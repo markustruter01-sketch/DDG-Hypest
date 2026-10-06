@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Hypest Web"
+description = "A phone-first Hypest navigation shell with five placeholder destinations in the brand palette, served as a development preview."
+version = "1.0.0"
+id = "artifacts/hypest-web"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24074
+
+[services.development]
+run = "pnpm --filter @workspace/hypest-web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hypest-web", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/hypest-web/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24074"
+BASE_PATH = "/"
