@@ -1,0 +1,1 @@
+- [Hypest Web scope](hypest-web-scope.md) — keep this preview separate from legacy Hypest services and the old website.
