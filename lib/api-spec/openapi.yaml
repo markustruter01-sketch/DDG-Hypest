@@ -121,6 +121,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+    patch:
+      operationId: updateCurrentUser
+      tags: [auth]
+      summary: Update the current user
+      description: Updates display_name and bio. Omitted fields stay unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   schemas:
     HealthStatus:
@@ -179,6 +209,18 @@ components:
         - password
         - display_name
         - adult_confirmed
+    UpdateProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        bio:
+          type: string
+          maxLength: 500
+          nullable: true
     LoginRequest:
       type: object
       additionalProperties: false

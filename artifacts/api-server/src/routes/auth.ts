@@ -6,6 +6,8 @@ import {
   LoginResponse,
   SignupBody,
   SignupResponse,
+  UpdateCurrentUserBody,
+  UpdateCurrentUserResponse,
 } from "@workspace/api-zod";
 import { db, usersTable } from "@workspace/db";
 import {
@@ -147,6 +149,51 @@ router.get("/auth/me", requireUser, (req, res) => {
     return;
   }
   res.json(GetCurrentUserResponse.parse(toCurrentUser(user)));
+});
+
+router.patch("/auth/me", requireUser, async (req, res) => {
+  const user = res.locals.authUser;
+  if (!user) {
+    res.status(401).json({ message: "unauthorized" });
+    return;
+  }
+
+  const parsed = UpdateCurrentUserBody.strict().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: invalidBodyMessage(parsed.error.issues) });
+    return;
+  }
+
+  const changes: { displayName?: string; bio?: string | null } = {};
+  if (parsed.data.display_name !== undefined) {
+    changes.displayName = parsed.data.display_name;
+  }
+  if (parsed.data.bio !== undefined) {
+    changes.bio = parsed.data.bio;
+  }
+
+  if (Object.keys(changes).length === 0) {
+    res.json(UpdateCurrentUserResponse.parse(toCurrentUser(user)));
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set(changes)
+    .where(eq(usersTable.id, user.id))
+    .returning({
+      id: usersTable.id,
+      email: usersTable.email,
+      displayName: usersTable.displayName,
+      bio: usersTable.bio,
+    });
+
+  if (!updated) {
+    res.status(401).json({ message: "unauthorized" });
+    return;
+  }
+
+  res.json(UpdateCurrentUserResponse.parse(toCurrentUser(updated)));
 });
 
 export default router;

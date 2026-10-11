@@ -82,3 +82,26 @@ export const GetCurrentUserResponse = zod.object({
 })
 
 
+/**
+ * Updates display_name and bio. Omitted fields stay unchanged.
+ * @summary Update the current user
+ */
+export const updateCurrentUserBodyDisplayNameMax = 60;
+
+export const updateCurrentUserBodyBioMax = 500;
+
+
+
+export const UpdateCurrentUserBody = zod.object({
+  "display_name": zod.string().min(1).max(updateCurrentUserBodyDisplayNameMax).optional(),
+  "bio": zod.string().max(updateCurrentUserBodyBioMax).nullish()
+})
+
+export const UpdateCurrentUserResponse = zod.object({
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "display_name": zod.string(),
+  "bio": zod.string().nullable()
+})
+
+

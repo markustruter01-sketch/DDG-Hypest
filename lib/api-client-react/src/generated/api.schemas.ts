@@ -35,6 +35,16 @@ export interface SignupRequest {
   adult_confirmed: true;
 }
 
+export interface UpdateProfileRequest {
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  display_name?: string;
+  /** @maxLength 500 */
+  bio?: string | null;
+}
+
 export interface LoginRequest {
   email: string;
   /** @maxLength 200 */

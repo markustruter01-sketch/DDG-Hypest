@@ -1,5 +1,8 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Compass, House, Plus, UserRound, Dumbbell } from 'lucide-react';
+import { LoginPage } from '@/pages/login-page';
+import { ProfilePage } from '@/pages/profile-page';
+import { SignupPage } from '@/pages/signup-page';
 
 const destinations = [
   { label: 'Home', path: '/', Icon: House },
@@ -57,7 +60,9 @@ function AppShell() {
         <Route path="/explore" element={<Screen title="Explore" />} />
         <Route path="/create" element={<Screen title="Create" />} />
         <Route path="/coaching" element={<Screen title="Coaching" />} />
-        <Route path="/profile" element={<Screen title="Profile" />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNavigation />

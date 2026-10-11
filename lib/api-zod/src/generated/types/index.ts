@@ -11,3 +11,4 @@ export * from './errorMessage';
 export * from './healthStatus';
 export * from './loginRequest';
 export * from './signupRequest';
+export * from './updateProfileRequest';
