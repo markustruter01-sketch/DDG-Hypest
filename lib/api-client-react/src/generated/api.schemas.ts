@@ -51,3 +51,143 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface PublicProgram {
+  id: number;
+  title: string;
+  description: string | null;
+  price_cents: number;
+  creator_display_name: string;
+  lesson_count: number;
+}
+
+export type MyProgramSummaryStatus = typeof MyProgramSummaryStatus[keyof typeof MyProgramSummaryStatus];
+
+
+export const MyProgramSummaryStatus = {
+  draft: 'draft',
+  published: 'published',
+} as const;
+
+export interface MyProgramSummary {
+  id: number;
+  title: string;
+  description: string | null;
+  price_cents: number;
+  status: MyProgramSummaryStatus;
+  lesson_count: number;
+}
+
+export type LessonMediaSource = typeof LessonMediaSource[keyof typeof LessonMediaSource] | null;
+
+
+export const LessonMediaSource = {
+  youtube: 'youtube',
+} as const;
+
+export interface Lesson {
+  id: number;
+  position: number;
+  title: string;
+  body: string | null;
+  sets: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  media_source: LessonMediaSource;
+  media_ref: string | null;
+}
+
+export type MyProgramStatus = typeof MyProgramStatus[keyof typeof MyProgramStatus];
+
+
+export const MyProgramStatus = {
+  draft: 'draft',
+  published: 'published',
+} as const;
+
+export interface MyProgram {
+  id: number;
+  title: string;
+  description: string | null;
+  price_cents: number;
+  status: MyProgramStatus;
+  lessons: Lesson[];
+}
+
+export interface CreateProgramRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /** @maxLength 2000 */
+  description?: string | null;
+  /** @minimum 500 */
+  price_cents: number;
+}
+
+export interface UpdateProgramRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title?: string;
+  /** @maxLength 2000 */
+  description?: string | null;
+  /** @minimum 500 */
+  price_cents?: number;
+}
+
+export type LessonWriteRequestMediaSource = typeof LessonWriteRequestMediaSource[keyof typeof LessonWriteRequestMediaSource] | null;
+
+
+export const LessonWriteRequestMediaSource = {
+  youtube: 'youtube',
+} as const;
+
+export interface LessonWriteRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /** @maxLength 5000 */
+  body?: string | null;
+  /** @minimum 0 */
+  sets?: number | null;
+  /** @minimum 0 */
+  reps?: number | null;
+  /** @minimum 0 */
+  duration_seconds?: number | null;
+  media_source?: LessonWriteRequestMediaSource;
+  media_ref?: string | null;
+}
+
+export type LessonPatchRequestMediaSource = typeof LessonPatchRequestMediaSource[keyof typeof LessonPatchRequestMediaSource] | null;
+
+
+export const LessonPatchRequestMediaSource = {
+  youtube: 'youtube',
+} as const;
+
+export interface LessonPatchRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title?: string;
+  /** @maxLength 5000 */
+  body?: string | null;
+  /** @minimum 0 */
+  sets?: number | null;
+  /** @minimum 0 */
+  reps?: number | null;
+  /** @minimum 0 */
+  duration_seconds?: number | null;
+  media_source?: LessonPatchRequestMediaSource;
+  media_ref?: string | null;
+}
+
+export interface ReorderLessonsRequest {
+  lesson_ids: number[];
+}
+

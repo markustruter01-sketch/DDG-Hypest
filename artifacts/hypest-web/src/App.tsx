@@ -1,5 +1,8 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Compass, House, Plus, UserRound, Dumbbell } from 'lucide-react';
+import { CreatePage } from '@/pages/create-page';
+import { ExploreDetailPage } from '@/pages/explore-detail-page';
+import { ExplorePage } from '@/pages/explore-page';
 import { LoginPage } from '@/pages/login-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { SignupPage } from '@/pages/signup-page';
@@ -18,7 +21,7 @@ function BottomNavigation() {
   return (
     <nav className="bottom-navigation" aria-label="Main navigation">
       {destinations.map(({ label, path, Icon }) => {
-        const active = pathname === path;
+        const active = path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
         const isCreate = path === '/create';
         return (
           <Link
@@ -57,8 +60,9 @@ function AppShell() {
     <div className="app-shell">
       <Routes>
         <Route path="/" element={<Screen title="Home" />} />
-        <Route path="/explore" element={<Screen title="Explore" />} />
-        <Route path="/create" element={<Screen title="Create" />} />
+        <Route path="/explore" element={<ExplorePage />} />
+        <Route path="/explore/:programId" element={<ExploreDetailPage />} />
+        <Route path="/create" element={<CreatePage />} />
         <Route path="/coaching" element={<Screen title="Coaching" />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />

@@ -6,9 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './createProgramRequest';
 export * from './currentUser';
 export * from './errorMessage';
 export * from './healthStatus';
+export * from './lesson';
+export * from './lessonMediaSource';
+export * from './lessonPatchRequest';
+export * from './lessonPatchRequestMediaSource';
+export * from './lessonWriteRequest';
+export * from './lessonWriteRequestMediaSource';
 export * from './loginRequest';
+export * from './myProgram';
+export * from './myProgramStatus';
+export * from './myProgramSummary';
+export * from './myProgramSummaryStatus';
+export * from './publicProgram';
+export * from './reorderLessonsRequest';
 export * from './signupRequest';
 export * from './updateProfileRequest';
+export * from './updateProgramRequest';
