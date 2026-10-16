@@ -11,4 +11,5 @@ export interface CurrentUser {
   email: string;
   display_name: string;
   bio: string | null;
+  handle: string | null;
 }

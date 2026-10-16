@@ -14,4 +14,6 @@ export interface UpdateProfileRequest {
   display_name?: string;
   /** @maxLength 500 */
   bio?: string | null;
+  /** @pattern ^[a-z0-9_]{3,30}$ */
+  handle?: string;
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { getGetCurrentUserQueryKey, useGetCurrentUser } from '@workspace/api-client-react';
 import { CreatePage } from '@/pages/create-page';
+import { CreatorRoute } from '@/pages/creator-page';
 import { ExploreDetailPage } from '@/pages/explore-detail-page';
 import { ExplorePage } from '@/pages/explore-page';
 import { HomePage } from '@/pages/home-page';
@@ -62,6 +63,7 @@ function AppShell() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/:slug" element={<CreatorRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {onWelcome ? null : <BottomNavigation />}

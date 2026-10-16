@@ -47,3 +47,21 @@ r $L GET /programs/1
 r $A DELETE /programs/mine/1/lessons/2
 r $L GET /programs/1
 r $A GET /programs/mine
+echo "== creator links (expect: 400, 409, 200 handle, 409, 409 taken, 200, 404, 1 program, 204 + cookie 1, 204 + cookie 0)"
+r $A PATCH /auth/me -d '{"handle":"Bad Name"}'
+r $A PATCH /auth/me -d '{"handle":"hypest"}'
+r $A PATCH /auth/me -d '{"handle":"ann_pt"}'
+r $A PATCH /auth/me -d '{"handle":"ann_pt2"}'
+r $C PATCH /auth/me -d '{"handle":"ann_pt"}'
+r $L GET /creators/ann_pt
+r $L GET /creators/nobody
+P=$(curl -s -b $A -c $A -X POST -H 'content-type: application/json' $B/programs -d '{"title":"Hinge Lab","price_cents":900}' | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+r $A POST /programs/mine/$P/lessons -d '{"title":"Hinge"}' >/dev/null; r $A POST /programs/mine/$P/publish >/dev/null
+printf 'programs for ann_pt: '; curl -s "$B/programs?creator=ann_pt" | grep -o '"id":' | wc -l
+D=$(mktemp)
+r $D POST /creators/ann_pt/visit; printf 'visitor cookie: '; grep -c hypest_ref $D
+r $A POST /creators/ann_pt/visit; printf 'creator self-visit cookie: '; grep -c hypest_ref $A || true
+echo "== logged-in visit saves on the account (check DB: bob referred by ann)"
+r $C POST /creators/ann_pt/visit
+echo "== signup after a creator link saves the referral on the account (check DB: referred_by_creator_id set for dee@test.com)"
+r $D POST /auth/signup -d '{"email":"dee@test.com","password":"longenough4","display_name":"Dee","adult_confirmed":true}'

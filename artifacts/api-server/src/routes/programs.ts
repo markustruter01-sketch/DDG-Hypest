@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Response } from "express";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import {
   CreateLessonBody,
   CreateLessonParams,
@@ -12,6 +12,7 @@ import {
   GetPublishedProgramParams,
   GetPublishedProgramResponse,
   ListMyProgramsResponse,
+  ListPublishedProgramsQueryParams,
   ListPublishedProgramsResponse,
   PublishProgramParams,
   PublishProgramResponse,
@@ -208,7 +209,8 @@ function readId(schema: { safeParse: (data: unknown) => { success: true; data: {
   return parsed.data.id;
 }
 
-router.get("/programs", async (_req, res) => {
+/** Single source for public program cards: published only, never lesson content. */
+async function publicPrograms(where: SQL | undefined) {
   const rows = await db
     .select({
       id: programsTable.id,
@@ -216,10 +218,11 @@ router.get("/programs", async (_req, res) => {
       description: programsTable.description,
       priceCents: programsTable.priceCents,
       creatorDisplayName: usersTable.displayName,
+      creatorHandle: usersTable.handle,
     })
     .from(programsTable)
     .innerJoin(usersTable, eq(usersTable.id, programsTable.creatorId))
-    .where(eq(programsTable.status, "published"))
+    .where(and(eq(programsTable.status, "published"), where))
     .orderBy(desc(programsTable.id));
 
   const counts = await lessonCounts(rows.map((row) => row.id));
@@ -229,9 +232,21 @@ router.get("/programs", async (_req, res) => {
     description: row.description,
     price_cents: row.priceCents,
     creator_display_name: row.creatorDisplayName,
+    creator_handle: row.creatorHandle,
     lesson_count: counts.get(row.id) ?? 0,
   }));
   assertNoLessonContent(payload);
+  return payload;
+}
+
+router.get("/programs", async (req, res) => {
+  const query = ListPublishedProgramsQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ message: invalidMessage(query.error.issues) });
+    return;
+  }
+  const creator = query.data.creator;
+  const payload = await publicPrograms(creator === undefined ? undefined : eq(usersTable.handle, creator));
   res.json(ListPublishedProgramsResponse.parse(payload));
 });
 
@@ -654,38 +669,11 @@ router.get("/programs/:id", async (req, res) => {
     return;
   }
 
-  const [row] = await db
-    .select({
-      id: programsTable.id,
-      title: programsTable.title,
-      description: programsTable.description,
-      priceCents: programsTable.priceCents,
-      creatorDisplayName: usersTable.displayName,
-    })
-    .from(programsTable)
-    .innerJoin(usersTable, eq(usersTable.id, programsTable.creatorId))
-    .where(and(eq(programsTable.id, programId), eq(programsTable.status, "published")))
-    .limit(1);
-
-  if (!row) {
+  const [payload] = await publicPrograms(eq(programsTable.id, programId));
+  if (!payload) {
     notFound(res);
     return;
   }
-
-  const [lessonCount] = await db
-    .select({ value: count() })
-    .from(lessonsTable)
-    .where(eq(lessonsTable.programId, row.id));
-
-  const payload = {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    price_cents: row.priceCents,
-    creator_display_name: row.creatorDisplayName,
-    lesson_count: Number(lessonCount?.value ?? 0),
-  };
-  assertNoLessonContent(payload);
   res.json(GetPublishedProgramResponse.parse(payload));
 });
 

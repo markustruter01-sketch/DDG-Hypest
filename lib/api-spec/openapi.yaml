@@ -14,6 +14,8 @@ tags:
     description: Account authentication
   - name: programs
     description: Creator drafts and published programs
+  - name: creators
+    description: Public creator pages and creator links
 paths:
   /healthz:
     get:
@@ -127,7 +129,7 @@ paths:
       operationId: updateCurrentUser
       tags: [auth]
       summary: Update the current user
-      description: Updates display_name and bio. Omitted fields stay unchanged.
+      description: Updates display_name, bio and handle. Omitted fields stay unchanged. handle can only be set once (409 if already set or taken).
       requestBody:
         required: true
         content:
@@ -153,12 +155,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Link name already set or taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /programs:
     get:
       operationId: listPublishedPrograms
       tags: [programs]
       summary: List published programs
-      description: Public. Published programs only, with no lesson content.
+      description: Public. Published programs only, with no lesson content. Optional creator filters to one creator's link name.
+      parameters:
+        - name: creator
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Published programs
@@ -498,8 +512,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /creators/{handle}:
+    get:
+      operationId: getCreator
+      tags: [creators]
+      summary: Public creator profile
+      parameters:
+        - $ref: "#/components/parameters/Handle"
+      responses:
+        "200":
+          description: Creator
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicCreator"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /creators/{handle}/visit:
+    post:
+      operationId: recordCreatorVisit
+      tags: [creators]
+      summary: Record that a visitor arrived through this creator's link
+      description: Sets a 30-day referral cookie; if logged in, also saves it on the account. Last link wins. Ignored for the creator's own visits.
+      parameters:
+        - $ref: "#/components/parameters/Handle"
+      responses:
+        "204":
+          description: Recorded
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   parameters:
+    Handle:
+      name: handle
+      in: path
+      required: true
+      schema:
+        type: string
     ProgramId:
       name: id
       in: path
@@ -541,11 +598,15 @@ components:
         bio:
           type: string
           nullable: true
+        handle:
+          type: string
+          nullable: true
       required:
         - id
         - email
         - display_name
         - bio
+        - handle
     SignupRequest:
       type: object
       additionalProperties: false
@@ -581,6 +642,9 @@ components:
           type: string
           maxLength: 500
           nullable: true
+        handle:
+          type: string
+          pattern: "^[a-z0-9_]{3,30}$"
     LoginRequest:
       type: object
       additionalProperties: false
@@ -609,6 +673,9 @@ components:
           type: integer
         creator_display_name:
           type: string
+        creator_handle:
+          type: string
+          nullable: true
         lesson_count:
           type: integer
       required:
@@ -617,7 +684,23 @@ components:
         - description
         - price_cents
         - creator_display_name
+        - creator_handle
         - lesson_count
+    PublicCreator:
+      type: object
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+        display_name:
+          type: string
+        bio:
+          type: string
+          nullable: true
+      required:
+        - handle
+        - display_name
+        - bio
     MyProgramSummary:
       type: object
       additionalProperties: false

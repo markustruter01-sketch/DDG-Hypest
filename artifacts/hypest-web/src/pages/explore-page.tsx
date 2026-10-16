@@ -4,7 +4,7 @@ import { formatUsd } from "@/lib/money";
 import { serverErrorText } from "@/lib/server-error";
 
 export function ExplorePage() {
-  const programs = useListPublishedPrograms({
+  const programs = useListPublishedPrograms(undefined, {
     query: { queryKey: getListPublishedProgramsQueryKey(), retry: false },
   });
 

@@ -27,9 +27,11 @@ import type {
   Lesson,
   LessonPatchRequest,
   LessonWriteRequest,
+  ListPublishedProgramsParams,
   LoginRequest,
   MyProgram,
   MyProgramSummary,
+  PublicCreator,
   PublicProgram,
   ReorderLessonsRequest,
   SignupRequest,
@@ -481,7 +483,7 @@ export const getUpdateCurrentUserUrl = () => {
 }
 
 /**
- * Updates display_name and bio. Omitted fields stay unchanged.
+ * Updates display_name, bio and handle. Omitted fields stay unchanged. handle can only be set once (409 if already set or taken).
  * @summary Update the current user
  */
 export const updateCurrentUser = async (updateProfileRequest: UpdateProfileRequest, options?: Parameters<typeof customFetch>[1]): Promise<CurrentUser> => {
@@ -561,21 +563,28 @@ export const useUpdateCurrentUser = <TError = ErrorType<ErrorMessage>,
       return useMutation(getUpdateCurrentUserMutationOptions(options));
     }
 
-export const getListPublishedProgramsUrl = () => {
+export const getListPublishedProgramsUrl = (params?: ListPublishedProgramsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/programs`
+  return stringifiedParams.length > 0 ? `/api/programs?${stringifiedParams}` : `/api/programs`
 }
 
 /**
- * Public. Published programs only, with no lesson content.
+ * Public. Published programs only, with no lesson content. Optional creator filters to one creator's link name.
  * @summary List published programs
  */
-export const listPublishedPrograms = async ( options?: Parameters<typeof customFetch>[1]): Promise<PublicProgram[]> => {
+export const listPublishedPrograms = async (params?: ListPublishedProgramsParams, options?: Parameters<typeof customFetch>[1]): Promise<PublicProgram[]> => {
 
-  return customFetch<PublicProgram[]>(getListPublishedProgramsUrl(),
+  return customFetch<PublicProgram[]>(getListPublishedProgramsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -588,23 +597,23 @@ export const listPublishedPrograms = async ( options?: Parameters<typeof customF
 
 
 
-export const getListPublishedProgramsQueryKey = () => {
+export const getListPublishedProgramsQueryKey = (params?: ListPublishedProgramsParams,) => {
     return [
-    `/api/programs`
+    `/api/programs`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListPublishedProgramsQueryOptions = <TData = Awaited<ReturnType<typeof listPublishedPrograms>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPublishedPrograms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListPublishedProgramsQueryOptions = <TData = Awaited<ReturnType<typeof listPublishedPrograms>>, TError = ErrorType<unknown>>(params?: ListPublishedProgramsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPublishedPrograms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListPublishedProgramsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListPublishedProgramsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublishedPrograms>>> = ({ signal }) => listPublishedPrograms({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublishedPrograms>>> = ({ signal }) => listPublishedPrograms(params, { signal, ...requestOptions });
 
 
 
@@ -622,11 +631,11 @@ export type ListPublishedProgramsQueryError = ErrorType<unknown>
  */
 
 export function useListPublishedPrograms<TData = Awaited<ReturnType<typeof listPublishedPrograms>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPublishedPrograms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListPublishedProgramsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPublishedPrograms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListPublishedProgramsQueryOptions(options)
+  const queryOptions = getListPublishedProgramsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1540,4 +1549,156 @@ export function useGetPublishedProgram<TData = Awaited<ReturnType<typeof getPubl
 
 
 
+
+export const getGetCreatorUrl = (handle: string,) => {
+
+
+
+
+  return `/api/creators/${handle}`
+}
+
+/**
+ * @summary Public creator profile
+ */
+export const getCreator = async (handle: string, options?: Parameters<typeof customFetch>[1]): Promise<PublicCreator> => {
+
+  return customFetch<PublicCreator>(getGetCreatorUrl(handle),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreatorQueryKey = (handle: string,) => {
+    return [
+    `/api/creators/${handle}`
+    ] as const;
+    }
+
+
+export const getGetCreatorQueryOptions = <TData = Awaited<ReturnType<typeof getCreator>>, TError = ErrorType<ErrorMessage>>(handle: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreator>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreatorQueryKey(handle);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreator>>> = ({ signal }) => getCreator(handle, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: handle !== null && handle !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreator>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreatorQueryResult = NonNullable<Awaited<ReturnType<typeof getCreator>>>
+export type GetCreatorQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Public creator profile
+ */
+
+export function useGetCreator<TData = Awaited<ReturnType<typeof getCreator>>, TError = ErrorType<ErrorMessage>>(
+ handle: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreator>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreatorQueryOptions(handle,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRecordCreatorVisitUrl = (handle: string,) => {
+
+
+
+
+  return `/api/creators/${handle}/visit`
+}
+
+/**
+ * Sets a 30-day referral cookie; if logged in, also saves it on the account. Last link wins. Ignored for the creator's own visits.
+ * @summary Record that a visitor arrived through this creator's link
+ */
+export const recordCreatorVisit = async (handle: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRecordCreatorVisitUrl(handle),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRecordCreatorVisitMutationKey = () => ['recordCreatorVisit'] as const;
+
+export const getRecordCreatorVisitMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordCreatorVisit>>, TError,RecordCreatorVisitMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordCreatorVisit>>, TError,RecordCreatorVisitMutationVariables, TContext> => {
+
+const mutationKey = getRecordCreatorVisitMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordCreatorVisit>>, RecordCreatorVisitMutationVariables> = (props) => {
+          const {handle} = props ?? {};
+
+          return  recordCreatorVisit(handle,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordCreatorVisitMutationResult = NonNullable<Awaited<ReturnType<typeof recordCreatorVisit>>>
+
+    export type RecordCreatorVisitMutationError = ErrorType<ErrorMessage>
+    export type RecordCreatorVisitMutationVariables = {handle: string}
+
+    /**
+ * @summary Record that a visitor arrived through this creator's link
+ */
+export const useRecordCreatorVisit = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordCreatorVisit>>, TError,RecordCreatorVisitMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordCreatorVisit>>,
+        TError,
+        RecordCreatorVisitMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRecordCreatorVisitMutationOptions(options));
+    }
 

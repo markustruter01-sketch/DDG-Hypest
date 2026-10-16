@@ -11,6 +11,16 @@ export type AuthUser = {
   email: string;
   displayName: string;
   bio: string | null;
+  handle: string | null;
+};
+
+/** Single source for the user fields the API loads for a logged-in user. */
+export const authUserColumns = {
+  id: usersTable.id,
+  email: usersTable.email,
+  displayName: usersTable.displayName,
+  bio: usersTable.bio,
+  handle: usersTable.handle,
 };
 
 declare global {
@@ -106,12 +116,7 @@ export async function userFromRequest(req: Request): Promise<AuthUser | null> {
   }
 
   const [user] = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      displayName: usersTable.displayName,
-      bio: usersTable.bio,
-    })
+    .select(authUserColumns)
     .from(usersTable)
     .where(eq(usersTable.id, session.userId))
     .limit(1);

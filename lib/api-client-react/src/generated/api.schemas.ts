@@ -18,6 +18,7 @@ export interface CurrentUser {
   email: string;
   display_name: string;
   bio: string | null;
+  handle: string | null;
 }
 
 export interface SignupRequest {
@@ -43,6 +44,8 @@ export interface UpdateProfileRequest {
   display_name?: string;
   /** @maxLength 500 */
   bio?: string | null;
+  /** @pattern ^[a-z0-9_]{3,30}$ */
+  handle?: string;
 }
 
 export interface LoginRequest {
@@ -57,7 +60,14 @@ export interface PublicProgram {
   description: string | null;
   price_cents: number;
   creator_display_name: string;
+  creator_handle: string | null;
   lesson_count: number;
+}
+
+export interface PublicCreator {
+  handle: string;
+  display_name: string;
+  bio: string | null;
 }
 
 export type MyProgramSummaryStatus = typeof MyProgramSummaryStatus[keyof typeof MyProgramSummaryStatus];
@@ -190,4 +200,8 @@ export interface LessonPatchRequest {
 export interface ReorderLessonsRequest {
   lesson_ids: number[];
 }
+
+export type ListPublishedProgramsParams = {
+creator?: string;
+};
 
