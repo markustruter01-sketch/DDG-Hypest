@@ -1,18 +1,20 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Compass, House, Plus, UserRound, Dumbbell } from 'lucide-react';
+import { getGetCurrentUserQueryKey, useGetCurrentUser } from '@workspace/api-client-react';
 import { CreatePage } from '@/pages/create-page';
 import { ExploreDetailPage } from '@/pages/explore-detail-page';
 import { ExplorePage } from '@/pages/explore-page';
+import { HomePage } from '@/pages/home-page';
 import { LoginPage } from '@/pages/login-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { SignupPage } from '@/pages/signup-page';
+import { errorStatus } from '@/lib/server-error';
 
 const destinations = [
-  { label: 'Home', path: '/', Icon: House },
-  { label: 'Explore', path: '/explore', Icon: Compass },
-  { label: 'Create', path: '/create', Icon: Plus },
-  { label: 'Coaching', path: '/coaching', Icon: Dumbbell },
-  { label: 'Profile', path: '/profile', Icon: UserRound },
+  { label: 'Studio', path: '/' },
+  { label: 'Explore', path: '/explore' },
+  { label: 'Create', path: '/create' },
+  { label: 'Coaching', path: '/coaching' },
+  { label: 'Me', path: '/profile' },
 ] as const;
 
 function BottomNavigation() {
@@ -20,26 +22,11 @@ function BottomNavigation() {
 
   return (
     <nav className="bottom-navigation" aria-label="Main navigation">
-      {destinations.map(({ label, path, Icon }) => {
+      {destinations.map(({ label, path }) => {
         const active = path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
-        const isCreate = path === '/create';
         return (
-          <Link
-            key={path}
-            to={path}
-            className={`nav-item${isCreate ? ' nav-create' : ''}`}
-            aria-current={active ? 'page' : undefined}
-            aria-label={label}
-            title={label}
-          >
-            {isCreate ? (
-              <span className="create-button">
-                <Icon className="create-icon" aria-hidden="true" />
-              </span>
-            ) : (
-              <Icon className="nav-icon" aria-hidden="true" />
-            )}
-            <span className="nav-label">{label}</span>
+          <Link key={path} to={path} className="nav-item" aria-current={active ? 'page' : undefined}>
+            {label}
           </Link>
         );
       })}
@@ -56,10 +43,18 @@ function Screen({ title }: { title: string }) {
 }
 
 function AppShell() {
+  const { pathname } = useLocation();
+  const me = useGetCurrentUser({
+    query: { queryKey: getGetCurrentUserQueryKey(), retry: false },
+    request: { credentials: 'include' },
+  });
+  // The logged-out welcome screen is a full-bleed hero with no tab bar.
+  const onWelcome = pathname === '/' && me.isError && errorStatus(me.error) === 401;
+
   return (
     <div className="app-shell">
       <Routes>
-        <Route path="/" element={<Screen title="Home" />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/explore/:programId" element={<ExploreDetailPage />} />
         <Route path="/create" element={<CreatePage />} />
@@ -69,7 +64,7 @@ function AppShell() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <BottomNavigation />
+      {onWelcome ? null : <BottomNavigation />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetMyProgramQueryKey,
@@ -37,8 +37,16 @@ export function CreatePage() {
     query: { queryKey: getListMyProgramsQueryKey(), retry: false },
     request,
   });
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [creating, setCreating] = useState(false);
+  // Studio links here with ?new=1 (open the new-program form) or ?program=<id> (open the editor).
+  const [params, setParams] = useSearchParams();
+  const fromLink = Number(params.get("program"));
+  const [selectedId, setSelectedIdState] = useState<number | null>(Number.isInteger(fromLink) && fromLink > 0 ? fromLink : null);
+  const [creating, setCreating] = useState(params.get("new") === "1");
+
+  function setSelectedId(id: number | null) {
+    setSelectedIdState(id);
+    setParams(id === null ? {} : { program: String(id) }, { replace: true });
+  }
 
   const programs = Array.isArray(mine.data) ? mine.data : null;
   const loggedOut = mine.isError && errorStatus(mine.error) === 401;
@@ -71,7 +79,7 @@ export function CreatePage() {
       {programs && selectedId === null ? (
         <>
           <div className="button-row">
-            <button className="primary-button" type="button" onClick={() => setCreating((open) => !open)}>
+            <button className={creating ? "secondary-button" : "primary-button"} type="button" onClick={() => setCreating((open) => !open)}>
               New program
             </button>
           </div>
@@ -88,9 +96,10 @@ export function CreatePage() {
             {programs.map((program) => (
               <li key={program.id}>
                 <button className="program-card" type="button" onClick={() => setSelectedId(program.id)}>
+                  <span className={`status-tag status-${program.status}`}>{program.status === "published" ? "Live" : "Draft"}</span>
                   <span className="program-card-title">{program.title}</span>
                   <span className="screen-copy">
-                    {program.status} · {formatUsd(program.price_cents)}
+                    {formatUsd(program.price_cents)} · {program.lesson_count} {program.lesson_count === 1 ? "lesson" : "lessons"}
                   </span>
                 </button>
               </li>
@@ -280,7 +289,7 @@ function ProgramEditor({ programId, onBack }: { programId: number; onBack: () =>
   const lessons = program.data ? [...program.data.lessons].sort((a, b) => a.position - b.position) : [];
 
   return (
-    <div>
+    <div className="editor">
       <button className="text-link" type="button" onClick={onBack}>
         All programs
       </button>
@@ -288,7 +297,7 @@ function ProgramEditor({ programId, onBack }: { programId: number; onBack: () =>
       {program.isError ? <p className="error-text" role="alert">{serverErrorText(program.error)}</p> : null}
       {program.data ? (
         <>
-          <p className="screen-copy">{program.data.status}</p>
+          <span className={`status-tag status-${program.data.status}`}>{program.data.status === "published" ? "Live" : "Draft"}</span>
           <form className="account-form" onSubmit={onSaveProgram}>
             <label className="field">
               <span className="field-label">Title</span>
@@ -302,7 +311,7 @@ function ProgramEditor({ programId, onBack }: { programId: number; onBack: () =>
               <span className="field-label">Price (US$)</span>
               <input className="text-input" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required />
             </label>
-            <button className="primary-button" type="submit" disabled={updateProgram.isPending}>
+            <button className="secondary-button" type="submit" disabled={updateProgram.isPending}>
               Save program
             </button>
           </form>
