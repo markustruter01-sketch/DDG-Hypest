@@ -58,6 +58,10 @@ function Welcome() {
         <br />
         training.
       </h1>
+      <div className="hero-stats">
+        <div><span className="big-number">$0</span><span className="label">To join</span></div>
+        <div><span className="big-number">10%</span><span className="label">Your link fee</span></div>
+      </div>
       <div className="button-row">
         <Link className="primary-button" to="/signup" style={{ justifyContent: "space-between" }}>
           Start selling <span aria-hidden="true">→</span>
