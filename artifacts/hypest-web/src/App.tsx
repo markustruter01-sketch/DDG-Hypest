@@ -4,14 +4,14 @@ import { CreatePage } from '@/pages/create-page';
 import { CreatorRoute } from '@/pages/creator-page';
 import { ExploreDetailPage } from '@/pages/explore-detail-page';
 import { ExplorePage } from '@/pages/explore-page';
-import { HomePage } from '@/pages/home-page';
+import { HomePage, StudioPage } from '@/pages/home-page';
 import { LoginPage } from '@/pages/login-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { SignupPage } from '@/pages/signup-page';
 import { errorStatus } from '@/lib/server-error';
 
 const destinations = [
-  { label: 'Studio', path: '/' },
+  { label: 'Studio', path: '/studio' },
   { label: 'Explore', path: '/explore' },
   { label: 'Create', path: '/create' },
   { label: 'Coaching', path: '/coaching' },
@@ -24,7 +24,7 @@ function BottomNavigation() {
   return (
     <nav className="bottom-navigation" aria-label="Main navigation">
       {destinations.map(({ label, path }) => {
-        const active = path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
+        const active = pathname === path || pathname.startsWith(`${path}/`);
         return (
           <Link key={path} to={path} className="nav-item" aria-current={active ? 'page' : undefined}>
             {label}
@@ -49,13 +49,14 @@ function AppShell() {
     query: { queryKey: getGetCurrentUserQueryKey(), retry: false },
     request: { credentials: 'include' },
   });
-  // The logged-out welcome screen is a full-bleed hero with no tab bar.
-  const onWelcome = pathname === '/' && me.isError && errorStatus(me.error) === 401;
+  // The logged-out landing page is full width (phone and PC) with no tab bar.
+  const onLanding = pathname === '/' && me.isError && errorStatus(me.error) === 401;
 
   return (
-    <div className="app-shell">
+    <div className={onLanding ? 'app-shell app-shell-wide' : 'app-shell'}>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/studio" element={<StudioPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/explore/:programId" element={<ExploreDetailPage />} />
         <Route path="/create" element={<CreatePage />} />
@@ -66,7 +67,7 @@ function AppShell() {
         <Route path="/:slug" element={<CreatorRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      {onWelcome ? null : <BottomNavigation />}
+      {onLanding ? null : <BottomNavigation />}
     </div>
   );
 }
