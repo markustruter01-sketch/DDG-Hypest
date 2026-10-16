@@ -22,7 +22,7 @@ import {
   deleteSessionFromRequest,
   type AuthUser,
 } from "../lib/session";
-import { requireUser } from "../middleware/require-user";
+import { authUser, requireUser } from "../middleware/require-user";
 
 const router: IRouter = Router();
 
@@ -143,20 +143,12 @@ router.post("/auth/logout", async (req, res) => {
 });
 
 router.get("/auth/me", requireUser, (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   res.json(GetCurrentUserResponse.parse(toCurrentUser(user)));
 });
 
 router.patch("/auth/me", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
 
   const parsed = UpdateCurrentUserBody.strict().safeParse(req.body);
   if (!parsed.success) {

@@ -1,5 +1,5 @@
-import type { RequestHandler } from "express";
-import { userFromRequest } from "../lib/session";
+import type { RequestHandler, Response } from "express";
+import { userFromRequest, type AuthUser } from "../lib/session";
 
 export const requireUser: RequestHandler = async (req, res, next) => {
   try {
@@ -14,3 +14,12 @@ export const requireUser: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+/** The logged-in user on a route behind requireUser. Throws if requireUser was not used. */
+export function authUser(res: Response): AuthUser {
+  const user = res.locals.authUser;
+  if (!user) {
+    throw new Error("route is missing requireUser");
+  }
+  return user;
+}

@@ -28,10 +28,31 @@ import {
   UpdateMyProgramResponse,
 } from "@workspace/api-zod";
 import { db, lessonsTable, programsTable, usersTable } from "@workspace/db";
-import { requireUser } from "../middleware/require-user";
+import { authUser, requireUser } from "../middleware/require-user";
 import { youtubeUrlError } from "../lib/youtube-url";
 
 const router: IRouter = Router();
+
+const programColumns = {
+  id: programsTable.id,
+  creatorId: programsTable.creatorId,
+  title: programsTable.title,
+  description: programsTable.description,
+  priceCents: programsTable.priceCents,
+  status: programsTable.status,
+};
+
+const lessonColumns = {
+  id: lessonsTable.id,
+  position: lessonsTable.position,
+  title: lessonsTable.title,
+  body: lessonsTable.body,
+  sets: lessonsTable.sets,
+  reps: lessonsTable.reps,
+  durationSeconds: lessonsTable.durationSeconds,
+  mediaSource: lessonsTable.mediaSource,
+  mediaRef: lessonsTable.mediaRef,
+};
 
 const PUBLIC_FORBIDDEN_KEYS = new Set([
   "lessons",
@@ -156,17 +177,7 @@ async function lessonCounts(programIds: number[]): Promise<Map<number, number>> 
 
 async function loadLessons(programId: number): Promise<LessonRow[]> {
   return db
-    .select({
-      id: lessonsTable.id,
-      position: lessonsTable.position,
-      title: lessonsTable.title,
-      body: lessonsTable.body,
-      sets: lessonsTable.sets,
-      reps: lessonsTable.reps,
-      durationSeconds: lessonsTable.durationSeconds,
-      mediaSource: lessonsTable.mediaSource,
-      mediaRef: lessonsTable.mediaRef,
-    })
+    .select(lessonColumns)
     .from(lessonsTable)
     .where(eq(lessonsTable.programId, programId))
     .orderBy(asc(lessonsTable.position));
@@ -174,14 +185,7 @@ async function loadLessons(programId: number): Promise<LessonRow[]> {
 
 async function findOwned(userId: number, programId: number): Promise<ProgramRow | null> {
   const [program] = await db
-    .select({
-      id: programsTable.id,
-      creatorId: programsTable.creatorId,
-      title: programsTable.title,
-      description: programsTable.description,
-      priceCents: programsTable.priceCents,
-      status: programsTable.status,
-    })
+    .select(programColumns)
     .from(programsTable)
     .where(and(eq(programsTable.id, programId), eq(programsTable.creatorId, userId)))
     .limit(1);
@@ -232,11 +236,7 @@ router.get("/programs", async (_req, res) => {
 });
 
 router.get("/programs/mine", requireUser, async (_req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
 
   const rows = await db
     .select({
@@ -263,11 +263,7 @@ router.get("/programs/mine", requireUser, async (_req, res) => {
 });
 
 router.post("/programs", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
 
   const parsed = CreateProgramBody.strict().safeParse(req.body);
   if (!parsed.success) {
@@ -284,14 +280,7 @@ router.post("/programs", requireUser, async (req, res) => {
       priceCents: parsed.data.price_cents,
       status: "draft",
     })
-    .returning({
-      id: programsTable.id,
-      creatorId: programsTable.creatorId,
-      title: programsTable.title,
-      description: programsTable.description,
-      priceCents: programsTable.priceCents,
-      status: programsTable.status,
-    });
+    .returning(programColumns);
 
   if (!program) {
     throw new Error("program insert returned no row");
@@ -301,11 +290,7 @@ router.post("/programs", requireUser, async (req, res) => {
 });
 
 router.get("/programs/mine/:id", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const programId = readId(GetMyProgramParams, req.params, res);
   if (programId === undefined) {
     return;
@@ -320,11 +305,7 @@ router.get("/programs/mine/:id", requireUser, async (req, res) => {
 });
 
 router.patch("/programs/mine/:id", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const programId = readId(UpdateMyProgramParams, req.params, res);
   if (programId === undefined) {
     return;
@@ -361,14 +342,7 @@ router.patch("/programs/mine/:id", requireUser, async (req, res) => {
     .update(programsTable)
     .set(changes)
     .where(eq(programsTable.id, existing.id))
-    .returning({
-      id: programsTable.id,
-      creatorId: programsTable.creatorId,
-      title: programsTable.title,
-      description: programsTable.description,
-      priceCents: programsTable.priceCents,
-      status: programsTable.status,
-    });
+    .returning(programColumns);
 
   if (!program) {
     notFound(res);
@@ -380,11 +354,7 @@ router.patch("/programs/mine/:id", requireUser, async (req, res) => {
 });
 
 router.post("/programs/mine/:id/lessons", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const programId = readId(CreateLessonParams, req.params, res);
   if (programId === undefined) {
     return;
@@ -429,17 +399,7 @@ router.post("/programs/mine/:id/lessons", requireUser, async (req, res) => {
       mediaSource,
       mediaRef: mediaRef === "" ? null : mediaRef,
     })
-    .returning({
-      id: lessonsTable.id,
-      position: lessonsTable.position,
-      title: lessonsTable.title,
-      body: lessonsTable.body,
-      sets: lessonsTable.sets,
-      reps: lessonsTable.reps,
-      durationSeconds: lessonsTable.durationSeconds,
-      mediaSource: lessonsTable.mediaSource,
-      mediaRef: lessonsTable.mediaRef,
-    });
+    .returning(lessonColumns);
 
   if (!lesson) {
     throw new Error("lesson insert returned no row");
@@ -450,11 +410,7 @@ router.post("/programs/mine/:id/lessons", requireUser, async (req, res) => {
 });
 
 router.post("/programs/mine/:id/lessons/reorder", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const programId = readId(ReorderLessonsParams, req.params, res);
   if (programId === undefined) {
     return;
@@ -513,11 +469,7 @@ router.post("/programs/mine/:id/lessons/reorder", requireUser, async (req, res) 
 });
 
 router.patch("/programs/mine/:id/lessons/:lessonId", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const parsedParams = UpdateLessonParams.safeParse(req.params);
   if (!parsedParams.success) {
     res.status(400).json({ message: invalidMessage(parsedParams.error.issues) });
@@ -536,17 +488,7 @@ router.patch("/programs/mine/:id/lessons/:lessonId", requireUser, async (req, re
   }
 
   const [current] = await db
-    .select({
-      id: lessonsTable.id,
-      position: lessonsTable.position,
-      title: lessonsTable.title,
-      body: lessonsTable.body,
-      sets: lessonsTable.sets,
-      reps: lessonsTable.reps,
-      durationSeconds: lessonsTable.durationSeconds,
-      mediaSource: lessonsTable.mediaSource,
-      mediaRef: lessonsTable.mediaRef,
-    })
+    .select(lessonColumns)
     .from(lessonsTable)
     .where(and(eq(lessonsTable.id, parsedParams.data.lessonId), eq(lessonsTable.programId, program.id)))
     .limit(1);
@@ -599,17 +541,7 @@ router.patch("/programs/mine/:id/lessons/:lessonId", requireUser, async (req, re
     .update(lessonsTable)
     .set(changes)
     .where(eq(lessonsTable.id, current.id))
-    .returning({
-      id: lessonsTable.id,
-      position: lessonsTable.position,
-      title: lessonsTable.title,
-      body: lessonsTable.body,
-      sets: lessonsTable.sets,
-      reps: lessonsTable.reps,
-      durationSeconds: lessonsTable.durationSeconds,
-      mediaSource: lessonsTable.mediaSource,
-      mediaRef: lessonsTable.mediaRef,
-    });
+    .returning(lessonColumns);
 
   if (!lesson) {
     notFound(res);
@@ -621,11 +553,7 @@ router.patch("/programs/mine/:id/lessons/:lessonId", requireUser, async (req, re
 });
 
 router.delete("/programs/mine/:id/lessons/:lessonId", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const parsedParams = DeleteLessonParams.safeParse(req.params);
   if (!parsedParams.success) {
     res.status(400).json({ message: invalidMessage(parsedParams.error.issues) });
@@ -648,16 +576,17 @@ router.delete("/programs/mine/:id/lessons/:lessonId", requireUser, async (req, r
     return;
   }
 
-  await touchProgram(program.id);
+  // A published program must always have at least one lesson: deleting the last one unpublishes it.
+  const remaining = await lessonCounts([program.id]);
+  await db
+    .update(programsTable)
+    .set({ updatedAt: new Date(), ...(remaining.has(program.id) ? {} : { status: "draft" }) })
+    .where(eq(programsTable.id, program.id));
   res.status(204).end();
 });
 
 router.post("/programs/mine/:id/publish", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const programId = readId(PublishProgramParams, req.params, res);
   if (programId === undefined) {
     return;
@@ -682,14 +611,7 @@ router.post("/programs/mine/:id/publish", requireUser, async (req, res) => {
     .update(programsTable)
     .set({ status: "published", updatedAt: new Date() })
     .where(eq(programsTable.id, existing.id))
-    .returning({
-      id: programsTable.id,
-      creatorId: programsTable.creatorId,
-      title: programsTable.title,
-      description: programsTable.description,
-      priceCents: programsTable.priceCents,
-      status: programsTable.status,
-    });
+    .returning(programColumns);
 
   if (!program) {
     notFound(res);
@@ -700,11 +622,7 @@ router.post("/programs/mine/:id/publish", requireUser, async (req, res) => {
 });
 
 router.post("/programs/mine/:id/unpublish", requireUser, async (req, res) => {
-  const user = res.locals.authUser;
-  if (!user) {
-    res.status(401).json({ message: "unauthorized" });
-    return;
-  }
+  const user = authUser(res);
   const programId = readId(UnpublishProgramParams, req.params, res);
   if (programId === undefined) {
     return;
@@ -719,14 +637,7 @@ router.post("/programs/mine/:id/unpublish", requireUser, async (req, res) => {
     .update(programsTable)
     .set({ status: "draft", updatedAt: new Date() })
     .where(eq(programsTable.id, existing.id))
-    .returning({
-      id: programsTable.id,
-      creatorId: programsTable.creatorId,
-      title: programsTable.title,
-      description: programsTable.description,
-      priceCents: programsTable.priceCents,
-      status: programsTable.status,
-    });
+    .returning(programColumns);
 
   if (!program) {
     notFound(res);
