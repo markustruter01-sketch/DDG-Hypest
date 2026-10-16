@@ -66,6 +66,10 @@ export interface PublicProgram {
 
 export interface AppConfig {
   dev_tools: boolean;
+  /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
+  creator_brought_bps: number;
+  /** Hypest's fee on sales Hypest found, in basis points */
+  hypest_found_bps: number;
 }
 
 export type LessonMediaSource = typeof LessonMediaSource[keyof typeof LessonMediaSource] | null;

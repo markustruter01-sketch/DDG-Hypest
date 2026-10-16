@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { Wordmark } from "@/components/wordmark";
 import { formatUsd } from "@/lib/money";
+import { useAppConfig } from "@/lib/config";
 import { serverErrorText } from "@/lib/server-error";
 
 const request = { credentials: "include" as const };
@@ -163,6 +164,7 @@ function Programs({ programs }: { programs: MyProgramSummary[] }) {
 
 /** The creator's own link. Sales through it pay the lower fee. Copies the full address. */
 function LinkBar({ handle }: { handle: string }) {
+  const config = useAppConfig();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -177,7 +179,7 @@ function LinkBar({ handle }: { handle: string }) {
   return (
     <div className="link-bar">
       <span>
-        <span className="label" style={{ display: "block", color: "var(--color-on-dark-muted)" }}>Your link · 10% fee</span>
+        <span className="label" style={{ display: "block", color: "var(--color-on-dark-muted)" }}>Your link{config ? ` · ${config.creator_brought_bps / 100}% fee` : ""}</span>
         <span className="tile-title">@{handle}</span>
       </span>
       <button className="secondary-button" type="button" onClick={copy}>

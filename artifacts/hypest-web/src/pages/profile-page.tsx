@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetCurrentUserQueryKey,
@@ -27,6 +27,7 @@ function isCurrentUser(value: unknown): value is CurrentUser {
 
 export function ProfilePage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const me = useGetCurrentUser({
     query: { queryKey: getGetCurrentUserQueryKey(), retry: false },
     request,
@@ -44,6 +45,7 @@ export function ProfilePage() {
       await logout.mutateAsync();
       setEditing(false);
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+      navigate("/");
     } catch (err) {
       setError(serverErrorText(err));
     }
@@ -82,7 +84,7 @@ export function ProfilePage() {
 
   return (
     <main className="screen-scroll">
-      <h1 className="screen-title">Profile</h1>
+      <h1 className="screen-title">Me</h1>
       {me.isPending ? <p className="screen-copy">Loading</p> : null}
       {failed ? (
         <p className="error-text" role="alert">
@@ -101,11 +103,23 @@ export function ProfilePage() {
       ) : null}
       {user && !editing ? (
         <div className="profile-details">
-          <p className="profile-name">{user.display_name}</p>
-          <p className="screen-copy">{user.email}</p>
-          <p className="screen-copy">{user.bio ?? ""}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <span className="avatar" style={{ width: "3.5rem", height: "3.5rem", fontSize: "1.5rem" }} aria-hidden="true">
+              {user.display_name.trim().charAt(0).toUpperCase() || "?"}
+            </span>
+            <span>
+              <span className="profile-name" style={{ display: "block" }}>{user.display_name}</span>
+              <span className="screen-copy" style={{ fontSize: "var(--size-small)" }}>{user.email}</span>
+            </span>
+          </div>
+          {user.bio ? <p className="screen-copy">{user.bio}</p> : null}
+          {user.handle ? (
+            <Link className="text-link" to={`/@${user.handle}`}>My page · @{user.handle}</Link>
+          ) : (
+            <Link className="text-link" to="/studio">Claim your link in Studio</Link>
+          )}
           <div className="button-row">
-            <button className="primary-button" type="button" onClick={startEditing}>
+            <button className="secondary-button" type="button" onClick={startEditing}>
               Edit profile
             </button>
             <button className="secondary-button" type="button" onClick={onLogout} disabled={logout.isPending}>

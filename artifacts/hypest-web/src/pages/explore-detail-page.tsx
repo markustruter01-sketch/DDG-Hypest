@@ -1,16 +1,15 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  getGetConfigQueryKey,
   getGetLibraryProgramQueryKey,
   getGetPublishedProgramQueryKey,
   getListLibraryQueryKey,
-  useGetConfig,
   useGetLibraryProgram,
   useGetPublishedProgram,
   useTestPurchase,
 } from "@workspace/api-client-react";
 import { formatUsd } from "@/lib/money";
+import { useAppConfig } from "@/lib/config";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 
 const request = { credentials: "include" as const };
@@ -76,7 +75,7 @@ export function ExploreDetailPage() {
 function BuyBar({ programId, priceCents, owned, loggedOut }: { programId: number; priceCents: number; owned: boolean; loggedOut: boolean }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const config = useGetConfig({ query: { queryKey: getGetConfigQueryKey(), staleTime: Infinity } });
+  const config = useAppConfig();
   const buy = useTestPurchase({ request });
 
   async function onTestBuy() {
@@ -97,7 +96,7 @@ function BuyBar({ programId, priceCents, owned, loggedOut }: { programId: number
     action = <Link className="primary-button" to={`/train/${programId}`}>Start training →</Link>;
   } else if (loggedOut) {
     action = <Link className="primary-button" to="/signup">Sign up to buy</Link>;
-  } else if (config.data?.dev_tools) {
+  } else if (config?.dev_tools) {
     action = (
       <button className="primary-button" type="button" onClick={onTestBuy} disabled={buy.isPending}>
         Test buy · no charge

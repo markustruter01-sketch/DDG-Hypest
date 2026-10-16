@@ -473,7 +473,9 @@ export const RecordCreatorVisitResponse = zod.void()
  * @summary Public app settings the web app needs
  */
 export const GetConfigResponse = zod.object({
-  "dev_tools": zod.boolean()
+  "dev_tools": zod.boolean(),
+  "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),
+  "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points')
 })
 
 

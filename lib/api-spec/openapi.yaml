@@ -796,8 +796,16 @@ components:
       properties:
         dev_tools:
           type: boolean
+        creator_brought_bps:
+          type: integer
+          description: Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%)
+        hypest_found_bps:
+          type: integer
+          description: Hypest's fee on sales Hypest found, in basis points
       required:
         - dev_tools
+        - creator_brought_bps
+        - hypest_found_bps
     LibraryProgram:
       type: object
       additionalProperties: false

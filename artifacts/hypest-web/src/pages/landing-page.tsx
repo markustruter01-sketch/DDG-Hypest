@@ -1,15 +1,11 @@
 import { Link } from "react-router-dom";
 import { Wordmark } from "@/components/wordmark";
 import { formatUsd } from "@/lib/money";
+import { keepCents, useAppConfig } from "@/lib/config";
 
 const img = (name: string) => `${import.meta.env.BASE_URL}img/${name}`;
 
-// Fee rates seeded in commission_rates (creator_brought 10%, hypest_found 20%).
 const EXAMPLE_PRICE_CENTS = 2400;
-const SPLITS = [
-  { label: "Your link", feePct: 10 },
-  { label: "Hypest found them", feePct: 20 },
-];
 
 const STEPS = [
   { n: "01", title: "Make a program", icon: "M4 5h16M4 12h16M4 19h10" },
@@ -25,6 +21,14 @@ const STYLES = [
 
 /** Public landing page at "/" for anyone not logged in. Photos allowed: this is a hero page. */
 export function LandingPage() {
+  const config = useAppConfig();
+  const linkPct = config ? config.creator_brought_bps / 100 : null;
+  const splits = config
+    ? [
+        { label: "Your link", feeBps: config.creator_brought_bps },
+        { label: "Hypest found them", feeBps: config.hypest_found_bps },
+      ]
+    : [];
   return (
     <main className="landing">
       <section className="landing-hero">
@@ -46,7 +50,7 @@ export function LandingPage() {
           </h1>
           <div className="hero-stats">
             <div><span className="big-number">$0</span><span className="label">To join</span></div>
-            <div><span className="big-number">10%</span><span className="label">Your link fee</span></div>
+            <div><span className="big-number">{linkPct === null ? "–" : `${linkPct}%`}</span><span className="label">Your link fee</span></div>
           </div>
           <div className="button-row landing-ctas">
             <Link className="primary-button" to="/signup" style={{ justifyContent: "space-between" }}>
@@ -80,17 +84,18 @@ export function LandingPage() {
         <div className="landing-inner">
           <h2 className="landing-h2">Where a {formatUsd(EXAMPLE_PRICE_CENTS).replace(".00", "")} sale goes</h2>
           <div className="splits">
-            {SPLITS.map((s) => {
-              const fee = Math.round((EXAMPLE_PRICE_CENTS * s.feePct) / 100);
+            {splits.map((s) => {
+              const keep = keepCents(EXAMPLE_PRICE_CENTS, s.feeBps);
+              const keepPct = 100 - s.feeBps / 100;
               return (
                 <div key={s.label}>
                   <div className="split-head">
                     <span>{s.label}</span>
-                    <span>You {formatUsd(EXAMPLE_PRICE_CENTS - fee)}</span>
+                    <span>You {formatUsd(keep)}</span>
                   </div>
-                  <div className="split-bar" role="img" aria-label={`${s.label}: you keep ${100 - s.feePct}%, Hypest ${s.feePct}%`}>
-                    <span style={{ width: `${100 - s.feePct}%` }} />
-                    <span className="split-fee" style={{ width: `${s.feePct}%` }} />
+                  <div className="split-bar" role="img" aria-label={`${s.label}: you keep ${keepPct}%, Hypest ${100 - keepPct}%`}>
+                    <span style={{ width: `${keepPct}%` }} />
+                    <span className="split-fee" style={{ width: `${100 - keepPct}%` }} />
                   </div>
                 </div>
               );
