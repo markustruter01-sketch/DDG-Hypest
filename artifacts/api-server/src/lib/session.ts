@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, sessionsTable, usersTable } from "@workspace/db";
+import { devUserId, setDevGuest } from "./dev-login";
 
 export const SESSION_COOKIE = "hypest_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -68,10 +69,12 @@ export async function createSession(res: Response, userId: number): Promise<void
     expiresAt,
   });
   res.cookie(SESSION_COOKIE, raw.toString("base64url"), cookieOptions(expiresAt));
+  setDevGuest(res, false);
 }
 
 export function clearSessionCookie(res: Response): void {
   res.clearCookie(SESSION_COOKIE, cookieOptions());
+  setDevGuest(res, true);
 }
 
 export async function deleteSessionFromRequest(req: Request): Promise<void> {
@@ -87,6 +90,19 @@ export async function deleteSessionFromRequest(req: Request): Promise<void> {
 }
 
 export async function userFromRequest(req: Request): Promise<AuthUser | null> {
+  const user = await sessionUser(req);
+  if (user) {
+    return user;
+  }
+  const devId = await devUserId(req);
+  if (devId === null) {
+    return null;
+  }
+  const [dev] = await db.select(authUserColumns).from(usersTable).where(eq(usersTable.id, devId)).limit(1);
+  return dev ?? null;
+}
+
+async function sessionUser(req: Request): Promise<AuthUser | null> {
   const cookieValue = readCookie(req);
   if (!cookieValue) {
     return null;
