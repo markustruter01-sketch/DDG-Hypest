@@ -343,6 +343,44 @@ textarea.text-input { resize: vertical; }
 .tile .status-draft { background: var(--color-card); color: var(--color-ink); }
 .tile .status-published { background: var(--color-volt); color: var(--color-ink); }
 
+.link-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-ink);
+  color: var(--color-on-dark);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.link-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-bar .secondary-button {
+  flex: none;
+  min-height: var(--tap);
+  border-color: rgb(255 255 255 / 50%);
+  color: var(--color-on-dark);
+  font-size: var(--size-small);
+}
+.handle-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 700;
+}
+
+.creator-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 15rem;
+  margin: 0 calc(var(--space-5) * -1);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+}
+
 /* ---------- Hero (dark, photo) ---------- */
 
 .hero {

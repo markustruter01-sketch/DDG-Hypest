@@ -39,10 +39,14 @@ export function ExploreDetailPage() {
       {detail ? (
         <article className="profile-details">
           <h1 className="screen-title">{detail.title}</h1>
-          <p className="screen-copy">{detail.creator_display_name}</p>
+          {detail.creator_handle ? (
+            <Link className="text-link" to={`/@${detail.creator_handle}`}>{detail.creator_display_name}</Link>
+          ) : (
+            <p className="screen-copy">{detail.creator_display_name}</p>
+          )}
           <p className="program-price">{formatUsd(detail.price_cents)}</p>
           <p className="screen-copy">{detail.description ?? ""}</p>
-          <p className="screen-copy">{detail.lesson_count} lessons</p>
+          <p className="screen-copy">{detail.lesson_count} {detail.lesson_count === 1 ? "lesson" : "lessons"}</p>
           <button className="primary-button" type="button" disabled>
             Buy — coming soon
           </button>

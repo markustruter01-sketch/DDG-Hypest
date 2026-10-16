@@ -39,7 +39,8 @@ export const SignupResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable()
+  "bio": zod.string().nullable(),
+  "handle": zod.string().nullable()
 })
 
 
@@ -60,7 +61,8 @@ export const LoginResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable()
+  "bio": zod.string().nullable(),
+  "handle": zod.string().nullable()
 })
 
 
@@ -78,43 +80,52 @@ export const GetCurrentUserResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable()
+  "bio": zod.string().nullable(),
+  "handle": zod.string().nullable()
 })
 
 
 /**
- * Updates display_name and bio. Omitted fields stay unchanged.
+ * Updates display_name, bio and handle. Omitted fields stay unchanged. handle can only be set once (409 if already set or taken).
  * @summary Update the current user
  */
 export const updateCurrentUserBodyDisplayNameMax = 60;
 
 export const updateCurrentUserBodyBioMax = 500;
 
+export const updateCurrentUserBodyHandleRegExp = new RegExp('^[a-z0-9_]{3,30}$');
 
 
 export const UpdateCurrentUserBody = zod.object({
   "display_name": zod.string().min(1).max(updateCurrentUserBodyDisplayNameMax).optional(),
-  "bio": zod.string().max(updateCurrentUserBodyBioMax).nullish()
+  "bio": zod.string().max(updateCurrentUserBodyBioMax).nullish(),
+  "handle": zod.string().regex(updateCurrentUserBodyHandleRegExp).optional()
 })
 
 export const UpdateCurrentUserResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable()
+  "bio": zod.string().nullable(),
+  "handle": zod.string().nullable()
 })
 
 
 /**
- * Public. Published programs only, with no lesson content.
+ * Public. Published programs only, with no lesson content. Optional creator filters to one creator's link name.
  * @summary List published programs
  */
+export const ListPublishedProgramsQueryParams = zod.object({
+  "creator": zod.coerce.string().optional()
+})
+
 export const ListPublishedProgramsResponseItem = zod.object({
   "id": zod.number().int(),
   "title": zod.string(),
   "description": zod.string().nullable(),
   "price_cents": zod.number().int(),
   "creator_display_name": zod.string(),
+  "creator_handle": zod.string().nullable(),
   "lesson_count": zod.number().int()
 })
 export const ListPublishedProgramsResponse = zod.array(ListPublishedProgramsResponseItem)
@@ -428,7 +439,33 @@ export const GetPublishedProgramResponse = zod.object({
   "description": zod.string().nullable(),
   "price_cents": zod.number().int(),
   "creator_display_name": zod.string(),
+  "creator_handle": zod.string().nullable(),
   "lesson_count": zod.number().int()
 })
+
+
+/**
+ * @summary Public creator profile
+ */
+export const GetCreatorParams = zod.object({
+  "handle": zod.coerce.string()
+})
+
+export const GetCreatorResponse = zod.object({
+  "handle": zod.string(),
+  "display_name": zod.string(),
+  "bio": zod.string().nullable()
+})
+
+
+/**
+ * Sets a 30-day referral cookie; if logged in, also saves it on the account. Last link wins. Ignored for the creator's own visits.
+ * @summary Record that a visitor arrived through this creator's link
+ */
+export const RecordCreatorVisitParams = zod.object({
+  "handle": zod.coerce.string()
+})
+
+export const RecordCreatorVisitResponse = zod.void()
 
 

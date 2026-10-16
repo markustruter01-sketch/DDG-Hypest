@@ -1,10 +1,13 @@
+import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import {
   getGetCurrentUserQueryKey,
   getListMyProgramsQueryKey,
   useGetCurrentUser,
   useListMyPrograms,
+  useUpdateCurrentUser,
 } from "@workspace/api-client-react";
 import { Wordmark } from "@/components/wordmark";
 import { formatUsd } from "@/lib/money";
@@ -33,7 +36,7 @@ export function HomePage() {
       </main>
     );
   }
-  return <Studio />;
+  return <Studio handle={me.data?.handle ?? null} />;
 }
 
 function Welcome() {
@@ -74,7 +77,7 @@ function Welcome() {
   );
 }
 
-function Studio() {
+function Studio({ handle }: { handle: string | null }) {
   const mine = useListMyPrograms({
     query: { queryKey: getListMyProgramsQueryKey(), retry: false },
     request,
@@ -98,6 +101,8 @@ function Studio() {
             <div className="card stat"><span className="big-number">{live}</span><span className="label">Live</span></div>
             <div className="card stat"><span className="big-number">{lessons}</span><span className="label">Lessons</span></div>
           </div>
+
+          {handle ? <LinkBar handle={handle} /> : <ClaimLink />}
 
           <div className="page-header">
             <h2 className="section-title" style={{ marginTop: 0 }}>Programs</h2>
@@ -128,5 +133,77 @@ function Studio() {
         </>
       ) : null}
     </main>
+  );
+}
+
+/** The creator's own link. Sales through it pay the lower fee. */
+function LinkBar({ handle }: { handle: string }) {
+  const url = `${window.location.host}/@${handle}`;
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/@${handle}`);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="link-bar">
+      <span>{url}</span>
+      <button className="secondary-button" type="button" onClick={copy}>
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+function ClaimLink() {
+  const queryClient = useQueryClient();
+  const update = useUpdateCurrentUser({ request });
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const handle = value.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,30}$/.test(handle)) {
+      setError("3–30 letters, numbers or _");
+      return;
+    }
+    try {
+      await update.mutateAsync({ data: { handle } });
+      await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+    } catch (err) {
+      setError(serverErrorText(err));
+    }
+  }
+
+  return (
+    <form className="account-form" onSubmit={onSubmit}>
+      <label className="field">
+        <span className="field-label">Claim your link</span>
+        <span className="handle-input">
+          <span>{window.location.host}/@</span>
+          <input
+            className="text-input"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={30}
+            required
+          />
+        </span>
+      </label>
+      {error ? <p className="error-text" role="alert">{error}</p> : null}
+      <button className="secondary-button" type="submit" disabled={update.isPending}>
+        Claim
+      </button>
+    </form>
   );
 }

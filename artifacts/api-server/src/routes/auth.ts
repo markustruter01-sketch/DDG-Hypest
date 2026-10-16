@@ -16,7 +16,10 @@ import {
   recordLoginFailure,
 } from "../lib/login-rate-limit";
 import { hashPassword, verifyPassword } from "../lib/passwords";
+import { isLive, readReferralCookie } from "../lib/referral";
+import { isReservedHandle } from "../lib/handles";
 import {
+  authUserColumns,
   clearSessionCookie,
   createSession,
   deleteSessionFromRequest,
@@ -38,6 +41,7 @@ function toCurrentUser(user: AuthUser) {
     email: user.email,
     display_name: user.displayName,
     bio: user.bio,
+    handle: user.handle,
   };
 }
 
@@ -62,6 +66,8 @@ router.post("/auth/signup", async (req, res) => {
   }
 
   const email = parsed.data.email.toLowerCase();
+  const cookieClick = readReferralCookie(req);
+  const referral = cookieClick && isLive(cookieClick, new Date()) ? cookieClick : null;
   try {
     const passwordHash = await hashPassword(parsed.data.password);
     const [user] = await db
@@ -72,13 +78,9 @@ router.post("/auth/signup", async (req, res) => {
         displayName: parsed.data.display_name,
         bio: null,
         adultConfirmedAt: new Date(),
+        ...(referral ? { referredByCreatorId: referral.creatorId, referredAt: referral.at } : {}),
       })
-      .returning({
-        id: usersTable.id,
-        email: usersTable.email,
-        displayName: usersTable.displayName,
-        bio: usersTable.bio,
-      });
+      .returning(authUserColumns);
 
     if (!user) {
       throw new Error("signup insert returned no row");
@@ -109,13 +111,7 @@ router.post("/auth/login", async (req, res) => {
   }
 
   const [user] = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      displayName: usersTable.displayName,
-      bio: usersTable.bio,
-      passwordHash: usersTable.passwordHash,
-    })
+    .select({ ...authUserColumns, passwordHash: usersTable.passwordHash })
     .from(usersTable)
     .where(eq(usersTable.email, email))
     .limit(1);
@@ -156,12 +152,24 @@ router.patch("/auth/me", requireUser, async (req, res) => {
     return;
   }
 
-  const changes: { displayName?: string; bio?: string | null } = {};
+  const changes: { displayName?: string; bio?: string | null; handle?: string } = {};
   if (parsed.data.display_name !== undefined) {
     changes.displayName = parsed.data.display_name;
   }
   if (parsed.data.bio !== undefined) {
     changes.bio = parsed.data.bio;
+  }
+  if (parsed.data.handle !== undefined && parsed.data.handle !== user.handle) {
+    // Set once: changing it would break links creators have already shared.
+    if (user.handle !== null) {
+      res.status(409).json({ message: "link already set" });
+      return;
+    }
+    if (isReservedHandle(parsed.data.handle)) {
+      res.status(409).json({ message: "link name taken" });
+      return;
+    }
+    changes.handle = parsed.data.handle;
   }
 
   if (Object.keys(changes).length === 0) {
@@ -169,16 +177,20 @@ router.patch("/auth/me", requireUser, async (req, res) => {
     return;
   }
 
-  const [updated] = await db
-    .update(usersTable)
-    .set(changes)
-    .where(eq(usersTable.id, user.id))
-    .returning({
-      id: usersTable.id,
-      email: usersTable.email,
-      displayName: usersTable.displayName,
-      bio: usersTable.bio,
-    });
+  let updated: AuthUser | undefined;
+  try {
+    [updated] = await db
+      .update(usersTable)
+      .set(changes)
+      .where(eq(usersTable.id, user.id))
+      .returning(authUserColumns);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ message: "link name taken" });
+      return;
+    }
+    throw err;
+  }
 
   if (!updated) {
     res.status(401).json({ message: "unauthorized" });

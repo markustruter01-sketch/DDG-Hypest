@@ -12,5 +12,6 @@ export interface PublicProgram {
   description: string | null;
   price_cents: number;
   creator_display_name: string;
+  creator_handle: string | null;
   lesson_count: number;
 }
