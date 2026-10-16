@@ -115,7 +115,7 @@ function asMediaSource(value: string | null): "youtube" | null {
   throw new Error("unexpected media source");
 }
 
-function toLesson(lesson: LessonRow) {
+export function toLesson(lesson: LessonRow) {
   return {
     id: lesson.id,
     position: lesson.position,
@@ -176,7 +176,7 @@ async function lessonCounts(programIds: number[]): Promise<Map<number, number>> 
   return counts;
 }
 
-async function loadLessons(programId: number): Promise<LessonRow[]> {
+export async function loadLessons(programId: number): Promise<LessonRow[]> {
   return db
     .select(lessonColumns)
     .from(lessonsTable)
@@ -200,7 +200,7 @@ async function touchProgram(programId: number): Promise<void> {
     .where(eq(programsTable.id, programId));
 }
 
-function readId(schema: { safeParse: (data: unknown) => { success: true; data: { id: number } } | { success: false; error: { issues: { message: string }[] } } }, params: unknown, res: Response): number | undefined {
+export function readId(schema: { safeParse: (data: unknown) => { success: true; data: { id: number } } | { success: false; error: { issues: { message: string }[] } } }, params: unknown, res: Response): number | undefined {
   const parsed = schema.safeParse(params);
   if (!parsed.success) {
     res.status(400).json({ message: invalidMessage(parsed.error.issues) });
@@ -209,8 +209,11 @@ function readId(schema: { safeParse: (data: unknown) => { success: true; data: {
   return parsed.data.id;
 }
 
-/** Single source for public program cards: published only, never lesson content. */
-async function publicPrograms(where: SQL | undefined) {
+/**
+ * Single source for program cards: never lesson content. Published only, unless
+ * includeUnpublished (a buyer keeps a program they bought even if it is unpublished later).
+ */
+export async function publicPrograms(where: SQL | undefined, includeUnpublished = false) {
   const rows = await db
     .select({
       id: programsTable.id,
@@ -222,7 +225,7 @@ async function publicPrograms(where: SQL | undefined) {
     })
     .from(programsTable)
     .innerJoin(usersTable, eq(usersTable.id, programsTable.creatorId))
-    .where(and(eq(programsTable.status, "published"), where))
+    .where(and(includeUnpublished ? undefined : eq(programsTable.status, "published"), where))
     .orderBy(desc(programsTable.id));
 
   const counts = await lessonCounts(rows.map((row) => row.id));

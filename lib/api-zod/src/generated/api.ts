@@ -469,3 +469,72 @@ export const RecordCreatorVisitParams = zod.object({
 export const RecordCreatorVisitResponse = zod.void()
 
 
+/**
+ * @summary Public app settings the web app needs
+ */
+export const GetConfigResponse = zod.object({
+  "dev_tools": zod.boolean(),
+  "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),
+  "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points')
+})
+
+
+/**
+ * @summary Programs the current user has bought, newest first
+ */
+export const ListLibraryResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "price_cents": zod.number().int(),
+  "creator_display_name": zod.string(),
+  "creator_handle": zod.string().nullable(),
+  "lesson_count": zod.number().int()
+})
+export const ListLibraryResponse = zod.array(ListLibraryResponseItem)
+
+
+/**
+ * @summary A program with its lessons, for a buyer who owns it or its creator
+ */
+export const GetLibraryProgramParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const GetLibraryProgramResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "creator_display_name": zod.string(),
+  "creator_handle": zod.string().nullable(),
+  "is_creator": zod.boolean(),
+  "lessons": zod.array(zod.object({
+  "id": zod.number().int(),
+  "position": zod.number().int(),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "sets": zod.number().int().nullable(),
+  "reps": zod.number().int().nullable(),
+  "duration_seconds": zod.number().int().nullable(),
+  "media_source": zod.enum(['youtube']).nullable(),
+  "media_ref": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary DEVELOPMENT ONLY. Grant access as if bought, with no payment. 404 outside development.
+ */
+export const TestPurchaseParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const TestPurchaseResponse = zod.object({
+  "program_id": zod.number().int(),
+  "price_cents": zod.number().int(),
+  "commission_source": zod.enum(['creator_brought', 'hypest_found']),
+  "commission_bps": zod.number().int(),
+  "status": zod.enum(['paid', 'test'])
+})
+
+

@@ -64,6 +64,67 @@ export interface PublicProgram {
   lesson_count: number;
 }
 
+export interface AppConfig {
+  dev_tools: boolean;
+  /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
+  creator_brought_bps: number;
+  /** Hypest's fee on sales Hypest found, in basis points */
+  hypest_found_bps: number;
+}
+
+export type LessonMediaSource = typeof LessonMediaSource[keyof typeof LessonMediaSource] | null;
+
+
+export const LessonMediaSource = {
+  youtube: 'youtube',
+} as const;
+
+export interface Lesson {
+  id: number;
+  position: number;
+  title: string;
+  body: string | null;
+  sets: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  media_source: LessonMediaSource;
+  media_ref: string | null;
+}
+
+export interface LibraryProgram {
+  id: number;
+  title: string;
+  description: string | null;
+  creator_display_name: string;
+  creator_handle: string | null;
+  is_creator: boolean;
+  lessons: Lesson[];
+}
+
+export type PurchaseCommissionSource = typeof PurchaseCommissionSource[keyof typeof PurchaseCommissionSource];
+
+
+export const PurchaseCommissionSource = {
+  creator_brought: 'creator_brought',
+  hypest_found: 'hypest_found',
+} as const;
+
+export type PurchaseStatus = typeof PurchaseStatus[keyof typeof PurchaseStatus];
+
+
+export const PurchaseStatus = {
+  paid: 'paid',
+  test: 'test',
+} as const;
+
+export interface Purchase {
+  program_id: number;
+  price_cents: number;
+  commission_source: PurchaseCommissionSource;
+  commission_bps: number;
+  status: PurchaseStatus;
+}
+
 export interface PublicCreator {
   handle: string;
   display_name: string;
@@ -85,25 +146,6 @@ export interface MyProgramSummary {
   price_cents: number;
   status: MyProgramSummaryStatus;
   lesson_count: number;
-}
-
-export type LessonMediaSource = typeof LessonMediaSource[keyof typeof LessonMediaSource] | null;
-
-
-export const LessonMediaSource = {
-  youtube: 'youtube',
-} as const;
-
-export interface Lesson {
-  id: number;
-  position: number;
-  title: string;
-  body: string | null;
-  sets: number | null;
-  reps: number | null;
-  duration_seconds: number | null;
-  media_source: LessonMediaSource;
-  media_ref: string | null;
 }
 
 export type MyProgramStatus = typeof MyProgramStatus[keyof typeof MyProgramStatus];

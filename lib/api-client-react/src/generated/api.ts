@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AppConfig,
   CreateProgramRequest,
   CurrentUser,
   ErrorMessage,
@@ -27,12 +28,14 @@ import type {
   Lesson,
   LessonPatchRequest,
   LessonWriteRequest,
+  LibraryProgram,
   ListPublishedProgramsParams,
   LoginRequest,
   MyProgram,
   MyProgramSummary,
   PublicCreator,
   PublicProgram,
+  Purchase,
   ReorderLessonsRequest,
   SignupRequest,
   UpdateProfileRequest,
@@ -1700,5 +1703,310 @@ export const useRecordCreatorVisit = <TError = ErrorType<ErrorMessage>,
         TContext
       > => {
       return useMutation(getRecordCreatorVisitMutationOptions(options));
+    }
+
+export const getGetConfigUrl = () => {
+
+
+
+
+  return `/api/config`
+}
+
+/**
+ * @summary Public app settings the web app needs
+ */
+export const getConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<AppConfig> => {
+
+  return customFetch<AppConfig>(getGetConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigQueryKey = () => {
+    return [
+    `/api/config`
+    ] as const;
+    }
+
+
+export const getGetConfigQueryOptions = <TData = Awaited<ReturnType<typeof getConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfig>>> = ({ signal }) => getConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getConfig>>>
+export type GetConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Public app settings the web app needs
+ */
+
+export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListLibraryUrl = () => {
+
+
+
+
+  return `/api/library`
+}
+
+/**
+ * @summary Programs the current user has bought, newest first
+ */
+export const listLibrary = async ( options?: Parameters<typeof customFetch>[1]): Promise<PublicProgram[]> => {
+
+  return customFetch<PublicProgram[]>(getListLibraryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLibraryQueryKey = () => {
+    return [
+    `/api/library`
+    ] as const;
+    }
+
+
+export const getListLibraryQueryOptions = <TData = Awaited<ReturnType<typeof listLibrary>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLibraryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLibrary>>> = ({ signal }) => listLibrary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof listLibrary>>>
+export type ListLibraryQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Programs the current user has bought, newest first
+ */
+
+export function useListLibrary<TData = Awaited<ReturnType<typeof listLibrary>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLibraryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetLibraryProgramUrl = (id: number,) => {
+
+
+
+
+  return `/api/library/${id}`
+}
+
+/**
+ * @summary A program with its lessons, for a buyer who owns it or its creator
+ */
+export const getLibraryProgram = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<LibraryProgram> => {
+
+  return customFetch<LibraryProgram>(getGetLibraryProgramUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLibraryProgramQueryKey = (id: number,) => {
+    return [
+    `/api/library/${id}`
+    ] as const;
+    }
+
+
+export const getGetLibraryProgramQueryOptions = <TData = Awaited<ReturnType<typeof getLibraryProgram>>, TError = ErrorType<ErrorMessage>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLibraryProgram>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLibraryProgramQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLibraryProgram>>> = ({ signal }) => getLibraryProgram(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLibraryProgram>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLibraryProgramQueryResult = NonNullable<Awaited<ReturnType<typeof getLibraryProgram>>>
+export type GetLibraryProgramQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary A program with its lessons, for a buyer who owns it or its creator
+ */
+
+export function useGetLibraryProgram<TData = Awaited<ReturnType<typeof getLibraryProgram>>, TError = ErrorType<ErrorMessage>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLibraryProgram>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLibraryProgramQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getTestPurchaseUrl = (id: number,) => {
+
+
+
+
+  return `/api/programs/${id}/test-purchase`
+}
+
+/**
+ * @summary DEVELOPMENT ONLY. Grant access as if bought, with no payment. 404 outside development.
+ */
+export const testPurchase = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Purchase> => {
+
+  return customFetch<Purchase>(getTestPurchaseUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getTestPurchaseMutationKey = () => ['testPurchase'] as const;
+
+export const getTestPurchaseMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testPurchase>>, TError,TestPurchaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testPurchase>>, TError,TestPurchaseMutationVariables, TContext> => {
+
+const mutationKey = getTestPurchaseMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testPurchase>>, TestPurchaseMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  testPurchase(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestPurchaseMutationResult = NonNullable<Awaited<ReturnType<typeof testPurchase>>>
+
+    export type TestPurchaseMutationError = ErrorType<ErrorMessage>
+    export type TestPurchaseMutationVariables = {id: number}
+
+    /**
+ * @summary DEVELOPMENT ONLY. Grant access as if bought, with no payment. 404 outside development.
+ */
+export const useTestPurchase = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testPurchase>>, TError,TestPurchaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testPurchase>>,
+        TError,
+        TestPurchaseMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTestPurchaseMutationOptions(options));
     }
 
