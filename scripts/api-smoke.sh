@@ -65,3 +65,9 @@ echo "== logged-in visit saves on the account (check DB: bob referred by ann)"
 r $C POST /creators/ann_pt/visit
 echo "== signup after a creator link saves the referral on the account (check DB: referred_by_creator_id set for dee@test.com)"
 r $D POST /auth/signup -d '{"email":"dee@test.com","password":"longenough4","display_name":"Dee","adult_confirmed":true}'
+echo "== library (expect: 401, 403 not bought, 200 creator sees lessons, 200 empty library, 404 test-purchase outside dev)"
+r $L GET /library/$P
+r $C GET /library/$P
+printf 'creator lessons: '; curl -s -b $A $B/library/$P | grep -o '"lessons":\[[^]]*' | head -c 80; echo
+r $C GET /library
+r $C POST /programs/$P/test-purchase

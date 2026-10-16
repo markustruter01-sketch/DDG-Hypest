@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 
 /**
- * DEVELOPMENT ONLY: with no session, act as a fixed "Dev Creator" account so
+ * DEVELOPMENT ONLY (also gates the other dev tools, e.g. test purchases): with no session, act as a fixed "Dev Creator" account so
  * Markus doesn't have to log in on every preview.
  * Two gates: NODE_ENV must be "development" (production runs set "production")
  * AND DEV_AUTO_LOGIN must be "1" (set only in the api-server dev script).
@@ -14,7 +14,7 @@ const GUEST_COOKIE = "hypest_dev_guest";
 // Not a valid scrypt hash, so nobody can log in to this account with a password.
 const NO_PASSWORD = "disabled";
 
-export function devAutoLoginOn(): boolean {
+export function devToolsOn(): boolean {
   return process.env.NODE_ENV === "development" && process.env.DEV_AUTO_LOGIN === "1";
 }
 
@@ -25,7 +25,7 @@ function wantsGuest(req: Request): boolean {
 
 /** Called on logout / login so dev auto-login steps aside or comes back. */
 export function setDevGuest(res: Response, guest: boolean): void {
-  if (!devAutoLoginOn()) {
+  if (!devToolsOn()) {
     return;
   }
   if (guest) {
@@ -37,7 +37,7 @@ export function setDevGuest(res: Response, guest: boolean): void {
 
 /** The dev account id to act as, or null. Creates the account on first use. */
 export async function devUserId(req: Request): Promise<number | null> {
-  if (!devAutoLoginOn() || wantsGuest(req)) {
+  if (!devToolsOn() || wantsGuest(req)) {
     return null;
   }
   await db

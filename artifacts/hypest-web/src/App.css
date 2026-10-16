@@ -594,6 +594,79 @@ textarea.text-input { resize: vertical; }
   color: var(--color-ink);
 }
 
+/* ---------- Program page ---------- */
+
+.program-hero {
+  display: flex;
+  flex-direction: column;
+  min-height: 15rem;
+  margin: 0 calc(var(--space-5) * -1);
+  padding: var(--space-2) var(--space-5) var(--space-5);
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+}
+.buy-bar {
+  position: fixed;
+  z-index: 4;
+  left: 50%;
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  width: min(100%, var(--shell-width));
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--hairline) solid var(--color-line);
+  background: var(--color-card);
+  transform: translateX(-50%);
+}
+.buy-bar .error-text { grid-column: 1 / -1; }
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.tile-grid .tile { width: auto; }
+
+/* ---------- Workout player (deliberately dark) ---------- */
+
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 100dvh;
+  padding: var(--space-3) var(--space-5) calc(var(--button-height) + var(--space-8) + env(safe-area-inset-bottom));
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+}
+.progress { display: flex; gap: 3px; }
+.progress span { flex: 1; height: 4px; background: var(--color-dark-line); }
+.progress .on { background: var(--color-on-dark); }
+.video { position: relative; aspect-ratio: 16 / 9; margin: 0 calc(var(--space-5) * -1); background: #000; }
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: var(--hairline) solid var(--color-dark-line);
+}
+.metrics > div { display: flex; flex-direction: column; padding: var(--space-3) 0; }
+.player-body { margin: 0; color: var(--color-on-dark-muted); font-size: 1rem; line-height: 1.5; white-space: pre-line; }
+.player-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-2);
+  width: min(100%, var(--shell-width));
+  padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--color-dark);
+  border-top: var(--hairline) solid var(--color-dark-line);
+  transform: translateX(-50%);
+}
+.player .secondary-button { border-color: rgb(255 255 255 / 40%); color: var(--color-on-dark); }
+
 /* ---------- Bottom navigation ---------- */
 
 .bottom-navigation {

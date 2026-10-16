@@ -18,6 +18,7 @@ import {
 import { hashPassword, verifyPassword } from "../lib/passwords";
 import { isLive, readReferralCookie } from "../lib/referral";
 import { isReservedHandle } from "../lib/handles";
+import { isUniqueViolation } from "../lib/db-errors";
 import {
   authUserColumns,
   clearSessionCookie,
@@ -43,19 +44,6 @@ function toCurrentUser(user: AuthUser) {
     bio: user.bio,
     handle: user.handle,
   };
-}
-
-function isUniqueViolation(err: unknown): boolean {
-  const seen = new Set<unknown>();
-  let current: unknown = err;
-  while (current && typeof current === "object" && !seen.has(current)) {
-    seen.add(current);
-    if ("code" in current && (current as { code?: unknown }).code === "23505") {
-      return true;
-    }
-    current = "cause" in current ? (current as { cause?: unknown }).cause : undefined;
-  }
-  return false;
 }
 
 router.post("/auth/signup", async (req, res) => {

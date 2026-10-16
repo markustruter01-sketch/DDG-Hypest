@@ -16,6 +16,8 @@ tags:
     description: Creator drafts and published programs
   - name: creators
     description: Public creator pages and creator links
+  - name: library
+    description: Programs a buyer owns, and the lessons inside them
 paths:
   /healthz:
     get:
@@ -549,6 +551,108 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /config:
+    get:
+      operationId: getConfig
+      tags: [health]
+      summary: Public app settings the web app needs
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppConfig"
+  /library:
+    get:
+      operationId: listLibrary
+      tags: [library]
+      summary: Programs the current user has bought, newest first
+      responses:
+        "200":
+          description: Owned programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicProgram"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /library/{id}:
+    get:
+      operationId: getLibraryProgram
+      tags: [library]
+      summary: A program with its lessons, for a buyer who owns it or its creator
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      responses:
+        "200":
+          description: Program with lessons
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryProgram"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Not bought
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/{id}/test-purchase:
+    post:
+      operationId: testPurchase
+      tags: [library]
+      summary: DEVELOPMENT ONLY. Grant access as if bought, with no payment. 404 outside development.
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      responses:
+        "201":
+          description: Test purchase recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+        "400":
+          description: Cannot buy own program
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Already owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   parameters:
     Handle:
@@ -686,6 +790,66 @@ components:
         - creator_display_name
         - creator_handle
         - lesson_count
+    AppConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        dev_tools:
+          type: boolean
+      required:
+        - dev_tools
+    LibraryProgram:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        creator_display_name:
+          type: string
+        creator_handle:
+          type: string
+          nullable: true
+        is_creator:
+          type: boolean
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lesson"
+      required:
+        - id
+        - title
+        - description
+        - creator_display_name
+        - creator_handle
+        - is_creator
+        - lessons
+    Purchase:
+      type: object
+      additionalProperties: false
+      properties:
+        program_id:
+          type: integer
+        price_cents:
+          type: integer
+        commission_source:
+          type: string
+          enum: [creator_brought, hypest_found]
+        commission_bps:
+          type: integer
+        status:
+          type: string
+          enum: [paid, test]
+      required:
+        - program_id
+        - price_cents
+        - commission_source
+        - commission_bps
+        - status
     PublicCreator:
       type: object
       additionalProperties: false
