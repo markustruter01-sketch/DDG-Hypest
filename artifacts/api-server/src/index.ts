@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { seedCommissionRatesIfEmpty } from "./lib/seed-commission-rates";
 
 const rawPort = process.env["PORT"];
 
@@ -13,6 +14,13 @@ const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+
+try {
+  await seedCommissionRatesIfEmpty();
+} catch (err) {
+  logger.error({ err }, "Failed to seed commission rates");
+  process.exit(1);
 }
 
 app.listen(port, (err) => {

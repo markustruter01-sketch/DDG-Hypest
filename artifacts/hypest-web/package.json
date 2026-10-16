@@ -10,6 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@workspace/api-client-react": "workspace:*",
     "express": "^5.2.1",
     "react-router-dom": "^6.28.0"
   },

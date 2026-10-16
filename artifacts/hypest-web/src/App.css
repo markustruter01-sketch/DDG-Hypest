@@ -128,6 +128,181 @@
   stroke-width: 1.8;
 }
 
+.screen-copy {
+  margin: var(--space-3) 0 0;
+  color: var(--color-secondary);
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: var(--space-6);
+}
+
+.profile-name {
+  margin: var(--space-0);
+  color: var(--color-main);
+  font-size: var(--font-size-title-min);
+  font-weight: var(--font-weight-title);
+  line-height: var(--line-height-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field-label {
+  color: var(--color-secondary);
+}
+
+.text-input {
+  width: 100%;
+  min-height: var(--space-12);
+  padding: var(--space-3) var(--space-4);
+  border: var(--hairline) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-main);
+  font: inherit;
+}
+
+.text-input:focus-visible {
+  outline: var(--hairline) solid var(--color-teal);
+  outline-offset: var(--space-1);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-main);
+}
+
+.checkbox-row input {
+  width: var(--space-5);
+  height: var(--space-5);
+  accent-color: var(--color-teal);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.primary-button,
+.secondary-button,
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--space-12);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-round);
+  font-weight: var(--font-weight-nav);
+  text-decoration: none;
+}
+
+.primary-button {
+  border: 0;
+  background: var(--color-teal);
+  color: var(--color-page);
+}
+
+.secondary-button {
+  border: var(--hairline) solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-main);
+}
+
+.text-link {
+  color: var(--color-teal);
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.text-link:focus-visible {
+  outline: var(--hairline) solid var(--color-teal);
+  outline-offset: var(--space-1);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  color: var(--color-secondary);
+}
+
+.error-text {
+  margin: var(--space-0);
+  color: var(--color-orange);
+}
+
+.program-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 0;
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.program-card {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: var(--hairline) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-main);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.program-card-title {
+  color: var(--color-main);
+  font-weight: var(--font-weight-title);
+}
+
+.program-price {
+  color: var(--color-teal);
+}
+
+.section-title {
+  margin: var(--space-8) 0 0;
+  color: var(--color-main);
+  font-size: 1.25rem;
+}
+
+.lesson-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--hairline) solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+button.text-link {
+  border: 0;
+  background: transparent;
+}
+
 @media (min-width: 481px) {
   .app-shell {
     border-inline: var(--hairline) solid var(--color-line);

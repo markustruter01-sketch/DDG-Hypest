@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Account authentication
+  - name: programs
+    description: Creator drafts and published programs
 paths:
   /healthz:
     get:
@@ -24,7 +28,490 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Create an account
+      description: Creates a user and sets the hypest_session cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in
+      description: Checks email and password and sets the hypest_session cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "429":
+          description: Too many failed login attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      description: Deletes the session row for the hypest_session cookie and clears that cookie.
+      responses:
+        "204":
+          description: Logged out
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    patch:
+      operationId: updateCurrentUser
+      tags: [auth]
+      summary: Update the current user
+      description: Updates display_name and bio. Omitted fields stay unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs:
+    get:
+      operationId: listPublishedPrograms
+      tags: [programs]
+      summary: List published programs
+      description: Public. Published programs only, with no lesson content.
+      responses:
+        "200":
+          description: Published programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicProgram"
+    post:
+      operationId: createProgram
+      tags: [programs]
+      summary: Create a draft program
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProgramRequest"
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProgram"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine:
+    get:
+      operationId: listMyPrograms
+      tags: [programs]
+      summary: List the current user's programs
+      responses:
+        "200":
+          description: Programs owned by the current user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyProgramSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine/{id}:
+    get:
+      operationId: getMyProgram
+      tags: [programs]
+      summary: Get one of the current user's programs, including lessons
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      responses:
+        "200":
+          description: Program with lessons
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProgram"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    patch:
+      operationId: updateMyProgram
+      tags: [programs]
+      summary: Update one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProgramRequest"
+      responses:
+        "200":
+          description: Updated program
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProgram"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine/{id}/lessons:
+    post:
+      operationId: createLesson
+      tags: [programs]
+      summary: Add a lesson to one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonWriteRequest"
+      responses:
+        "201":
+          description: Lesson created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lesson"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine/{id}/lessons/reorder:
+    post:
+      operationId: reorderLessons
+      tags: [programs]
+      summary: Reorder lessons in one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderLessonsRequest"
+      responses:
+        "200":
+          description: Lessons in the new order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lesson"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine/{id}/lessons/{lessonId}:
+    patch:
+      operationId: updateLesson
+      tags: [programs]
+      summary: Update a lesson in one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+        - $ref: "#/components/parameters/LessonId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonPatchRequest"
+      responses:
+        "200":
+          description: Updated lesson
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lesson"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    delete:
+      operationId: deleteLesson
+      tags: [programs]
+      summary: Delete a lesson from one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+        - $ref: "#/components/parameters/LessonId"
+      responses:
+        "204":
+          description: Lesson deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine/{id}/publish:
+    post:
+      operationId: publishProgram
+      tags: [programs]
+      summary: Publish one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      responses:
+        "200":
+          description: Published program
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProgram"
+        "400":
+          description: Program cannot be published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/mine/{id}/unpublish:
+    post:
+      operationId: unpublishProgram
+      tags: [programs]
+      summary: Unpublish one of the current user's programs
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      responses:
+        "200":
+          description: Unpublished program
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProgram"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /programs/{id}:
+    get:
+      operationId: getPublishedProgram
+      tags: [programs]
+      summary: Get one published program
+      description: Public. Published programs only, with no lesson content.
+      parameters:
+        - $ref: "#/components/parameters/ProgramId"
+      responses:
+        "200":
+          description: Published program
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProgram"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
+  parameters:
+    ProgramId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    LessonId:
+      name: lessonId
+      in: path
+      required: true
+      schema:
+        type: integer
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +520,300 @@ components:
           type: string
       required:
         - status
+    ErrorMessage:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        display_name:
+          type: string
+        bio:
+          type: string
+          nullable: true
+      required:
+        - id
+        - email
+        - display_name
+        - bio
+    SignupRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+          maxLength: 200
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        adult_confirmed:
+          type: boolean
+          const: true
+      required:
+        - email
+        - password
+        - display_name
+        - adult_confirmed
+    UpdateProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        bio:
+          type: string
+          maxLength: 500
+          nullable: true
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          maxLength: 200
+      required:
+        - email
+        - password
+    PublicProgram:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price_cents:
+          type: integer
+        creator_display_name:
+          type: string
+        lesson_count:
+          type: integer
+      required:
+        - id
+        - title
+        - description
+        - price_cents
+        - creator_display_name
+        - lesson_count
+    MyProgramSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price_cents:
+          type: integer
+        status:
+          type: string
+          enum: [draft, published]
+        lesson_count:
+          type: integer
+      required:
+        - id
+        - title
+        - description
+        - price_cents
+        - status
+        - lesson_count
+    Lesson:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        position:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        sets:
+          type: integer
+          nullable: true
+        reps:
+          type: integer
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        media_source:
+          type: string
+          nullable: true
+          enum: [youtube]
+        media_ref:
+          type: string
+          nullable: true
+      required:
+        - id
+        - position
+        - title
+        - body
+        - sets
+        - reps
+        - duration_seconds
+        - media_source
+        - media_ref
+    MyProgram:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price_cents:
+          type: integer
+        status:
+          type: string
+          enum: [draft, published]
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lesson"
+      required:
+        - id
+        - title
+        - description
+        - price_cents
+        - status
+        - lessons
+    CreateProgramRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        price_cents:
+          type: integer
+          minimum: 500
+      required:
+        - title
+        - price_cents
+    UpdateProgramRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        price_cents:
+          type: integer
+          minimum: 500
+    LessonWriteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 5000
+          nullable: true
+        sets:
+          type: integer
+          minimum: 0
+          nullable: true
+        reps:
+          type: integer
+          minimum: 0
+          nullable: true
+        duration_seconds:
+          type: integer
+          minimum: 0
+          nullable: true
+        media_source:
+          type: string
+          nullable: true
+          enum: [youtube]
+        media_ref:
+          type: string
+          nullable: true
+      required:
+        - title
+    LessonPatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 5000
+          nullable: true
+        sets:
+          type: integer
+          minimum: 0
+          nullable: true
+        reps:
+          type: integer
+          minimum: 0
+          nullable: true
+        duration_seconds:
+          type: integer
+          minimum: 0
+          nullable: true
+        media_source:
+          type: string
+          nullable: true
+          enum: [youtube]
+        media_ref:
+          type: string
+          nullable: true
+    ReorderLessonsRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        lesson_ids:
+          type: array
+          items:
+            type: integer
+      required:
+        - lesson_ids
 
