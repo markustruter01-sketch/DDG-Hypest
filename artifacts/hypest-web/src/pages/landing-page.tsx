@@ -1,34 +1,24 @@
 import { Link } from "react-router-dom";
+import { Activity, CalendarCheck, LifeBuoy, Repeat, ShieldCheck } from "lucide-react";
 import { Wordmark } from "@/components/wordmark";
-import { formatUsd } from "@/lib/money";
-import { keepCents, useAppConfig } from "@/lib/config";
+import { ShowMe } from "@/components/show-me";
+import { useAppConfig } from "@/lib/config";
+import { img, money, useCoaches } from "@/lib/coaching";
 
-const img = (name: string) => `${import.meta.env.BASE_URL}img/${name}`;
-
-const EXAMPLE_PRICE_CENTS = 2400;
-
-const STEPS = [
-  { n: "01", title: "Make a program", icon: "M4 5h16M4 12h16M4 19h10" },
-  { n: "02", title: "Share your link", icon: "M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" },
-  { n: "03", title: "Get paid", icon: "M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6" },
+const FEATURES = [
+  { Icon: CalendarCheck, word: "Built for you", note: "Your goal, days, kit" },
+  { Icon: Activity, word: "Log every set", note: "Weights, reps, streaks" },
+  { Icon: Repeat, word: "Adapts", note: "Each block builds on the last" },
+  { Icon: LifeBuoy, word: "Swaps", note: "Sore? A gentler move" },
+  { Icon: ShieldCheck, word: "Safety stop", note: "Warning signs pause the plan" },
 ];
 
-const STYLES = [
-  { file: "yoga.jpg", label: "Yoga", alt: "Woman stretching outdoors" },
-  { file: "run.jpg", label: "Running", alt: "Man running through a city" },
-  { file: "strength.jpg", label: "Strength", alt: "Man smiling at a running track" },
-];
-
-/** Public landing page at "/" for anyone not logged in. Photos allowed: this is a hero page. */
+/** Public landing page for the AI-coach app. Photos allowed: hero page. */
 export function LandingPage() {
   const config = useAppConfig();
-  const linkPct = config ? config.creator_brought_bps / 100 : null;
-  const splits = config
-    ? [
-        { label: "Your link", feeBps: config.creator_brought_bps },
-        { label: "Hypest found them", feeBps: config.hypest_found_bps },
-      ]
-    : [];
+  const coaches = useCoaches();
+  const p = config?.prices;
+
   return (
     <main className="landing">
       <section className="landing-hero">
@@ -39,99 +29,92 @@ export function LandingPage() {
         <div className="landing-inner landing-hero-content">
           <div className="page-header">
             <Wordmark tone="light" />
-            <Link className="secondary-button" to="/login" style={{ minHeight: "var(--tap)" }}>
-              Log in
-            </Link>
+            <Link className="secondary-button" to="/login" style={{ minHeight: "var(--tap)" }}>Log in</Link>
           </div>
-          <h1 className="hero-title">
-            Sell your
-            <br />
-            training.
-          </h1>
+          <h1 className="hero-title">Your coach.<br />Your plan.<br />Every week.</h1>
           <div className="hero-stats">
-            <div><span className="big-number">$0</span><span className="label">To join</span></div>
-            <div><span className="big-number">{linkPct === null ? "–" : `${linkPct}%`}</span><span className="label">Your link fee</span></div>
+            <div><span className="big-number">{p ? money(p.intro_plan_cents) : "–"}</span><span className="label">First plan</span></div>
+            <div><span className="big-number">{coaches.data?.length ?? 5}</span><span className="label">AI coaches</span></div>
           </div>
           <div className="button-row landing-ctas">
-            <Link className="primary-button" to="/signup" style={{ justifyContent: "space-between" }}>
-              Start selling <span aria-hidden="true">→</span>
-            </Link>
-            <Link className="secondary-button" to="/explore">
-              I'm here to train
-            </Link>
+            <Link className="primary-button" to="/coaches" style={{ justifyContent: "space-between" }}>Meet your coach <span aria-hidden="true">→</span></Link>
+            <a className="secondary-button" href="#show-me">See how it works</a>
           </div>
         </div>
       </section>
 
-      <section className="landing-section">
+      <section className="landing-section" id="show-me">
         <div className="landing-inner">
-          <h2 className="landing-h2">How it works</h2>
-          <ol className="steps">
-            {STEPS.map((s) => (
-              <li key={s.n} className="step">
-                <span className="step-n">{s.n}</span>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" aria-hidden="true">
-                  <path d={s.icon} />
-                </svg>
-                <span className="step-title">{s.title}</span>
-              </li>
-            ))}
-          </ol>
+          <h2 className="landing-h2">See it work</h2>
+          <ShowMe />
         </div>
       </section>
 
       <section className="landing-section landing-section-white">
         <div className="landing-inner">
-          <h2 className="landing-h2">Where a {formatUsd(EXAMPLE_PRICE_CENTS).replace(".00", "")} sale goes</h2>
-          <div className="splits">
-            {splits.map((s) => {
-              const keep = keepCents(EXAMPLE_PRICE_CENTS, s.feeBps);
-              const keepPct = 100 - s.feeBps / 100;
-              return (
-                <div key={s.label}>
-                  <div className="split-head">
-                    <span>{s.label}</span>
-                    <span>You {formatUsd(keep)}</span>
-                  </div>
-                  <div className="split-bar" role="img" aria-label={`${s.label}: you keep ${keepPct}%, Hypest ${100 - keepPct}%`}>
-                    <span style={{ width: `${keepPct}%` }} />
-                    <span className="split-fee" style={{ width: `${100 - keepPct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+          <h2 className="landing-h2">What you get</h2>
+          <div className="feature-grid">
+            {FEATURES.map(({ Icon, word, note }) => (
+              <div key={word} className="feature">
+                <Icon size={26} aria-hidden="true" />
+                <b>{word}</b>
+                <span className="screen-copy">{note}</span>
+              </div>
+            ))}
           </div>
-          <p className="label" style={{ marginTop: "var(--space-3)" }}>Before card fees</p>
         </div>
       </section>
 
       <section className="landing-section">
         <div className="landing-inner">
-          <h2 className="landing-h2">Any kind of training</h2>
-          <div className="style-grid">
-            {STYLES.map((s) => (
-              <figure key={s.file} className="style-tile">
-                <img src={img(s.file)} alt={s.alt} loading="lazy" />
-                <figcaption>{s.label}</figcaption>
-              </figure>
+          <h2 className="landing-h2">Meet the coaches</h2>
+          <div className="tile-row landing-coaches">
+            {coaches.data?.map((c) => (
+              <Link key={c.id} to={`/coaches/${c.id}`} className="coach-card" style={{ width: "11rem", flex: "none", backgroundImage: `linear-gradient(rgb(14 14 14 / 0%) 35%, rgb(14 14 14 / 85%)), url("${img(c.photo)}")` }}>
+                <span className="ai-tag">AI coach</span>
+                <span className="coach-card-name">{c.name}</span>
+                <span className="tile-meta">{c.title}</span>
+              </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {p ? (
+        <section className="landing-section landing-section-white">
+          <div className="landing-inner">
+            <h2 className="landing-h2">Simple pricing</h2>
+            <div className="price-grid">
+              <div className="price"><span className="label">First plan</span><b>{money(p.intro_plan_cents)}</b><span className="screen-copy">then {money(p.plan_cents)} a plan</span></div>
+              <div className="price"><span className="label">Plans</span><b>{money(p.tier1_cents)}<small>/mo</small></b><span className="screen-copy">New plan every 4 weeks</span></div>
+              <div className="price price-best"><span className="label">Coaching</span><b>{money(p.tier2_cents)}<small>/mo</small></b><span className="screen-copy">Logging, swaps, plans that adapt</span></div>
+            </div>
+            <p className="label" style={{ marginTop: "var(--space-3)" }}>US$</p>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="landing-section">
+        <div className="landing-inner safety">
+          <ShieldCheck size={32} aria-hidden="true" />
+          <div>
+            <h2 className="landing-h2" style={{ marginBottom: "var(--space-2)" }}>Safe by design</h2>
+            <p className="screen-copy">Every exercise comes from a vetted list. Every plan is checked before you see it. Warning signs pause your plan and send you to a doctor. Hypest is not medical advice; your health and safety are your call, and we do our part.</p>
           </div>
         </div>
       </section>
 
       <section className="landing-cta">
         <div className="landing-inner">
-          <h2 className="hero-title" style={{ margin: "0 0 var(--space-5)" }}>Your first program, today.</h2>
-          <Link className="primary-button" to="/signup" style={{ justifyContent: "space-between", maxWidth: "26rem" }}>
-            Start selling <span aria-hidden="true">→</span>
-          </Link>
+          <h2 className="hero-title" style={{ margin: "0 0 var(--space-5)" }}>Start today.</h2>
+          <Link className="primary-button" to="/coaches" style={{ justifyContent: "space-between", maxWidth: "26rem" }}>Meet your coach <span aria-hidden="true">→</span></Link>
         </div>
       </section>
 
       <footer className="landing-footer">
         <div className="landing-inner page-header">
           <Wordmark tone="dark" />
-          <Link className="text-link" to="/explore">Explore</Link>
+          <Link className="text-link" to="/login">Log in</Link>
         </div>
       </footer>
     </main>
