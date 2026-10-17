@@ -2,7 +2,7 @@ import { Navigate } from "react-router-dom";
 import { getGetCurrentUserQueryKey, useGetCurrentUser } from "@workspace/api-client-react";
 import { LandingPage } from "@/pages/landing-page";
 import { Studio } from "@/pages/studio-page";
-import { Dashboard } from "@/pages/dashboard-page";
+import { TodayPage } from "@/pages/today-page";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 
 const request = { credentials: "include" as const };
@@ -30,7 +30,7 @@ export function HomePage() {
       </main>
     );
   }
-  return me.data ? <Dashboard user={me.data} /> : null;
+  return me.data ? <TodayPage user={me.data} /> : null;
 }
 
 /** "/studio" — creator dashboard; logged-out visitors go to the landing page. */

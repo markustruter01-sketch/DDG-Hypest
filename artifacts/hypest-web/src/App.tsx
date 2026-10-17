@@ -1,36 +1,37 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { CalendarDays, House, LineChart, MessageCircle, UserRound } from 'lucide-react';
 import { getGetCurrentUserQueryKey, useGetCurrentUser } from '@workspace/api-client-react';
-import { CreatePage } from '@/pages/create-page';
-import { CreatorRoute } from '@/pages/creator-page';
-import { ExploreDetailPage } from '@/pages/explore-detail-page';
-import { ExplorePage } from '@/pages/explore-page';
-import { HomePage, StudioPage } from '@/pages/home-page';
-import { LibraryPage } from '@/pages/library-page';
-import { PlayerPage } from '@/pages/player-page';
+import { HomePage } from '@/pages/home-page';
+import { CoachesPage, CoachPage } from '@/pages/coaches-page';
+import { CoachTabPage } from '@/pages/coach-tab-page';
+import { OnboardingPage } from '@/pages/onboarding-page';
+import { PlanPage } from '@/pages/plan-page';
+import { ProgressPage } from '@/pages/progress-page';
+import { SessionPage } from '@/pages/session-page';
 import { LoginPage } from '@/pages/login-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { SignupPage } from '@/pages/signup-page';
 import { errorStatus } from '@/lib/server-error';
 
-// Create lives inside Studio (its + button and program tiles open /create), so Home fits in five tabs.
+// AI-coach app (pivot, 18 Oct 2026). The creator-marketplace pages (Studio, Create, Explore,
+// Library, creator links) stay in src/pages but are no longer routed.
 const destinations = [
-  { label: 'Home', path: '/', also: [] },
-  { label: 'Explore', path: '/explore', also: [] },
-  { label: 'Studio', path: '/studio', also: ['/create'] },
-  { label: 'Library', path: '/library', also: [] },
-  { label: 'Me', path: '/profile', also: [] },
+  { label: 'Today', path: '/', Icon: House, also: [] as string[] },
+  { label: 'Plan', path: '/plan', Icon: CalendarDays, also: [] as string[] },
+  { label: 'Coach', path: '/coach', Icon: MessageCircle, also: ['/coaches', '/start'] },
+  { label: 'Progress', path: '/progress', Icon: LineChart, also: [] as string[] },
+  { label: 'Me', path: '/profile', Icon: UserRound, also: [] as string[] },
 ] as const;
 
 function BottomNavigation() {
   const { pathname } = useLocation();
-
   return (
     <nav className="bottom-navigation" aria-label="Main navigation">
-      {destinations.map(({ label, path, also }) => {
-        const paths: readonly string[] = [path, ...also];
-        const active = path === '/' ? pathname === '/' : paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+      {destinations.map(({ label, path, Icon, also }) => {
+        const active = path === '/' ? pathname === '/' : [path, ...also].some((p) => pathname === p || pathname.startsWith(`${p}/`));
         return (
           <Link key={path} to={path} className="nav-item" aria-current={active ? 'page' : undefined}>
+            <Icon size={20} aria-hidden="true" />
             {label}
           </Link>
         );
@@ -45,26 +46,28 @@ function AppShell() {
     query: { queryKey: getGetCurrentUserQueryKey(), retry: false },
     request: { credentials: 'include' },
   });
-  // The logged-out landing page is full width (phone and PC) with no tab bar.
-  const onLanding = pathname === '/' && me.isError && errorStatus(me.error) === 401;
+  const loggedOut = me.isError && errorStatus(me.error) === 401;
+  // Full-screen places: the logged-out landing page, onboarding, and a live session.
+  const onLanding = pathname === '/' && loggedOut;
+  const fullScreen = onLanding || pathname.startsWith('/session/') || pathname.startsWith('/start/') || (loggedOut && pathname.startsWith('/coaches'));
 
   return (
     <div className={onLanding ? 'app-shell app-shell-wide' : 'app-shell'}>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/studio" element={<StudioPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/explore/:programId" element={<ExploreDetailPage />} />
-        <Route path="/create" element={<CreatePage />} />
-        <Route path="/library" element={<LibraryPage />} />
-        <Route path="/train/:programId" element={<PlayerPage />} />
+        <Route path="/plan" element={<PlanPage />} />
+        <Route path="/coach" element={<CoachTabPage />} />
+        <Route path="/coaches" element={<CoachesPage />} />
+        <Route path="/coaches/:coachId" element={<CoachPage />} />
+        <Route path="/start/:coachId" element={<OnboardingPage />} />
+        <Route path="/session/:sessionId" element={<SessionPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/:slug" element={<CreatorRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      {onLanding || pathname.startsWith('/train/') ? null : <BottomNavigation />}
+      {fullScreen ? null : <BottomNavigation />}
     </div>
   );
 }

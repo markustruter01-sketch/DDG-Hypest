@@ -758,7 +758,7 @@ paths:
     post:
       operationId: createPlan
       tags: [coaching]
-      summary: Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership.
+      summary: Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership (members may replace a current plan).
       responses:
         "201":
           description: Plan built

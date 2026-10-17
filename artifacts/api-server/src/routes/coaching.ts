@@ -208,9 +208,12 @@ router.post("/me/plans", requireUser, async (_req, res) => {
   const user = authUser(res);
   const profile = await profileOf(user.id);
   if (!profile) return void res.status(409).json({ message: "answer the questions first" });
-  if (await currentPlanRow(user.id)) return void res.status(409).json({ message: "you already have a plan" });
   const access = await accessFor(user.id);
+  const current = await currentPlanRow(user.id);
+  // Members (Tier 1/2) can restart with new answers or a new coach; one-off buyers finish the block they paid for.
+  if (current && !canAutoNext(access)) return void res.status(409).json({ message: "finish your current plan first" });
   if (access.creditId === null && !canAutoNext(access)) return void res.status(402).json({ message: "get a plan or membership first" });
+  if (current) await db.update(plansTable).set({ status: "done" }).where(eq(plansTable.id, current.id));
   const [last] = await db.select({ block: plansTable.block }).from(plansTable).where(eq(plansTable.userId, user.id)).orderBy(desc(plansTable.id)).limit(1);
   const block = (last?.block ?? 0) + 1;
   const input = toInput(profile, block);
