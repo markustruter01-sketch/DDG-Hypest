@@ -75,63 +75,54 @@ export function Dashboard({ user }: { user: CurrentUser }) {
     <main className="home">
       <section className="home-hero">
         <img className="home-hero-photo" src={img("welcome.jpg")} alt="" aria-hidden="true" />
-        <div className="home-hero-inner">
-          <div className="page-header">
-            <Wordmark tone="light" />
-            <Link to="/profile" className="avatar avatar-light" aria-label="Your profile">
-              {firstName.charAt(0).toUpperCase() || "?"}
-            </Link>
-          </div>
-          <span className="label home-greeting rise" style={{ animationDelay: "60ms" }}>
-            {greeting()}{firstName ? `, ${firstName}` : ""}
-          </span>
-          <blockquote className="home-quote rise" style={{ animationDelay: "140ms" }}>{quote.text}</blockquote>
-          <span className="home-quote-by rise" style={{ animationDelay: "220ms" }}>{quote.by}</span>
-          {show ? (
-            <div className="home-stats rise" style={{ animationDelay: "300ms" }}>
-              <Stat value={show.creators} label="Creators" />
-              <Stat value={show.live_programs} label="Programs" />
-              {show.paid_out_cents !== null ? <Stat value={show.paid_out_cents} label="Paid out" money /> : null}
-            </div>
-          ) : null}
+        <div className="home-hero-top page-header">
+          <Wordmark tone="light" />
+          <Link to="/profile" className="avatar avatar-light" aria-label="Your profile">
+            {firstName.charAt(0).toUpperCase() || "?"}
+          </Link>
         </div>
       </section>
 
-      <section className="home-body">
-        {show && show.top_creators.length > 0 ? (
+      <section className="home-copy">
+        <span className="label rise" style={{ animationDelay: "60ms" }}>
+          {greeting()}{firstName ? `, ${firstName}` : ""}
+        </span>
+        <blockquote className="home-quote rise" style={{ animationDelay: "140ms" }}>{quote.text}</blockquote>
+        <span className="home-quote-by rise" style={{ animationDelay: "220ms" }}>{quote.by}</span>
+      </section>
+
+      <section className="home-strip rise" style={{ animationDelay: "300ms" }}>
+        {show ? (
           <>
-            <h2 className="section-title" style={{ margin: 0 }}>{show.ranking === "sales" ? "Top creators" : "New creators"}</h2>
-            <div className="tile-row">
-              {show.top_creators.map((c, i) => (
-                <Link key={c.handle} className="creator-card" to={`/@${c.handle}`}>
-                  <span className="creator-card-letter" aria-hidden="true">{c.display_name.trim().charAt(0).toUpperCase() || "?"}</span>
-                  {show.ranking === "sales" ? <span className="creator-card-rank">#{i + 1}</span> : null}
-                  <span className="creator-card-text">
-                    <span className="tile-title" style={{ display: "block" }}>{c.display_name}</span>
-                    <span className="tile-meta">
-                      {show.ranking === "sales" ? `${c.sales} sold` : `${c.live_programs} ${c.live_programs === 1 ? "program" : "programs"}`}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <Stat value={show.creators} label="Creators" />
+            <Stat value={show.live_programs} label="Programs" />
+            {show.paid_out_cents !== null ? <Stat value={show.paid_out_cents} label="Paid out" money /> : null}
           </>
         ) : null}
-
-        <div className="cockpit">
-          {tiles.map((t) => (
-            <Link
-              key={t.to}
-              className={t.photo ? "cockpit-tile" : "cockpit-tile cockpit-tile-solid"}
-              to={t.to}
-              style={t.photo ? { backgroundImage: `linear-gradient(rgb(14 14 14 / 10%), rgb(14 14 14 / 80%)), url("${img(t.photo)}")` } : undefined}
-            >
-              <span className="cockpit-word">{t.word}</span>
-              <span className="tile-meta">{t.meta}</span>
-            </Link>
-          ))}
-        </div>
+        {show && show.top_creators.length > 0 ? (
+          <div className="home-faces" aria-label={show.ranking === "sales" ? "Top creators" : "New creators"}>
+            {show.top_creators.slice(0, 4).map((c) => (
+              <Link key={c.handle} to={`/@${c.handle}`} className="avatar" title={c.display_name} aria-label={c.display_name}>
+                {c.display_name.trim().charAt(0).toUpperCase() || "?"}
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </section>
+
+      <nav className="cockpit" aria-label="Main areas">
+        {tiles.map((t) => (
+          <Link
+            key={t.to}
+            className={t.photo ? "cockpit-tile" : "cockpit-tile cockpit-tile-solid"}
+            to={t.to}
+            style={t.photo ? { backgroundImage: `linear-gradient(rgb(14 14 14 / 5%), rgb(14 14 14 / 78%)), url("${img(t.photo)}")` } : undefined}
+          >
+            <span className="cockpit-word">{t.word}</span>
+            <span className="tile-meta">{t.meta}</span>
+          </Link>
+        ))}
+      </nav>
     </main>
   );
 }
