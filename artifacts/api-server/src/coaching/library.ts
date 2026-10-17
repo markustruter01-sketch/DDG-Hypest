@@ -145,7 +145,7 @@ export type Coach = {
 export const COACHES: Coach[] = [
   {
     id: "mara", name: "Mara", discipline: "yoga", title: "Yoga and mobility", personality: "Calm, warm, patient",
-    goodFor: "Flexibility, stress, recovery", photo: "coach-mara.jpg", goals: ["mobility", "fitness"],
+    goodFor: "Flexibility, stress, recovery", photo: "coach-mara.svg", goals: ["mobility", "fitness"],
     dayTemplates: [
       ["flow", "standing", "balance", "hips", "spine", "rest_pose"],
       ["spine", "flow", "standing", "core", "hips", "rest_pose"],
@@ -153,7 +153,7 @@ export const COACHES: Coach[] = [
   },
   {
     id: "rex", name: "Rex", discipline: "strength", title: "Strength and gym", personality: "Direct, no fluff, numbers-driven",
-    goodFor: "Building muscle and strength", photo: "coach-rex.jpg", goals: ["strength", "muscle", "fat_loss"],
+    goodFor: "Building muscle and strength", photo: "coach-rex.svg", goals: ["strength", "muscle", "fat_loss"],
     dayTemplates: [
       ["squat", "push", "hinge", "pull", "core", "carry"],
       ["hinge", "pull", "lunge", "push", "core", "carry"],
@@ -161,7 +161,7 @@ export const COACHES: Coach[] = [
   },
   {
     id: "jade", name: "Jade", discipline: "cross", title: "Cross training", personality: "High energy, playful",
-    goodFor: "Fitness, fat loss, variety", photo: "coach-jade.jpg", goals: ["fat_loss", "fitness", "muscle"],
+    goodFor: "Fitness, fat loss, variety", photo: "coach-jade.svg", goals: ["fat_loss", "fitness", "muscle"],
     dayTemplates: [
       ["cardio", "squat", "push", "plyo", "pull", "core"],
       ["intervals", "lunge", "hinge", "core", "push", "carry"],
@@ -169,7 +169,7 @@ export const COACHES: Coach[] = [
   },
   {
     id: "kip", name: "Kip", discipline: "endurance", title: "Endurance: run, ride, swim", personality: "Steady, data-minded",
-    goodFor: "5 km to triathlon", photo: "coach-kip.jpg", goals: ["endurance", "fitness"],
+    goodFor: "5 km to triathlon", photo: "coach-kip.svg", goals: ["endurance", "fitness"],
     dayTemplates: [
       ["cardio", "core", "hips", "spine"],
       ["intervals", "lunge", "hinge", "core"],
@@ -178,7 +178,7 @@ export const COACHES: Coach[] = [
   },
   {
     id: "ace", name: "Ace", discipline: "athletic", title: "Athletic performance", personality: "Competitive, sharp",
-    goodFor: "Speed, power, sport", photo: "coach-ace.jpg", goals: ["performance", "strength", "fitness"],
+    goodFor: "Speed, power, sport", photo: "coach-ace.svg", goals: ["performance", "strength", "fitness"],
     dayTemplates: [
       ["plyo", "squat", "pull", "intervals", "core", "balance"],
       ["plyo", "hinge", "push", "lunge", "core", "carry"],

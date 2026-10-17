@@ -873,7 +873,21 @@ textarea.text-input { resize: vertical; }
 .showme-dots button { width: 0.6rem; height: 0.6rem; padding: 0; border: 0; border-radius: 50%; background: var(--color-line); cursor: pointer; }
 .showme-dots .on { width: 1.6rem; border-radius: 999px; background: var(--color-ink); }
 
-.sc { display: flex; flex-direction: column; justify-content: center; gap: 0.75rem; height: 100%; padding: 1.6rem 1rem; }
+.phone-screen { position: relative; }
+.sc { display: flex; flex-direction: column; justify-content: center; gap: 0.75rem; height: 100%; padding: 1.6rem 1rem 4.6rem; }
+/* The one-liner on each scene, like a subtitle. */
+.sc-sub {
+  position: absolute; left: 0.6rem; right: 0.6rem; bottom: 0.6rem;
+  padding: 0.6rem 0.75rem; border-radius: 0.75rem;
+  background: var(--color-ink); color: var(--color-on-dark);
+  font-size: 0.85rem; font-weight: 700; line-height: 1.25; text-align: center;
+  box-shadow: inset 0 -3px 0 var(--color-volt);
+  animation: sc-up 400ms 150ms ease-out both;
+}
+.sc-dark .sc-sub, .sc-dark ~ .sc-sub { background: var(--color-volt); color: var(--color-ink); box-shadow: none; }
+.sc-hi { display: flex; align-items: center; gap: 0.6rem; }
+.sc-hi img { width: 2.6rem; height: 2.6rem; border-radius: 50%; object-fit: cover; object-position: center 35%; animation: sc-pop 350ms ease-out both; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .sc-dark { background: var(--color-dark); color: var(--color-on-dark); }
 .sc-h { font-family: var(--font-display); font-size: 1.5rem; line-height: 1; text-transform: uppercase; animation: sc-up 500ms ease-out both; }
 .sc-big { font-family: var(--font-display); font-size: 1.25rem; }
@@ -1011,12 +1025,12 @@ textarea.text-input { resize: vertical; }
 .onboard-head {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  height: 9rem;
+  gap: var(--space-3);
   padding: var(--space-4) var(--space-5) var(--space-3);
-  background-size: cover;
-  background-position: center 25%;
 }
+.onboard-top { display: flex; align-items: center; justify-content: space-between; }
+/* Round coach head (the SVG is 4:5; the face sits in the top two thirds). */
+.coach-face { width: 4rem; height: 4rem; border-radius: 50%; object-fit: cover; object-position: center 30%; background: var(--color-dark); }
 .onboard-steps { display: flex; gap: 4px; }
 .onboard-steps span { flex: 1; height: 4px; background: var(--color-line); }
 .onboard-steps .on { background: var(--color-ink); }
