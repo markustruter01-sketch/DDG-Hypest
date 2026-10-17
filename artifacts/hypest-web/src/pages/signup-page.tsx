@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetCurrentUserQueryKey, useSignup } from "@workspace/api-client-react";
 import { serverErrorText } from "@/lib/server-error";
+import { savePendingProfile } from "@/lib/pending";
 
 const request = { credentials: "include" as const };
 
@@ -33,7 +34,8 @@ export function SignupPage() {
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-      navigate("/studio");
+      await savePendingProfile();
+      navigate("/");
     } catch (err) {
       setError(serverErrorText(err));
     }

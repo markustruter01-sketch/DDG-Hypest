@@ -18,6 +18,8 @@ tags:
     description: Public creator pages and creator links
   - name: library
     description: Programs a buyer owns, and the lessons inside them
+  - name: coaching
+    description: AI coaches, plans, sessions, logging and progress
 paths:
   /healthz:
     get:
@@ -551,6 +553,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /home:
+    get:
+      operationId: getHome
+      tags: [library]
+      summary: Public showcase numbers for the Home page
+      description: Real data only. paid_out_cents is null until real (non-test) money has been paid. ranking is "sales" once any real sale exists, otherwise "new".
+      responses:
+        "200":
+          description: Home showcase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeShowcase"
   /config:
     get:
       operationId: getConfig
@@ -653,8 +668,365 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /coaches:
+    get:
+      operationId: listCoaches
+      tags: [coaching]
+      summary: The AI coaches
+      responses:
+        "200":
+          description: Coaches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Coach"
+  /coaching/preview:
+    post:
+      operationId: previewPlan
+      tags: [coaching]
+      summary: Public. Week 1 of the plan these answers would get; nothing is saved
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingAnswers"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanView"
+        "400":
+          description: Invalid answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/training:
+    get:
+      operationId: getTraining
+      tags: [coaching]
+      summary: Onboarding answers, access level and current plan
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/training/profile:
+    put:
+      operationId: saveTrainingProfile
+      tags: [coaching]
+      summary: Save onboarding answers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingAnswers"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingState"
+        "400":
+          description: Invalid answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/plans:
+    post:
+      operationId: createPlan
+      tags: [coaching]
+      summary: Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership (members may replace a current plan).
+      responses:
+        "201":
+          description: Plan built
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanView"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Needs a plan or membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: No saved answers, or a plan is already active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/plans/next:
+    post:
+      operationId: createNextPlan
+      tags: [coaching]
+      summary: Finish the current block and build the next one (Tier 1/2). Tier 2 uses the logs to set loads.
+      responses:
+        "201":
+          description: Next block built
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanView"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Needs a membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: No current plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/plans/resume:
+    post:
+      operationId: resumePlan
+      tags: [coaching]
+      summary: Resume a plan paused by a safety stop, after the member confirms they were cleared
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanView"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Nothing to resume
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/sessions/{sessionId}/complete:
+    post:
+      operationId: completeSession
+      tags: [coaching]
+      summary: Mark a session done
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanSessionView"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/items/{itemId}/sets/{setNumber}:
+    put:
+      operationId: logSet
+      tags: [coaching]
+      summary: Save one set (Tier 2)
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+        - $ref: "#/components/parameters/SetNumber"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetLogInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetLog"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Needs Tier 2
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/items/{itemId}/hurts:
+    post:
+      operationId: reportPain
+      tags: [coaching]
+      summary: This hurts. Warning words pause the plan on every tier; a gentler swap is Tier 2.
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PainReport"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PainResult"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/progress:
+    get:
+      operationId: getProgress
+      tags: [coaching]
+      summary: Streak, best lifts and weekly volume (Tier 2)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Progress"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Needs Tier 2
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /dev/unlock:
+    post:
+      operationId: devUnlock
+      tags: [coaching]
+      summary: DEVELOPMENT ONLY. Grant a test membership with no payment. 404 outside development.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnlockRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Intro already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: integer
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: integer
+    SetNumber:
+      name: setNumber
+      in: path
+      required: true
+      schema:
+        type: integer
     Handle:
       name: handle
       in: path
@@ -790,6 +1162,253 @@ components:
         - creator_display_name
         - creator_handle
         - lesson_count
+    HomeShowcase:
+      type: object
+      additionalProperties: false
+      properties:
+        creators:
+          type: integer
+        live_programs:
+          type: integer
+        paid_out_cents:
+          type: integer
+          nullable: true
+        ranking:
+          type: string
+          enum: [sales, new]
+        top_creators:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShowcaseCreator"
+      required:
+        - creators
+        - live_programs
+        - paid_out_cents
+        - ranking
+        - top_creators
+    ShowcaseCreator:
+      type: object
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+        display_name:
+          type: string
+        live_programs:
+          type: integer
+        sales:
+          type: integer
+      required:
+        - handle
+        - display_name
+        - live_programs
+        - sales
+    Coach:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: string}
+        name: {type: string}
+        discipline: {type: string}
+        title: {type: string}
+        personality: {type: string}
+        good_for: {type: string}
+        photo: {type: string}
+        goals:
+          type: array
+          items: {type: string}
+      required: [id, name, discipline, title, personality, good_for, photo, goals]
+    TrainingAnswers:
+      type: object
+      additionalProperties: false
+      properties:
+        coach_id: {type: string}
+        goal:
+          type: string
+          enum: [strength, muscle, fat_loss, fitness, mobility, endurance, performance]
+        experience:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        days_per_week: {type: integer, minimum: 2, maximum: 6}
+        minutes:
+          type: integer
+          enum: [20, 30, 45, 60]
+        equipment:
+          type: array
+          items:
+            type: string
+            enum: [dumbbells, kettlebell, barbell, machines, bands, pullup_bar, cardio_machine, pool]
+        avoid_areas:
+          type: array
+          items:
+            type: string
+            enum: [knee, lower_back, shoulder, wrist, hip, ankle, neck]
+        units:
+          type: string
+          enum: [kg, lb]
+        health_accepted:
+          type: boolean
+          enum: [true]
+      required: [coach_id, goal, experience, days_per_week, minutes, equipment, avoid_areas, health_accepted]
+    Access:
+      type: object
+      additionalProperties: false
+      properties:
+        level:
+          type: string
+          enum: [none, plan, tier1, tier2]
+        intro_available: {type: boolean}
+        plan_credits: {type: integer}
+      required: [level, intro_available, plan_credits]
+    SetLog:
+      type: object
+      additionalProperties: false
+      properties:
+        set_number: {type: integer}
+        reps: {type: integer, nullable: true}
+        seconds: {type: integer, nullable: true}
+        load_kg: {type: number, nullable: true}
+      required: [set_number, reps, seconds, load_kg]
+    SetLogInput:
+      type: object
+      additionalProperties: false
+      properties:
+        reps: {type: integer, nullable: true, minimum: 0, maximum: 200}
+        seconds: {type: integer, nullable: true, minimum: 0, maximum: 7200}
+        load_kg: {type: number, nullable: true, minimum: 0, maximum: 1000}
+      required: [reps, seconds, load_kg]
+    PlanItemView:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: integer, nullable: true}
+        exercise_id: {type: string}
+        name: {type: string}
+        cue: {type: string}
+        measure:
+          type: string
+          enum: [reps, time]
+        weighted: {type: boolean}
+        sets: {type: integer}
+        reps: {type: integer, nullable: true}
+        seconds: {type: integer, nullable: true}
+        rest_seconds: {type: integer}
+        target_load_kg: {type: number, nullable: true}
+        swapped_from: {type: string, nullable: true}
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SetLog"
+      required: [id, exercise_id, name, cue, measure, weighted, sets, reps, seconds, rest_seconds, target_load_kg, swapped_from, logs]
+    PlanSessionView:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: integer, nullable: true}
+        week: {type: integer}
+        day: {type: integer}
+        title: {type: string}
+        completed_at: {type: string, nullable: true}
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanItemView"
+      required: [id, week, day, title, completed_at, items]
+    PlanView:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: integer, nullable: true}
+        coach_id: {type: string}
+        block: {type: integer}
+        weeks: {type: integer}
+        days_per_week: {type: integer}
+        status:
+          type: string
+          enum: [preview, active, paused, done]
+        paused_reason: {type: string, nullable: true}
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSessionView"
+      required: [id, coach_id, block, weeks, days_per_week, status, paused_reason, sessions]
+    TrainingState:
+      type: object
+      additionalProperties: false
+      properties:
+        profile:
+          allOf:
+            - $ref: "#/components/schemas/TrainingAnswers"
+          nullable: true
+        access:
+          $ref: "#/components/schemas/Access"
+        plan:
+          allOf:
+            - $ref: "#/components/schemas/PlanView"
+          nullable: true
+      required: [profile, access, plan]
+    PainReport:
+      type: object
+      additionalProperties: false
+      properties:
+        text: {type: string, minLength: 1, maxLength: 500}
+        area:
+          type: string
+          enum: [knee, lower_back, shoulder, wrist, hip, ankle, neck]
+      required: [text]
+    PainResult:
+      type: object
+      additionalProperties: false
+      properties:
+        stopped: {type: boolean}
+        message: {type: string}
+        swapped_to: {type: string, nullable: true}
+        needs_tier2: {type: boolean}
+      required: [stopped, message, swapped_to, needs_tier2]
+    Progress:
+      type: object
+      additionalProperties: false
+      properties:
+        streak_days: {type: integer}
+        sessions_done: {type: integer}
+        best_lifts:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              exercise_id: {type: string}
+              name: {type: string}
+              load_kg: {type: number}
+              reps: {type: integer}
+            required: [exercise_id, name, load_kg, reps]
+        weekly_volume:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              week_start: {type: string}
+              volume_kg: {type: number}
+            required: [week_start, volume_kg]
+      required: [streak_days, sessions_done, best_lifts, weekly_volume]
+    UnlockRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum: [intro_plan, plan, tier1, tier2]
+      required: [kind]
+    Prices:
+      type: object
+      additionalProperties: false
+      properties:
+        intro_plan_cents: {type: integer}
+        plan_cents: {type: integer}
+        tier1_cents: {type: integer}
+        tier2_cents: {type: integer}
+      required: [intro_plan_cents, plan_cents, tier1_cents, tier2_cents]
     AppConfig:
       type: object
       additionalProperties: false
@@ -802,7 +1421,10 @@ components:
         hypest_found_bps:
           type: integer
           description: Hypest's fee on sales Hypest found, in basis points
+        prices:
+          $ref: "#/components/schemas/Prices"
       required:
+        - prices
         - dev_tools
         - creator_brought_bps
         - hypest_found_bps

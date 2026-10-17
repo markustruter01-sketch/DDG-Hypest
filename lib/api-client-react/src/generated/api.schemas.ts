@@ -64,12 +64,300 @@ export interface PublicProgram {
   lesson_count: number;
 }
 
+export type HomeShowcaseRanking = typeof HomeShowcaseRanking[keyof typeof HomeShowcaseRanking];
+
+
+export const HomeShowcaseRanking = {
+  sales: 'sales',
+  new: 'new',
+} as const;
+
+export interface ShowcaseCreator {
+  handle: string;
+  display_name: string;
+  live_programs: number;
+  sales: number;
+}
+
+export interface HomeShowcase {
+  creators: number;
+  live_programs: number;
+  paid_out_cents: number | null;
+  ranking: HomeShowcaseRanking;
+  top_creators: ShowcaseCreator[];
+}
+
+export interface Coach {
+  id: string;
+  name: string;
+  discipline: string;
+  title: string;
+  personality: string;
+  good_for: string;
+  photo: string;
+  goals: string[];
+}
+
+export type TrainingAnswersGoal = typeof TrainingAnswersGoal[keyof typeof TrainingAnswersGoal];
+
+
+export const TrainingAnswersGoal = {
+  strength: 'strength',
+  muscle: 'muscle',
+  fat_loss: 'fat_loss',
+  fitness: 'fitness',
+  mobility: 'mobility',
+  endurance: 'endurance',
+  performance: 'performance',
+} as const;
+
+export type TrainingAnswersExperience = typeof TrainingAnswersExperience[keyof typeof TrainingAnswersExperience];
+
+
+export const TrainingAnswersExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export type TrainingAnswersMinutes = typeof TrainingAnswersMinutes[keyof typeof TrainingAnswersMinutes];
+
+
+export const TrainingAnswersMinutes = {
+  NUMBER_20: 20,
+  NUMBER_30: 30,
+  NUMBER_45: 45,
+  NUMBER_60: 60,
+} as const;
+
+export type TrainingAnswersEquipmentItem = typeof TrainingAnswersEquipmentItem[keyof typeof TrainingAnswersEquipmentItem];
+
+
+export const TrainingAnswersEquipmentItem = {
+  dumbbells: 'dumbbells',
+  kettlebell: 'kettlebell',
+  barbell: 'barbell',
+  machines: 'machines',
+  bands: 'bands',
+  pullup_bar: 'pullup_bar',
+  cardio_machine: 'cardio_machine',
+  pool: 'pool',
+} as const;
+
+export type TrainingAnswersAvoidAreasItem = typeof TrainingAnswersAvoidAreasItem[keyof typeof TrainingAnswersAvoidAreasItem];
+
+
+export const TrainingAnswersAvoidAreasItem = {
+  knee: 'knee',
+  lower_back: 'lower_back',
+  shoulder: 'shoulder',
+  wrist: 'wrist',
+  hip: 'hip',
+  ankle: 'ankle',
+  neck: 'neck',
+} as const;
+
+export type TrainingAnswersUnits = typeof TrainingAnswersUnits[keyof typeof TrainingAnswersUnits];
+
+
+export const TrainingAnswersUnits = {
+  kg: 'kg',
+  lb: 'lb',
+} as const;
+
+export interface TrainingAnswers {
+  coach_id: string;
+  goal: TrainingAnswersGoal;
+  experience: TrainingAnswersExperience;
+  /**
+     * @minimum 2
+     * @maximum 6
+     */
+  days_per_week: number;
+  minutes: TrainingAnswersMinutes;
+  equipment: TrainingAnswersEquipmentItem[];
+  avoid_areas: TrainingAnswersAvoidAreasItem[];
+  units?: TrainingAnswersUnits;
+  health_accepted: true;
+}
+
+export type AccessLevel = typeof AccessLevel[keyof typeof AccessLevel];
+
+
+export const AccessLevel = {
+  none: 'none',
+  plan: 'plan',
+  tier1: 'tier1',
+  tier2: 'tier2',
+} as const;
+
+export interface Access {
+  level: AccessLevel;
+  intro_available: boolean;
+  plan_credits: number;
+}
+
+export interface SetLog {
+  set_number: number;
+  reps: number | null;
+  seconds: number | null;
+  load_kg: number | null;
+}
+
+export interface SetLogInput {
+  /**
+     * @minimum 0
+     * @maximum 200
+     */
+  reps: number | null;
+  /**
+     * @minimum 0
+     * @maximum 7200
+     */
+  seconds: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     */
+  load_kg: number | null;
+}
+
+export type PlanItemViewMeasure = typeof PlanItemViewMeasure[keyof typeof PlanItemViewMeasure];
+
+
+export const PlanItemViewMeasure = {
+  reps: 'reps',
+  time: 'time',
+} as const;
+
+export interface PlanItemView {
+  id: number | null;
+  exercise_id: string;
+  name: string;
+  cue: string;
+  measure: PlanItemViewMeasure;
+  weighted: boolean;
+  sets: number;
+  reps: number | null;
+  seconds: number | null;
+  rest_seconds: number;
+  target_load_kg: number | null;
+  swapped_from: string | null;
+  logs: SetLog[];
+}
+
+export interface PlanSessionView {
+  id: number | null;
+  week: number;
+  day: number;
+  title: string;
+  completed_at: string | null;
+  items: PlanItemView[];
+}
+
+export type PlanViewStatus = typeof PlanViewStatus[keyof typeof PlanViewStatus];
+
+
+export const PlanViewStatus = {
+  preview: 'preview',
+  active: 'active',
+  paused: 'paused',
+  done: 'done',
+} as const;
+
+export interface PlanView {
+  id: number | null;
+  coach_id: string;
+  block: number;
+  weeks: number;
+  days_per_week: number;
+  status: PlanViewStatus;
+  paused_reason: string | null;
+  sessions: PlanSessionView[];
+}
+
+export interface TrainingState {
+  profile: TrainingAnswers | null;
+  access: Access;
+  plan: PlanView | null;
+}
+
+export type PainReportArea = typeof PainReportArea[keyof typeof PainReportArea];
+
+
+export const PainReportArea = {
+  knee: 'knee',
+  lower_back: 'lower_back',
+  shoulder: 'shoulder',
+  wrist: 'wrist',
+  hip: 'hip',
+  ankle: 'ankle',
+  neck: 'neck',
+} as const;
+
+export interface PainReport {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  text: string;
+  area?: PainReportArea;
+}
+
+export interface PainResult {
+  stopped: boolean;
+  message: string;
+  swapped_to: string | null;
+  needs_tier2: boolean;
+}
+
+export type ProgressBestLiftsItem = {
+  exercise_id: string;
+  name: string;
+  load_kg: number;
+  reps: number;
+};
+
+export type ProgressWeeklyVolumeItem = {
+  week_start: string;
+  volume_kg: number;
+};
+
+export interface Progress {
+  streak_days: number;
+  sessions_done: number;
+  best_lifts: ProgressBestLiftsItem[];
+  weekly_volume: ProgressWeeklyVolumeItem[];
+}
+
+export type UnlockRequestKind = typeof UnlockRequestKind[keyof typeof UnlockRequestKind];
+
+
+export const UnlockRequestKind = {
+  intro_plan: 'intro_plan',
+  plan: 'plan',
+  tier1: 'tier1',
+  tier2: 'tier2',
+} as const;
+
+export interface UnlockRequest {
+  kind: UnlockRequestKind;
+}
+
+export interface Prices {
+  intro_plan_cents: number;
+  plan_cents: number;
+  tier1_cents: number;
+  tier2_cents: number;
+}
+
 export interface AppConfig {
   dev_tools: boolean;
   /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
   creator_brought_bps: number;
   /** Hypest's fee on sales Hypest found, in basis points */
   hypest_found_bps: number;
+  prices: Prices;
 }
 
 export type LessonMediaSource = typeof LessonMediaSource[keyof typeof LessonMediaSource] | null;

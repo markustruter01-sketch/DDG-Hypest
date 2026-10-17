@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import { getGetCurrentUserQueryKey, useGetCurrentUser } from "@workspace/api-client-react";
 import { LandingPage } from "@/pages/landing-page";
 import { Studio } from "@/pages/studio-page";
+import { TodayPage } from "@/pages/today-page";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 
 const request = { credentials: "include" as const };
@@ -13,7 +14,7 @@ function useMe() {
   });
 }
 
-/** "/" — landing page when logged out; logged-in creators go to their Studio. */
+/** "/" — landing page when logged out; Home dashboard for everyone logged in. */
 export function HomePage() {
   const me = useMe();
   if (me.isPending) {
@@ -29,7 +30,7 @@ export function HomePage() {
       </main>
     );
   }
-  return <Navigate to="/studio" replace />;
+  return me.data ? <TodayPage user={me.data} /> : null;
 }
 
 /** "/studio" — creator dashboard; logged-out visitors go to the landing page. */

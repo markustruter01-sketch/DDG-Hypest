@@ -21,10 +21,12 @@ import type {
 
 import type {
   AppConfig,
+  Coach,
   CreateProgramRequest,
   CurrentUser,
   ErrorMessage,
   HealthStatus,
+  HomeShowcase,
   Lesson,
   LessonPatchRequest,
   LessonWriteRequest,
@@ -33,11 +35,21 @@ import type {
   LoginRequest,
   MyProgram,
   MyProgramSummary,
+  PainReport,
+  PainResult,
+  PlanSessionView,
+  PlanView,
+  Progress,
   PublicCreator,
   PublicProgram,
   Purchase,
   ReorderLessonsRequest,
+  SetLog,
+  SetLogInput,
   SignupRequest,
+  TrainingAnswers,
+  TrainingState,
+  UnlockRequest,
   UpdateProfileRequest,
   UpdateProgramRequest
 } from './api.schemas';
@@ -1705,6 +1717,84 @@ export const useRecordCreatorVisit = <TError = ErrorType<ErrorMessage>,
       return useMutation(getRecordCreatorVisitMutationOptions(options));
     }
 
+export const getGetHomeUrl = () => {
+
+
+
+
+  return `/api/home`
+}
+
+/**
+ * Real data only. paid_out_cents is null until real (non-test) money has been paid. ranking is "sales" once any real sale exists, otherwise "new".
+ * @summary Public showcase numbers for the Home page
+ */
+export const getHome = async ( options?: Parameters<typeof customFetch>[1]): Promise<HomeShowcase> => {
+
+  return customFetch<HomeShowcase>(getGetHomeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomeQueryKey = () => {
+    return [
+    `/api/home`
+    ] as const;
+    }
+
+
+export const getGetHomeQueryOptions = <TData = Awaited<ReturnType<typeof getHome>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHome>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHome>>> = ({ signal }) => getHome({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHome>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHomeQueryResult = NonNullable<Awaited<ReturnType<typeof getHome>>>
+export type GetHomeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Public showcase numbers for the Home page
+ */
+
+export function useGetHome<TData = Awaited<ReturnType<typeof getHome>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHome>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHomeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetConfigUrl = () => {
 
 
@@ -2008,5 +2098,976 @@ export const useTestPurchase = <TError = ErrorType<ErrorMessage>,
         TContext
       > => {
       return useMutation(getTestPurchaseMutationOptions(options));
+    }
+
+export const getListCoachesUrl = () => {
+
+
+
+
+  return `/api/coaches`
+}
+
+/**
+ * @summary The AI coaches
+ */
+export const listCoaches = async ( options?: Parameters<typeof customFetch>[1]): Promise<Coach[]> => {
+
+  return customFetch<Coach[]>(getListCoachesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCoachesQueryKey = () => {
+    return [
+    `/api/coaches`
+    ] as const;
+    }
+
+
+export const getListCoachesQueryOptions = <TData = Awaited<ReturnType<typeof listCoaches>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCoaches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCoachesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCoaches>>> = ({ signal }) => listCoaches({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCoaches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCoachesQueryResult = NonNullable<Awaited<ReturnType<typeof listCoaches>>>
+export type ListCoachesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The AI coaches
+ */
+
+export function useListCoaches<TData = Awaited<ReturnType<typeof listCoaches>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCoaches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCoachesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewPlanUrl = () => {
+
+
+
+
+  return `/api/coaching/preview`
+}
+
+/**
+ * @summary Public. Week 1 of the plan these answers would get; nothing is saved
+ */
+export const previewPlan = async (trainingAnswers: TrainingAnswers, options?: Parameters<typeof customFetch>[1]): Promise<PlanView> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlanView>(getPreviewPlanUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingAnswers)
+  }
+);}
+
+
+
+
+
+export const getPreviewPlanMutationKey = () => ['previewPlan'] as const;
+
+export const getPreviewPlanMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPlan>>, TError,PreviewPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewPlan>>, TError,PreviewPlanMutationVariables, TContext> => {
+
+const mutationKey = getPreviewPlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewPlan>>, PreviewPlanMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewPlan(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewPlanMutationResult = NonNullable<Awaited<ReturnType<typeof previewPlan>>>
+    export type PreviewPlanMutationBody = BodyType<TrainingAnswers>
+    export type PreviewPlanMutationError = ErrorType<ErrorMessage>
+    export type PreviewPlanMutationVariables = {data: BodyType<TrainingAnswers>}
+
+    /**
+ * @summary Public. Week 1 of the plan these answers would get; nothing is saved
+ */
+export const usePreviewPlan = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPlan>>, TError,PreviewPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewPlan>>,
+        TError,
+        PreviewPlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewPlanMutationOptions(options));
+    }
+
+export const getGetTrainingUrl = () => {
+
+
+
+
+  return `/api/me/training`
+}
+
+/**
+ * @summary Onboarding answers, access level and current plan
+ */
+export const getTraining = async ( options?: Parameters<typeof customFetch>[1]): Promise<TrainingState> => {
+
+  return customFetch<TrainingState>(getGetTrainingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTrainingQueryKey = () => {
+    return [
+    `/api/me/training`
+    ] as const;
+    }
+
+
+export const getGetTrainingQueryOptions = <TData = Awaited<ReturnType<typeof getTraining>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTraining>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTrainingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTraining>>> = ({ signal }) => getTraining({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTraining>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTrainingQueryResult = NonNullable<Awaited<ReturnType<typeof getTraining>>>
+export type GetTrainingQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Onboarding answers, access level and current plan
+ */
+
+export function useGetTraining<TData = Awaited<ReturnType<typeof getTraining>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTraining>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTrainingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveTrainingProfileUrl = () => {
+
+
+
+
+  return `/api/me/training/profile`
+}
+
+/**
+ * @summary Save onboarding answers
+ */
+export const saveTrainingProfile = async (trainingAnswers: TrainingAnswers, options?: Parameters<typeof customFetch>[1]): Promise<TrainingState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrainingState>(getSaveTrainingProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingAnswers)
+  }
+);}
+
+
+
+
+
+export const getSaveTrainingProfileMutationKey = () => ['saveTrainingProfile'] as const;
+
+export const getSaveTrainingProfileMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveTrainingProfile>>, TError,SaveTrainingProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveTrainingProfile>>, TError,SaveTrainingProfileMutationVariables, TContext> => {
+
+const mutationKey = getSaveTrainingProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveTrainingProfile>>, SaveTrainingProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveTrainingProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveTrainingProfileMutationResult = NonNullable<Awaited<ReturnType<typeof saveTrainingProfile>>>
+    export type SaveTrainingProfileMutationBody = BodyType<TrainingAnswers>
+    export type SaveTrainingProfileMutationError = ErrorType<ErrorMessage>
+    export type SaveTrainingProfileMutationVariables = {data: BodyType<TrainingAnswers>}
+
+    /**
+ * @summary Save onboarding answers
+ */
+export const useSaveTrainingProfile = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveTrainingProfile>>, TError,SaveTrainingProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveTrainingProfile>>,
+        TError,
+        SaveTrainingProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveTrainingProfileMutationOptions(options));
+    }
+
+export const getCreatePlanUrl = () => {
+
+
+
+
+  return `/api/me/plans`
+}
+
+/**
+ * @summary Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership.
+ */
+export const createPlan = async ( options?: Parameters<typeof customFetch>[1]): Promise<PlanView> => {
+
+  return customFetch<PlanView>(getCreatePlanUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreatePlanMutationKey = () => ['createPlan'] as const;
+
+export const getCreatePlanMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlan>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlan>>, TError,void, TContext> => {
+
+const mutationKey = getCreatePlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlan>>, void> = () => {
+
+
+          return  createPlan(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlanMutationResult = NonNullable<Awaited<ReturnType<typeof createPlan>>>
+
+    export type CreatePlanMutationError = ErrorType<ErrorMessage>
+
+
+    /**
+ * @summary Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership.
+ */
+export const useCreatePlan = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlan>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlan>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreatePlanMutationOptions(options));
+    }
+
+export const getCreateNextPlanUrl = () => {
+
+
+
+
+  return `/api/me/plans/next`
+}
+
+/**
+ * @summary Finish the current block and build the next one (Tier 1/2). Tier 2 uses the logs to set loads.
+ */
+export const createNextPlan = async ( options?: Parameters<typeof customFetch>[1]): Promise<PlanView> => {
+
+  return customFetch<PlanView>(getCreateNextPlanUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateNextPlanMutationKey = () => ['createNextPlan'] as const;
+
+export const getCreateNextPlanMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createNextPlan>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createNextPlan>>, TError,void, TContext> => {
+
+const mutationKey = getCreateNextPlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createNextPlan>>, void> = () => {
+
+
+          return  createNextPlan(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateNextPlanMutationResult = NonNullable<Awaited<ReturnType<typeof createNextPlan>>>
+
+    export type CreateNextPlanMutationError = ErrorType<ErrorMessage>
+
+
+    /**
+ * @summary Finish the current block and build the next one (Tier 1/2). Tier 2 uses the logs to set loads.
+ */
+export const useCreateNextPlan = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createNextPlan>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createNextPlan>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreateNextPlanMutationOptions(options));
+    }
+
+export const getResumePlanUrl = () => {
+
+
+
+
+  return `/api/me/plans/resume`
+}
+
+/**
+ * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
+ */
+export const resumePlan = async ( options?: Parameters<typeof customFetch>[1]): Promise<PlanView> => {
+
+  return customFetch<PlanView>(getResumePlanUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResumePlanMutationKey = () => ['resumePlan'] as const;
+
+export const getResumePlanMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,void, TContext> => {
+
+const mutationKey = getResumePlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumePlan>>, void> = () => {
+
+
+          return  resumePlan(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResumePlanMutationResult = NonNullable<Awaited<ReturnType<typeof resumePlan>>>
+
+    export type ResumePlanMutationError = ErrorType<ErrorMessage>
+
+
+    /**
+ * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
+ */
+export const useResumePlan = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resumePlan>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getResumePlanMutationOptions(options));
+    }
+
+export const getCompleteSessionUrl = (sessionId: number,) => {
+
+
+
+
+  return `/api/me/sessions/${sessionId}/complete`
+}
+
+/**
+ * @summary Mark a session done
+ */
+export const completeSession = async (sessionId: number, options?: Parameters<typeof customFetch>[1]): Promise<PlanSessionView> => {
+
+  return customFetch<PlanSessionView>(getCompleteSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteSessionMutationKey = () => ['completeSession'] as const;
+
+export const getCompleteSessionMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeSession>>, TError,CompleteSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeSession>>, TError,CompleteSessionMutationVariables, TContext> => {
+
+const mutationKey = getCompleteSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeSession>>, CompleteSessionMutationVariables> = (props) => {
+          const {sessionId} = props ?? {};
+
+          return  completeSession(sessionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteSessionMutationResult = NonNullable<Awaited<ReturnType<typeof completeSession>>>
+
+    export type CompleteSessionMutationError = ErrorType<ErrorMessage>
+    export type CompleteSessionMutationVariables = {sessionId: number}
+
+    /**
+ * @summary Mark a session done
+ */
+export const useCompleteSession = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeSession>>, TError,CompleteSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeSession>>,
+        TError,
+        CompleteSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCompleteSessionMutationOptions(options));
+    }
+
+export const getLogSetUrl = (itemId: number,
+    setNumber: number,) => {
+
+
+
+
+  return `/api/me/items/${itemId}/sets/${setNumber}`
+}
+
+/**
+ * @summary Save one set (Tier 2)
+ */
+export const logSet = async (itemId: number,
+    setNumber: number,
+    setLogInput: SetLogInput, options?: Parameters<typeof customFetch>[1]): Promise<SetLog> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SetLog>(getLogSetUrl(itemId,setNumber),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setLogInput)
+  }
+);}
+
+
+
+
+
+export const getLogSetMutationKey = () => ['logSet'] as const;
+
+export const getLogSetMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logSet>>, TError,LogSetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logSet>>, TError,LogSetMutationVariables, TContext> => {
+
+const mutationKey = getLogSetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logSet>>, LogSetMutationVariables> = (props) => {
+          const {itemId,setNumber,data} = props ?? {};
+
+          return  logSet(itemId,setNumber,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogSetMutationResult = NonNullable<Awaited<ReturnType<typeof logSet>>>
+    export type LogSetMutationBody = BodyType<SetLogInput>
+    export type LogSetMutationError = ErrorType<ErrorMessage>
+    export type LogSetMutationVariables = {itemId: number;setNumber: number;data: BodyType<SetLogInput>}
+
+    /**
+ * @summary Save one set (Tier 2)
+ */
+export const useLogSet = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logSet>>, TError,LogSetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logSet>>,
+        TError,
+        LogSetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLogSetMutationOptions(options));
+    }
+
+export const getReportPainUrl = (itemId: number,) => {
+
+
+
+
+  return `/api/me/items/${itemId}/hurts`
+}
+
+/**
+ * @summary This hurts. Warning words pause the plan on every tier; a gentler swap is Tier 2.
+ */
+export const reportPain = async (itemId: number,
+    painReport: PainReport, options?: Parameters<typeof customFetch>[1]): Promise<PainResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PainResult>(getReportPainUrl(itemId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(painReport)
+  }
+);}
+
+
+
+
+
+export const getReportPainMutationKey = () => ['reportPain'] as const;
+
+export const getReportPainMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportPain>>, TError,ReportPainMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportPain>>, TError,ReportPainMutationVariables, TContext> => {
+
+const mutationKey = getReportPainMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportPain>>, ReportPainMutationVariables> = (props) => {
+          const {itemId,data} = props ?? {};
+
+          return  reportPain(itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportPainMutationResult = NonNullable<Awaited<ReturnType<typeof reportPain>>>
+    export type ReportPainMutationBody = BodyType<PainReport>
+    export type ReportPainMutationError = ErrorType<ErrorMessage>
+    export type ReportPainMutationVariables = {itemId: number;data: BodyType<PainReport>}
+
+    /**
+ * @summary This hurts. Warning words pause the plan on every tier; a gentler swap is Tier 2.
+ */
+export const useReportPain = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportPain>>, TError,ReportPainMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportPain>>,
+        TError,
+        ReportPainMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportPainMutationOptions(options));
+    }
+
+export const getGetProgressUrl = () => {
+
+
+
+
+  return `/api/me/progress`
+}
+
+/**
+ * @summary Streak, best lifts and weekly volume (Tier 2)
+ */
+export const getProgress = async ( options?: Parameters<typeof customFetch>[1]): Promise<Progress> => {
+
+  return customFetch<Progress>(getGetProgressUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProgressQueryKey = () => {
+    return [
+    `/api/me/progress`
+    ] as const;
+    }
+
+
+export const getGetProgressQueryOptions = <TData = Awaited<ReturnType<typeof getProgress>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProgressQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProgress>>> = ({ signal }) => getProgress({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProgress>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getProgress>>>
+export type GetProgressQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Streak, best lifts and weekly volume (Tier 2)
+ */
+
+export function useGetProgress<TData = Awaited<ReturnType<typeof getProgress>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProgressQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDevUnlockUrl = () => {
+
+
+
+
+  return `/api/dev/unlock`
+}
+
+/**
+ * @summary DEVELOPMENT ONLY. Grant a test membership with no payment. 404 outside development.
+ */
+export const devUnlock = async (unlockRequest: UnlockRequest, options?: Parameters<typeof customFetch>[1]): Promise<TrainingState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrainingState>(getDevUnlockUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(unlockRequest)
+  }
+);}
+
+
+
+
+
+export const getDevUnlockMutationKey = () => ['devUnlock'] as const;
+
+export const getDevUnlockMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devUnlock>>, TError,DevUnlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devUnlock>>, TError,DevUnlockMutationVariables, TContext> => {
+
+const mutationKey = getDevUnlockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devUnlock>>, DevUnlockMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  devUnlock(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevUnlockMutationResult = NonNullable<Awaited<ReturnType<typeof devUnlock>>>
+    export type DevUnlockMutationBody = BodyType<UnlockRequest>
+    export type DevUnlockMutationError = ErrorType<ErrorMessage>
+    export type DevUnlockMutationVariables = {data: BodyType<UnlockRequest>}
+
+    /**
+ * @summary DEVELOPMENT ONLY. Grant a test membership with no payment. 404 outside development.
+ */
+export const useDevUnlock = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devUnlock>>, TError,DevUnlockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof devUnlock>>,
+        TError,
+        DevUnlockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDevUnlockMutationOptions(options));
     }
 

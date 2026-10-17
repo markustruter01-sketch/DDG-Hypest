@@ -9,6 +9,26 @@ import {
   type CurrentUser,
 } from "@workspace/api-client-react";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
+import { Offers } from "@/components/offers";
+import { useTraining } from "@/lib/coaching";
+
+const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
+
+function Membership() {
+  const training = useTraining();
+  const access = training.data?.access;
+  if (!access) return null;
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+      <h2 className="section-title" style={{ margin: 0 }}>Membership</h2>
+      <div className="card best-lift">
+        <span>{LEVEL_NAME[access.level] ?? access.level}</span>
+        <span className="label">{access.plan_credits > 0 ? `${access.plan_credits} plan${access.plan_credits === 1 ? "" : "s"} ready` : ""}</span>
+      </div>
+      {access.level !== "tier2" ? <Offers access={access} /> : null}
+    </section>
+  );
+}
 
 const request = { credentials: "include" as const };
 
@@ -113,11 +133,6 @@ export function ProfilePage() {
             </span>
           </div>
           {user.bio ? <p className="screen-copy">{user.bio}</p> : null}
-          {user.handle ? (
-            <Link className="text-link" to={`/@${user.handle}`}>My page · @{user.handle}</Link>
-          ) : (
-            <Link className="text-link" to="/studio">Claim your link in Studio</Link>
-          )}
           <div className="button-row">
             <button className="secondary-button" type="button" onClick={startEditing}>
               Edit profile
@@ -128,6 +143,7 @@ export function ProfilePage() {
           </div>
         </div>
       ) : null}
+      {user && !editing ? <Membership /> : null}
       {user && editing ? (
         <form className="account-form" onSubmit={onSave}>
           <label className="field">
