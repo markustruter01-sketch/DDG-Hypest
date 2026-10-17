@@ -1,37 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="600" height="750">
   <title>Kip, Hypest AI coach</title>
   <style>
-    .eyes { transform-origin: 300px 322px; }
-    .bud { transform-origin: 412px 338px; }
+    .eyes { transform-origin: 300px 316px; }
+    .ping { transform-origin: 300px 100px; }
     @media (prefers-reduced-motion: no-preference) {
-      .eyes { animation: blink 5s infinite; }
-      .bud { animation: glow 2.4s ease-in-out infinite; }
+      .blink { animation: blink 5s infinite; }
+      .ping { animation: ping 2.4s ease-in-out infinite; }
     }
     @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
-    @keyframes glow { 50% { transform: scale(1.35); opacity: 0.7; } }
+    @keyframes ping { 50% { transform: scale(1.4); opacity: 0.6; } }
   </style>
   <rect width="600" height="750" fill="#0e0e0e"/>
-  <circle cx="300" cy="330" r="228" fill="#d4ff3f"/>
-  
-  <path d="M56 750 C66 590 160 506 300 500 C440 506 534 590 544 750 Z" fill="#1f1f1f"/>
-  <path d="M254 400 L254 492 Q300 532 346 492 L346 400 Z" fill="#e3e3de"/>
-  <path d="M240 508 Q300 556 360 508" fill="none" stroke="#d4ff3f" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <ellipse cx="198" cy="332" rx="16" ry="26" fill="#e3e3de"/>
-  <ellipse cx="402" cy="332" rx="16" ry="26" fill="#e3e3de"/>
-  <ellipse cx="300" cy="320" rx="108" ry="130" fill="#f4f4f2"/>
-  <path d="M300 190 A108 130 0 0 1 300 450 A86 130 0 0 0 300 190 Z" fill="#e3e3de" opacity="0.7"/>
-  <path d="M192 300 L192 334 L206 324 L206 296 Z" fill="#111111"/><path d="M408 300 L408 334 L394 324 L394 296 Z" fill="#111111"/>
-      <path d="M188 290 C186 204 238 172 300 172 C362 172 414 204 412 290 Z" fill="#111111"/>
-      <path d="M232 214 C262 196 338 196 368 214" fill="none" stroke="#d4ff3f" stroke-width="8" stroke-linecap="round"/>
-      <path d="M186 286 C246 266 372 266 476 300 C446 314 366 306 300 302 C252 300 216 302 186 304 Z" fill="#d4ff3f" stroke="#111111" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M300 322 Q290 350 302 358" fill="none" stroke="#c4c4be" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  
-  <g class="eyes">
-    <rect x="245" y="318" width="26" height="32" rx="13" fill="#111111"/>
-    <rect x="329" y="318" width="26" height="32" rx="13" fill="#111111"/>
-    <circle cx="263" cy="327" r="5" fill="#d4ff3f"/>
-    <circle cx="347" cy="327" r="5" fill="#d4ff3f"/>
-  </g>
-      <path d="M276 392 Q300 410 324 392" fill="none" stroke="#111111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle class="bud" cx="410" cy="338" r="10" fill="#d4ff3f" stroke="#111111" stroke-width="4"/>
+  <path d="M300 160 L300 112" fill="none" stroke="#d4ff3f" stroke-width="12" stroke-linecap="round"/>
+  <circle class="ping" cx="300" cy="100" r="16" fill="#d4ff3f"/>
+  <rect x="172" y="146" width="256" height="368" rx="128" transform="rotate(12 300 330)" fill="#d4ff3f" stroke="#d4ff3f" stroke-linejoin="round"/>
+  <g class="eyes blink"><circle cx="262" cy="316" r="22" fill="#111111"/><circle cx="358" cy="316" r="22" fill="#111111"/></g>
 </svg>

@@ -42,6 +42,7 @@ const COACH_LINES: Record<string, string[]> = {
   jade: ["Let's make today fun.", "Sweat now, smile later.", "Move like you mean it.", "Play hard, rest harder."],
   kip: ["Easy days easy. Hard days hard.", "Consistency beats intensity.", "Every kilometre counts.", "Trust the build."],
   ace: ["Fast is a skill. Practise it.", "Win the warm-up.", "Explode, then recover.", "Small edges add up."],
+  ivy: ["Control beats speed.", "Small moves, strong centre.", "Quality over quantity, every rep.", "Stand taller than yesterday."],
 };
 export function coachLine(coachId: string | undefined, now = new Date()): string {
   const lines = COACH_LINES[coachId ?? ""] ?? COACH_LINES.rex!;

@@ -19,6 +19,8 @@ for (const c of COACHES) for (const goal of c.goals) for (const experience of EX
   for (const s of plan.sessions) for (const it of s.items) {
     const ex = EXERCISE_BY_ID.get(it.exerciseId)!;
     assert.ok(!ex.loads.some((a) => avoidAreas.includes(a)), `${ex.id} loads an avoided area`);
+    // Steady cardio is the main work only for the endurance coach; a short warm-up for everyone else.
+    if (ex.pattern === "cardio" && c.discipline !== "endurance") assert.ok((it.seconds ?? 0) <= Math.max(5, Math.round(minutes * 0.2)) * 60, `${c.id} cardio ${it.seconds}s too long`);
   }
   n += 1;
 }

@@ -61,9 +61,9 @@ function repDose(goal: Goal, experience: Experience, ex: Exercise): { sets: numb
 }
 
 /** Base dose for a time-based exercise (DRAFT). */
-function timeDose(experience: Experience, ex: Exercise, minutes: number): { sets: number; seconds: number; rest: number } {
+function timeDose(experience: Experience, ex: Exercise, minutes: number, coach: Coach): { sets: number; seconds: number; rest: number } {
   // Cardio is the main work for endurance; a short warm-up block for everyone else.
-  if (ex.pattern === "cardio") return { sets: 1, seconds: Math.max(5, Math.round(minutes * (ex.disciplines[0] === "endurance" ? 0.6 : 0.2))) * 60, rest: 0 };
+  if (ex.pattern === "cardio") return { sets: 1, seconds: Math.max(5, Math.round(minutes * (coach.discipline === "endurance" ? 0.6 : 0.2))) * 60, rest: 0 };
   if (ex.pattern === "intervals") return { sets: experience === "beginner" ? 5 : 8, seconds: 30, rest: 90 };
   if (ex.pattern === "carry") return { sets: 3, seconds: 30, rest: 60 };
   if (ex.pattern === "rest_pose") return { sets: 1, seconds: 120, rest: 0 };
@@ -109,9 +109,12 @@ function pick(coach: Coach, pattern: Pattern, input: PlanInput, offset: number, 
   for (const p of [pattern, ...(FALLBACK[pattern] ?? [])]) {
     const options = EXERCISES.filter((e) => e.pattern === p && e.disciplines.includes(coach.discipline) && fits(e, input) && !used.has(e.id));
     if (options.length === 0) continue;
-    // Prefer exercises that use the member's own equipment; bodyweight only when nothing else fits.
-    const withKit = options.filter((e) => e.equipment.length > 0);
-    const pool = withKit.length > 0 ? withKit : options;
+    // Prefer the coach's own signature moves when there are at least two (keeps variety), then
+    // moves that use the member's own equipment; bodyweight only when nothing else fits.
+    const signature = options.filter((e) => e.disciplines[0] === coach.discipline);
+    const styled = signature.length >= 2 ? signature : options;
+    const withKit = styled.filter((e) => e.equipment.length > 0);
+    const pool = withKit.length > 0 ? withKit : styled;
     return pool.at(offset % pool.length) ?? null;
   }
   return null;
@@ -148,7 +151,7 @@ export function buildPlan(input: PlanInput): Plan {
         const d = repDose(input.goal, input.experience, ex);
         items.push({ exerciseId: ex.id, sets: d.sets, reps: d.reps, seconds: null, restSeconds: d.rest, targetLoadKg: ex.weighted ? input.targetLoads?.[ex.id] ?? null : null });
       } else {
-        const d = timeDose(input.experience, ex, input.minutes);
+        const d = timeDose(input.experience, ex, input.minutes, coach);
         items.push({ exerciseId: ex.id, sets: d.sets, reps: null, seconds: d.seconds, restSeconds: d.rest, targetLoadKg: ex.weighted ? input.targetLoads?.[ex.id] ?? null : null });
       }
     });
