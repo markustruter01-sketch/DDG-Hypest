@@ -18,7 +18,16 @@ type Experience = TrainingAnswers["experience"];
 type Equipment = TrainingAnswers["equipment"][number];
 type Area = TrainingAnswers["avoid_areas"][number];
 
-function Chips<T extends string | number>({ options, value, onChange, label }: { options: readonly (readonly [T, string])[]; value: T | T[]; onChange: (v: T) => void; label: string }) {
+type Option<T> = readonly [T, string];
+
+// Option lists live outside the JSX: Replit's dev plugin can't parse JSX type arguments or casts inside props.
+const EXPERIENCE_OPTIONS: Option<Experience>[] = (["beginner", "intermediate", "advanced"] as Experience[]).map((e) => [e, EXPERIENCE_LABEL[e] ?? e]);
+const DAY_OPTIONS: Option<number>[] = [2, 3, 4, 5, 6].map((d) => [d, String(d)]);
+const MINUTE_OPTIONS: Option<20 | 30 | 45 | 60>[] = ([20, 30, 45, 60] as const).map((m) => [m, String(m)]);
+const EQUIPMENT_OPTIONS: Option<Equipment>[] = (Object.keys(EQUIPMENT_LABEL) as Equipment[]).map((e) => [e, EQUIPMENT_LABEL[e] ?? e]);
+const AREA_OPTIONS: Option<Area>[] = (Object.keys(AREA_LABEL) as Area[]).map((a) => [a, AREA_LABEL[a] ?? a]);
+
+function Chips<T extends string | number>({ options, value, onChange, label }: { options: readonly Option<T>[]; value: T | T[]; onChange: (v: T) => void; label: string }) {
   const on = (v: T) => (Array.isArray(value) ? value.includes(v) : value === v);
   return (
     <fieldset className="chips">
@@ -65,6 +74,7 @@ export function OnboardingPage() {
     coach_id: coach.id, goal: chosenGoal, experience, days_per_week: days, minutes, equipment, avoid_areas: areas, health_accepted: true,
   };
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  const goalOptions: Option<Goal>[] = (coach.goals as Goal[]).map((g) => [g, GOAL_LABEL[g] ?? g]);
 
   async function buildPreview() {
     setError(null);
@@ -115,10 +125,10 @@ export function OnboardingPage() {
       {step === 1 ? (
         <section className="onboard-body">
           <h1 className="screen-title">Hi, I'm {coach.name}.<br />What's the goal?</h1>
-          <Chips<Goal> label="Goal" options={coach.goals.map((g) => [g as Goal, GOAL_LABEL[g] ?? g] as const)} value={chosenGoal} onChange={(v) => setGoal(v)} />
-          <Chips<Experience> label="Training so far" options={(["beginner", "intermediate", "advanced"] as Experience[]).map((e) => [e, EXPERIENCE_LABEL[e] ?? e] as const)} value={experience} onChange={(v) => setExperience(v)} />
-          <Chips<number> label="Days a week" options={[2, 3, 4, 5, 6].map((d) => [d, String(d)] as const)} value={days} onChange={(v) => setDays(v)} />
-          <Chips<20 | 30 | 45 | 60> label="Minutes a session" options={([20, 30, 45, 60] as const).map((m) => [m, String(m)] as const)} value={minutes} onChange={(v) => setMinutes(v)} />
+          <Chips label="Goal" options={goalOptions} value={chosenGoal} onChange={(v) => setGoal(v)} />
+          <Chips label="Training so far" options={EXPERIENCE_OPTIONS} value={experience} onChange={(v) => setExperience(v)} />
+          <Chips label="Days a week" options={DAY_OPTIONS} value={days} onChange={(v) => setDays(v)} />
+          <Chips label="Minutes a session" options={MINUTE_OPTIONS} value={minutes} onChange={(v) => setMinutes(v)} />
           <button className="primary-button onboard-next" type="button" onClick={() => setStep(2)}>Next →</button>
         </section>
       ) : null}
@@ -126,8 +136,8 @@ export function OnboardingPage() {
       {step === 2 ? (
         <section className="onboard-body">
           <h1 className="screen-title">What have you got?</h1>
-          <Chips<Equipment> label="Equipment (none is fine)" options={(Object.keys(EQUIPMENT_LABEL) as Equipment[]).map((e) => [e, EQUIPMENT_LABEL[e] ?? e] as const)} value={equipment} onChange={(v) => setEquipment(toggle(equipment, v))} />
-          <Chips<Area> label="Anything sore or injured?" options={(Object.keys(AREA_LABEL) as Area[]).map((a) => [a, AREA_LABEL[a] ?? a] as const)} value={areas} onChange={(v) => setAreas(toggle(areas, v))} />
+          <Chips label="Equipment (none is fine)" options={EQUIPMENT_OPTIONS} value={equipment} onChange={(v) => setEquipment(toggle(equipment, v))} />
+          <Chips label="Anything sore or injured?" options={AREA_OPTIONS} value={areas} onChange={(v) => setAreas(toggle(areas, v))} />
           <label className="health-check">
             <input type="checkbox" checked={health} onChange={(e) => setHealth(e.target.checked)} />
             <span>I'm training at my own risk. If I have a health condition, injury or am pregnant, I'll check with a doctor first.</span>
