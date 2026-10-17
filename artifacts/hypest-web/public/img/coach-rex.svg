@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="600" height="750">
+  <title>Rex, Hypest AI coach</title>
+  <style>
+    .eyes { transform-origin: 300px 322px; }
+    .bud { transform-origin: 412px 338px; }
+    @media (prefers-reduced-motion: no-preference) {
+      .eyes { animation: blink 5s infinite; }
+      .bud { animation: glow 2.4s ease-in-out infinite; }
+    }
+    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+    @keyframes glow { 50% { transform: scale(1.35); opacity: 0.7; } }
+  </style>
+  <rect width="600" height="750" fill="#0e0e0e"/>
+  <circle cx="300" cy="330" r="228" fill="#d4ff3f"/>
+  
+  <path d="M56 750 C66 590 160 506 300 500 C440 506 534 590 544 750 Z" fill="#1f1f1f"/>
+  <path d="M242 400 L242 492 Q300 532 358 492 L358 400 Z" fill="#e3e3de"/>
+  <path d="M240 508 Q300 556 360 508" fill="none" stroke="#d4ff3f" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="190" cy="332" rx="16" ry="26" fill="#e3e3de"/>
+  <ellipse cx="410" cy="332" rx="16" ry="26" fill="#e3e3de"/>
+  <ellipse cx="300" cy="320" rx="116" ry="130" fill="#f4f4f2"/>
+  <path d="M300 190 A116 130 0 0 1 300 450 A94 130 0 0 0 300 190 Z" fill="#e3e3de" opacity="0.7"/>
+  <path d="M186 302 L188 226 C196 192 238 178 300 178 C362 178 404 192 412 226 L414 302 C400 262 380 248 300 246 C220 248 200 262 186 302 Z" fill="#111111"/>
+      <path d="M190 352 C194 432 246 456 300 456 C354 456 406 432 410 352 C392 404 352 420 300 420 C248 420 208 404 190 352 Z" fill="#111111"/>
+  <path d="M300 322 Q290 350 302 358" fill="none" stroke="#c4c4be" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <g class="eyes">
+    <rect x="245" y="310" width="26" height="26" rx="13" fill="#111111"/>
+    <rect x="329" y="310" width="26" height="26" rx="13" fill="#111111"/>
+    <circle cx="263" cy="319" r="5" fill="#d4ff3f"/>
+    <circle cx="347" cy="319" r="5" fill="#d4ff3f"/>
+  </g>
+      <rect x="236" y="284" width="44" height="12" rx="4" fill="#111111"/>
+      <rect x="320" y="284" width="44" height="12" rx="4" fill="#111111"/>
+      <path d="M280 394 L320 394" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle class="bud" cx="418" cy="338" r="10" fill="#d4ff3f" stroke="#111111" stroke-width="4"/>
+</svg>

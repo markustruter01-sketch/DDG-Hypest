@@ -6,13 +6,14 @@ import { img } from "@/lib/coaching";
  * "Show me" animation for sceptics: six scenes on a phone, looping. Built from the app's own
  * styles (no video), so it is crisp and light. Example content only, labelled as such.
  */
+// line = the one-liner shown on the phone like a subtitle. coaching = needs the Coaching tier.
 const SCENES = [
-  { title: "Pick a coach", note: "Five coaches, five styles" },
-  { title: "Tap 6 answers", note: "Goal, days, kit, sore spots" },
-  { title: "Your plan, built", note: "Around your knee, your gear" },
-  { title: "Train and log", note: "Every set, every rep" },
-  { title: "Hurts? Swap it", note: "A gentler move, instantly" },
-  { title: "Grow every block", note: "Next plan builds on your numbers" },
+  { title: "Pick a coach", line: "Choose the coach whose style suits you.", coaching: false },
+  { title: "Tap 6 answers", line: "Six quick taps. No long forms.", coaching: false },
+  { title: "Your plan, built", line: "A 4-week plan built around you.", coaching: false },
+  { title: "Train and log", line: "Follow along. Log every set.", coaching: true },
+  { title: "Hurts? Swap it", line: "Something sore? Get a gentler move.", coaching: true },
+  { title: "Grow every block", line: "Your next plan builds on your results.", coaching: true },
 ] as const;
 const SCENE_MS = 3200;
 
@@ -39,12 +40,13 @@ export function ShowMe() {
           {scene === 3 ? <SceneTrain /> : null}
           {scene === 4 ? <SceneSwap /> : null}
           {scene === 5 ? <SceneGrow /> : null}
+          <span className="sc-sub">{current.line}</span>
         </div>
       </div>
       <div className="showme-caption" aria-live="polite">
-        <span className="label">{scene + 1} / {SCENES.length} · example</span>
+        <span className="label">{scene + 1} / {SCENES.length} · example{current.coaching ? " · Coaching" : ""}</span>
         <span className="showme-title">{current.title}</span>
-        <span className="screen-copy">{current.note}</span>
+        <span className="sr-only">{current.line}</span>
         <div className="showme-dots" role="tablist" aria-label="Scenes">
           {SCENES.map((s, i) => (
             <button key={s.title} type="button" role="tab" aria-selected={i === scene} aria-label={s.title} className={i === scene ? "on" : undefined} onClick={() => { setAuto(false); setScene(i); }} />
@@ -56,7 +58,7 @@ export function ShowMe() {
 }
 
 function ScenePick() {
-  const coaches = [["Mara", "coach-mara.jpg"], ["Rex", "coach-rex.jpg"], ["Jade", "coach-jade.jpg"], ["Kip", "coach-kip.jpg"]] as const;
+  const coaches = [["Mara", "coach-mara.svg"], ["Rex", "coach-rex.svg"], ["Jade", "coach-jade.svg"], ["Kip", "coach-kip.svg"]] as const;
   return (
     <div className="sc sc-pick">
       <span className="sc-h">Pick your coach</span>
@@ -76,7 +78,7 @@ function SceneTell() {
   const rows = [["Build muscle", "Lose fat"], ["Some", "New"], ["3 days", "4 days"], ["45 min", "30 min"], ["Dumbbells", "None"], ["Knee", "Back"]] as const;
   return (
     <div className="sc">
-      <span className="sc-h">Hi, I'm Rex.</span>
+      <span className="sc-hi"><img src={img("coach-rex.svg")} alt="" /><span className="sc-h">Hi, I'm Rex.</span></span>
       {rows.map((r, i) => (
         <div key={r[0]} className="sc-chips">
           <span className="sc-chip sc-chip-pick" style={{ animationDelay: `${250 + i * 380}ms` }}>{r[0]}</span>

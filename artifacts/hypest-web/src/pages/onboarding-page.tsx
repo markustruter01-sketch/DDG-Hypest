@@ -102,8 +102,11 @@ export function OnboardingPage() {
 
   return (
     <main className="onboard">
-      <header className="onboard-head" style={{ backgroundImage: `linear-gradient(rgb(14 14 14 / 10%), var(--color-page)), url("${img(coach.photo)}")` }}>
-        <Link className="text-link" to={`/coaches/${coach.id}`}>← {coach.name}</Link>
+      <header className="onboard-head">
+        <div className="onboard-top">
+          <Link className="text-link" to={`/coaches/${coach.id}`}>← Back</Link>
+          <img className="coach-face" src={img(coach.photo)} alt={`${coach.name}, AI coach`} />
+        </div>
         <div className="onboard-steps" aria-label={`Step ${step} of 3`}>
           {[1, 2, 3].map((n) => <span key={n} className={n <= step ? "on" : undefined} />)}
         </div>
