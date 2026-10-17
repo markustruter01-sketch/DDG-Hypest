@@ -470,6 +470,24 @@ export const RecordCreatorVisitResponse = zod.void()
 
 
 /**
+ * Real data only. paid_out_cents is null until real (non-test) money has been paid. ranking is "sales" once any real sale exists, otherwise "new".
+ * @summary Public showcase numbers for the Home page
+ */
+export const GetHomeResponse = zod.object({
+  "creators": zod.number().int(),
+  "live_programs": zod.number().int(),
+  "paid_out_cents": zod.number().int().nullable(),
+  "ranking": zod.enum(['sales', 'new']),
+  "top_creators": zod.array(zod.object({
+  "handle": zod.string(),
+  "display_name": zod.string(),
+  "live_programs": zod.number().int(),
+  "sales": zod.number().int()
+}))
+})
+
+
+/**
  * @summary Public app settings the web app needs
  */
 export const GetConfigResponse = zod.object({

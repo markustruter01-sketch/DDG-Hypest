@@ -25,6 +25,7 @@ import type {
   CurrentUser,
   ErrorMessage,
   HealthStatus,
+  HomeShowcase,
   Lesson,
   LessonPatchRequest,
   LessonWriteRequest,
@@ -1704,6 +1705,84 @@ export const useRecordCreatorVisit = <TError = ErrorType<ErrorMessage>,
       > => {
       return useMutation(getRecordCreatorVisitMutationOptions(options));
     }
+
+export const getGetHomeUrl = () => {
+
+
+
+
+  return `/api/home`
+}
+
+/**
+ * Real data only. paid_out_cents is null until real (non-test) money has been paid. ranking is "sales" once any real sale exists, otherwise "new".
+ * @summary Public showcase numbers for the Home page
+ */
+export const getHome = async ( options?: Parameters<typeof customFetch>[1]): Promise<HomeShowcase> => {
+
+  return customFetch<HomeShowcase>(getGetHomeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomeQueryKey = () => {
+    return [
+    `/api/home`
+    ] as const;
+    }
+
+
+export const getGetHomeQueryOptions = <TData = Awaited<ReturnType<typeof getHome>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHome>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHome>>> = ({ signal }) => getHome({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHome>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHomeQueryResult = NonNullable<Awaited<ReturnType<typeof getHome>>>
+export type GetHomeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Public showcase numbers for the Home page
+ */
+
+export function useGetHome<TData = Awaited<ReturnType<typeof getHome>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHome>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHomeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetConfigUrl = () => {
 

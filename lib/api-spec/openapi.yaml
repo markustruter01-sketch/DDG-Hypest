@@ -551,6 +551,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /home:
+    get:
+      operationId: getHome
+      tags: [library]
+      summary: Public showcase numbers for the Home page
+      description: Real data only. paid_out_cents is null until real (non-test) money has been paid. ranking is "sales" once any real sale exists, otherwise "new".
+      responses:
+        "200":
+          description: Home showcase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeShowcase"
   /config:
     get:
       operationId: getConfig
@@ -790,6 +803,47 @@ components:
         - creator_display_name
         - creator_handle
         - lesson_count
+    HomeShowcase:
+      type: object
+      additionalProperties: false
+      properties:
+        creators:
+          type: integer
+        live_programs:
+          type: integer
+        paid_out_cents:
+          type: integer
+          nullable: true
+        ranking:
+          type: string
+          enum: [sales, new]
+        top_creators:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShowcaseCreator"
+      required:
+        - creators
+        - live_programs
+        - paid_out_cents
+        - ranking
+        - top_creators
+    ShowcaseCreator:
+      type: object
+      additionalProperties: false
+      properties:
+        handle:
+          type: string
+        display_name:
+          type: string
+        live_programs:
+          type: integer
+        sales:
+          type: integer
+      required:
+        - handle
+        - display_name
+        - live_programs
+        - sales
     AppConfig:
       type: object
       additionalProperties: false

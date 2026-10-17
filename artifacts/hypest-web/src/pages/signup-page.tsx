@@ -33,7 +33,7 @@ export function SignupPage() {
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-      navigate("/studio");
+      navigate("/");
     } catch (err) {
       setError(serverErrorText(err));
     }

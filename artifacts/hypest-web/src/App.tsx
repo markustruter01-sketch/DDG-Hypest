@@ -12,12 +12,13 @@ import { ProfilePage } from '@/pages/profile-page';
 import { SignupPage } from '@/pages/signup-page';
 import { errorStatus } from '@/lib/server-error';
 
+// Create lives inside Studio (its + button and program tiles open /create), so Home fits in five tabs.
 const destinations = [
-  { label: 'Studio', path: '/studio' },
-  { label: 'Explore', path: '/explore' },
-  { label: 'Create', path: '/create' },
-  { label: 'Library', path: '/library' },
-  { label: 'Me', path: '/profile' },
+  { label: 'Home', path: '/', also: [] },
+  { label: 'Explore', path: '/explore', also: [] },
+  { label: 'Studio', path: '/studio', also: ['/create'] },
+  { label: 'Library', path: '/library', also: [] },
+  { label: 'Me', path: '/profile', also: [] },
 ] as const;
 
 function BottomNavigation() {
@@ -25,8 +26,9 @@ function BottomNavigation() {
 
   return (
     <nav className="bottom-navigation" aria-label="Main navigation">
-      {destinations.map(({ label, path }) => {
-        const active = pathname === path || pathname.startsWith(`${path}/`);
+      {destinations.map(({ label, path, also }) => {
+        const paths: readonly string[] = [path, ...also];
+        const active = path === '/' ? pathname === '/' : paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
         return (
           <Link key={path} to={path} className="nav-item" aria-current={active ? 'page' : undefined}>
             {label}

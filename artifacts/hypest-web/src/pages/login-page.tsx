@@ -23,7 +23,7 @@ export function LoginPage() {
         data: { email, password },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-      navigate("/studio");
+      navigate("/");
     } catch (err) {
       setError(serverErrorText(err));
     }

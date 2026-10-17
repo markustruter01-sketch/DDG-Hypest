@@ -64,6 +64,29 @@ export interface PublicProgram {
   lesson_count: number;
 }
 
+export type HomeShowcaseRanking = typeof HomeShowcaseRanking[keyof typeof HomeShowcaseRanking];
+
+
+export const HomeShowcaseRanking = {
+  sales: 'sales',
+  new: 'new',
+} as const;
+
+export interface ShowcaseCreator {
+  handle: string;
+  display_name: string;
+  live_programs: number;
+  sales: number;
+}
+
+export interface HomeShowcase {
+  creators: number;
+  live_programs: number;
+  paid_out_cents: number | null;
+  ranking: HomeShowcaseRanking;
+  top_creators: ShowcaseCreator[];
+}
+
 export interface AppConfig {
   dev_tools: boolean;
   /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
