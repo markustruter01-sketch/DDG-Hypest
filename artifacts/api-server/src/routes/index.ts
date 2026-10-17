@@ -3,6 +3,7 @@ import authRouter from "./auth";
 import creatorsRouter from "./creators";
 import libraryRouter from "./library";
 import homeRouter from "./home";
+import coachingRouter from "./coaching";
 import healthRouter from "./health";
 import programsRouter from "./programs";
 
@@ -14,5 +15,6 @@ router.use(programsRouter);
 router.use(creatorsRouter);
 router.use(libraryRouter);
 router.use(homeRouter);
+router.use(coachingRouter);
 
 export default router;

@@ -493,7 +493,13 @@ export const GetHomeResponse = zod.object({
 export const GetConfigResponse = zod.object({
   "dev_tools": zod.boolean(),
   "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),
-  "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points')
+  "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points'),
+  "prices": zod.object({
+  "intro_plan_cents": zod.number().int(),
+  "plan_cents": zod.number().int(),
+  "tier1_cents": zod.number().int(),
+  "tier2_cents": zod.number().int()
+})
 })
 
 
@@ -553,6 +559,528 @@ export const TestPurchaseResponse = zod.object({
   "commission_source": zod.enum(['creator_brought', 'hypest_found']),
   "commission_bps": zod.number().int(),
   "status": zod.enum(['paid', 'test'])
+})
+
+
+/**
+ * @summary The AI coaches
+ */
+export const ListCoachesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "discipline": zod.string(),
+  "title": zod.string(),
+  "personality": zod.string(),
+  "good_for": zod.string(),
+  "photo": zod.string(),
+  "goals": zod.array(zod.string())
+})
+export const ListCoachesResponse = zod.array(ListCoachesResponseItem)
+
+
+/**
+ * @summary Public. Week 1 of the plan these answers would get; nothing is saved
+ */
+export const previewPlanBodyDaysPerWeekMin = 2;
+export const previewPlanBodyDaysPerWeekMax = 6;
+
+
+
+export const PreviewPlanBody = zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(previewPlanBodyDaysPerWeekMin).max(previewPlanBodyDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true)
+})
+
+export const PreviewPlanResponse = zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+})
+
+
+/**
+ * @summary Onboarding answers, access level and current plan
+ */
+export const getTrainingResponseProfileOneDaysPerWeekMin = 2;
+export const getTrainingResponseProfileOneDaysPerWeekMax = 6;
+
+
+
+export const GetTrainingResponse = zod.object({
+  "profile": zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(getTrainingResponseProfileOneDaysPerWeekMin).max(getTrainingResponseProfileOneDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true)
+}).nullable(),
+  "access": zod.object({
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "intro_available": zod.boolean(),
+  "plan_credits": zod.number().int()
+}),
+  "plan": zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+}).nullable()
+})
+
+
+/**
+ * @summary Save onboarding answers
+ */
+export const saveTrainingProfileBodyDaysPerWeekMin = 2;
+export const saveTrainingProfileBodyDaysPerWeekMax = 6;
+
+
+
+export const SaveTrainingProfileBody = zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(saveTrainingProfileBodyDaysPerWeekMin).max(saveTrainingProfileBodyDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true)
+})
+
+export const saveTrainingProfileResponseProfileOneDaysPerWeekMin = 2;
+export const saveTrainingProfileResponseProfileOneDaysPerWeekMax = 6;
+
+
+
+export const SaveTrainingProfileResponse = zod.object({
+  "profile": zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(saveTrainingProfileResponseProfileOneDaysPerWeekMin).max(saveTrainingProfileResponseProfileOneDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true)
+}).nullable(),
+  "access": zod.object({
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "intro_available": zod.boolean(),
+  "plan_credits": zod.number().int()
+}),
+  "plan": zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+}).nullable()
+})
+
+
+/**
+ * @summary Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership.
+ */
+export const CreatePlanResponse = zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+})
+
+
+/**
+ * @summary Finish the current block and build the next one (Tier 1/2). Tier 2 uses the logs to set loads.
+ */
+export const CreateNextPlanResponse = zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+})
+
+
+/**
+ * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
+ */
+export const ResumePlanResponse = zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+})
+
+
+/**
+ * @summary Mark a session done
+ */
+export const CompleteSessionParams = zod.object({
+  "sessionId": zod.coerce.number().int()
+})
+
+export const CompleteSessionResponse = zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+})
+
+
+/**
+ * @summary Save one set (Tier 2)
+ */
+export const LogSetParams = zod.object({
+  "itemId": zod.coerce.number().int(),
+  "setNumber": zod.coerce.number().int()
+})
+
+export const logSetBodyRepsMin = 0;
+export const logSetBodyRepsMax = 200;
+
+export const logSetBodySecondsMin = 0;
+export const logSetBodySecondsMax = 7200;
+
+export const logSetBodyLoadKgMin = 0;
+export const logSetBodyLoadKgMax = 1000;
+
+
+
+export const LogSetBody = zod.object({
+  "reps": zod.number().int().min(logSetBodyRepsMin).max(logSetBodyRepsMax).nullable(),
+  "seconds": zod.number().int().min(logSetBodySecondsMin).max(logSetBodySecondsMax).nullable(),
+  "load_kg": zod.number().min(logSetBodyLoadKgMin).max(logSetBodyLoadKgMax).nullable()
+})
+
+export const LogSetResponse = zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+})
+
+
+/**
+ * @summary This hurts. Warning words pause the plan on every tier; a gentler swap is Tier 2.
+ */
+export const ReportPainParams = zod.object({
+  "itemId": zod.coerce.number().int()
+})
+
+export const reportPainBodyTextMax = 500;
+
+
+
+export const ReportPainBody = zod.object({
+  "text": zod.string().min(1).max(reportPainBodyTextMax),
+  "area": zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck']).optional()
+})
+
+export const ReportPainResponse = zod.object({
+  "stopped": zod.boolean(),
+  "message": zod.string(),
+  "swapped_to": zod.string().nullable(),
+  "needs_tier2": zod.boolean()
+})
+
+
+/**
+ * @summary Streak, best lifts and weekly volume (Tier 2)
+ */
+export const GetProgressResponse = zod.object({
+  "streak_days": zod.number().int(),
+  "sessions_done": zod.number().int(),
+  "best_lifts": zod.array(zod.object({
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "load_kg": zod.number(),
+  "reps": zod.number().int()
+})),
+  "weekly_volume": zod.array(zod.object({
+  "week_start": zod.string(),
+  "volume_kg": zod.number()
+}))
+})
+
+
+/**
+ * @summary DEVELOPMENT ONLY. Grant a test membership with no payment. 404 outside development.
+ */
+export const DevUnlockBody = zod.object({
+  "kind": zod.enum(['intro_plan', 'plan', 'tier1', 'tier2'])
+})
+
+export const devUnlockResponseProfileOneDaysPerWeekMin = 2;
+export const devUnlockResponseProfileOneDaysPerWeekMax = 6;
+
+
+
+export const DevUnlockResponse = zod.object({
+  "profile": zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(devUnlockResponseProfileOneDaysPerWeekMin).max(devUnlockResponseProfileOneDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true)
+}).nullable(),
+  "access": zod.object({
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "intro_available": zod.boolean(),
+  "plan_credits": zod.number().int()
+}),
+  "plan": zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+}).nullable()
 })
 
 

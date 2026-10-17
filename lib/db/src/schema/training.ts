@@ -125,6 +125,8 @@ export const setLogsTable = pgTable(
   {
     id: serial("id").primaryKey(),
     itemId: integer("item_id").notNull().references(() => planItemsTable.id),
+    // The exercise actually done, kept even if the item is swapped later.
+    exerciseId: text("exercise_id").notNull(),
     setNumber: integer("set_number").notNull(),
     reps: integer("reps"),
     seconds: integer("seconds"),

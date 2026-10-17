@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { Prices } from './prices';
 
 export interface AppConfig {
   dev_tools: boolean;
@@ -12,4 +13,5 @@ export interface AppConfig {
   creator_brought_bps: number;
   /** Hypest's fee on sales Hypest found, in basis points */
   hypest_found_bps: number;
+  prices: Prices;
 }

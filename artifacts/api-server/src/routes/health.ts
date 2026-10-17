@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { GetConfigResponse, HealthCheckResponse } from "@workspace/api-zod";
 import { commissionRatesTable, db } from "@workspace/db";
 import { devToolsOn } from "../lib/dev-login";
+import { PRICES } from "../coaching/access";
 
 const router: IRouter = Router();
 
@@ -23,6 +24,7 @@ router.get("/config", async (_req, res) => {
       dev_tools: devToolsOn(),
       creator_brought_bps: bps("creator_brought"),
       hypest_found_bps: bps("hypest_found"),
+      prices: PRICES,
     }),
   );
 });
