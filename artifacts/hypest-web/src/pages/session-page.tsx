@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Minus, Plus } from "lucide-react";
@@ -15,6 +15,7 @@ import { FinishCard, type FinishStats } from "@/components/finish-card";
 import { nextSession } from "@/pages/today-page";
 import { serverErrorText } from "@/lib/server-error";
 import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
+import { useRestTimer, useScreenAwake } from "@/lib/gym";
 
 type SetEntry = { done: boolean; reps: number; load: number; seconds: number };
 
@@ -45,18 +46,16 @@ export function SessionPage() {
   const units = useUnits();
   const [index, setIndex] = useState(0);
   const [sets, setSets] = useState<Record<number, SetEntry[]>>({});
-  const [rest, setRest] = useState(0);
+  const restTimer = useRestTimer();
+  const rest = restTimer.left;
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [hurtOpen, setHurtOpen] = useState(false);
   const [startedAt] = useState(() => Date.now());
   const [finished, setFinished] = useState<FinishStats | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
   const coaches = useCoaches();
 
-  useEffect(() => {
-    if (rest <= 0) return;
-    const t = setTimeout(() => setRest((r) => r - 1), 1000);
-    return () => clearTimeout(t);
-  }, [rest]);
+  useScreenAwake();
 
   const item = session?.items.at(index) ?? null;
   const entries = useMemo(() => (item ? sets[item.id ?? 0] ?? initialSets(item, units) : []), [item, sets, units]);
@@ -79,7 +78,7 @@ export function SessionPage() {
     const nowDone = !entry.done;
     update(i, { done: nowDone });
     if (nowDone) {
-      setRest(item!.rest_seconds);
+      restTimer.start(item!.rest_seconds);
       if (canLog) {
         try {
           await logSet.mutateAsync({ itemId, setNumber: i + 1, data: {
@@ -89,7 +88,10 @@ export function SessionPage() {
           } });
         } catch {
           update(i, { done: false });
+          setSaveError(`Set ${i + 1} didn't save (no signal?). Tap it again.`);
+          return;
         }
+        setSaveError(null);
       }
     }
   }
@@ -169,9 +171,10 @@ export function SessionPage() {
         ))}
       </ol>
       {!canLog ? <p className="label lock-note">Save your numbers with Coaching</p> : null}
+      {saveError ? <p className="error-text error-on-dark" role="alert">{saveError}</p> : null}
 
       {rest > 0 ? (
-        <button type="button" className="rest-bar" onClick={() => setRest(0)}>
+        <button type="button" className="rest-bar" onClick={restTimer.stop}>
           <span>Rest</span><b>{Math.floor(rest / 60)}:{String(rest % 60).padStart(2, "0")}</b><span>Skip</span>
         </button>
       ) : null}
@@ -183,7 +186,7 @@ export function SessionPage() {
         {last ? (
           <button className="primary-button" type="button" onClick={finish} disabled={complete.isPending}>Finish ✓</button>
         ) : (
-          <button className="primary-button" type="button" onClick={() => { setRest(0); setIndex(index + 1); }}>Next →</button>
+          <button className="primary-button" type="button" onClick={() => { restTimer.stop(); setSaveError(null); setIndex(index + 1); }}>Next →</button>
         )}
       </div>
 
