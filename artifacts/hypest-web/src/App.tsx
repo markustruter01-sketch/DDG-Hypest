@@ -16,6 +16,7 @@ import { CheckoutReturn } from '@/components/checkout-return';
 import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/password-pages';
 import { LegalPage } from '@/pages/legal-page';
 import { AdminPage } from '@/pages/admin-page';
+import { RemindersOffPage } from '@/pages/reminders-off-page';
 
 // AI-coach app (pivot, 18 Oct 2026). The creator-marketplace pages (Studio, Create, Explore,
 // Library, creator links) stay in src/pages but are no longer routed.
@@ -76,6 +77,7 @@ function AppShell() {
         <Route path="/privacy" element={<LegalPage kind="privacy" />} />
         <Route path="/health" element={<LegalPage kind="health" />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/reminders/off" element={<RemindersOffPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {fullScreen ? null : <BottomNavigation />}

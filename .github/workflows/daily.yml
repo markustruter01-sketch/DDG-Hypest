@@ -1,0 +1,24 @@
+# Once a day: asks the published Hypest app to send due reminder emails and tidy expired rows.
+# The published app scales to zero and has no timer of its own, so GitHub wakes it.
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   HYPEST_URL  the published address, e.g. https://<name>.replit.app (no trailing slash)
+#   JOBS_TOKEN  the same value as the JOBS_TOKEN Replit Secret (32+ random characters)
+# Without them the job just says so and stops.
+name: daily
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 22:00 UTC = 08:00 Brisbane
+  workflow_dispatch: {}
+permissions: {}
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run the daily job
+        env:
+          HYPEST_URL: ${{ secrets.HYPEST_URL }}
+          JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
+        run: |
+          if [ -z "$HYPEST_URL" ] || [ -z "$JOBS_TOKEN" ]; then echo "HYPEST_URL or JOBS_TOKEN not set: skipped"; exit 0; fi
+          curl -fsS --max-time 120 -X POST -H "Authorization: Bearer $JOBS_TOKEN" "$HYPEST_URL/api/jobs/daily"
