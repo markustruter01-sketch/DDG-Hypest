@@ -1,6 +1,7 @@
 import { gte, sum } from "drizzle-orm";
 import { aiUsageTable, db } from "@workspace/db";
 import { logger } from "./logger";
+import { alert } from "./alerts";
 
 /**
  * The AI layer (Claude API). OFF unless BOTH are set in Replit Secrets:
@@ -70,6 +71,7 @@ export async function askClaude(args: {
     const spent = await spentThisMonthMicroUsd();
     if (!fitsBudget(spent, aiBudgetUsd(), args.tier, promptChars, args.maxTokens)) {
       logger.warn({ spentUsd: spent / 1e6, budgetUsd: aiBudgetUsd() }, "AI monthly budget reached: carrying on without AI");
+      void alert("warning", "AI monthly budget reached", `Spent US$${(spent / 1e6).toFixed(2)} of US$${aiBudgetUsd()}. Plans and the app carry on without AI until next month or a higher AI_MONTHLY_BUDGET_USD.`);
       return null;
     }
     const res = await fetch(apiUrl(), {
@@ -89,12 +91,14 @@ export async function askClaude(args: {
     });
     if (!res.ok) {
       logger.error({ status: res.status, type: body?.error?.type, purpose: args.purpose }, "AI call failed");
+      void alert("warning", `AI call failed (${args.purpose})`, `HTTP ${res.status} ${body?.error?.type ?? ""}`.trim());
       return null;
     }
     const text = (body?.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("").trim();
     return text || null;
   } catch (err) {
     logger.error({ err, purpose: args.purpose }, "AI call failed");
+    void alert("warning", `AI call failed (${args.purpose})`, err instanceof Error ? err.message : String(err));
     return null;
   }
 }

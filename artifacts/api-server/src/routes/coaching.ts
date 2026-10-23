@@ -38,6 +38,7 @@ import { buildPlan, findSwap, nextLoads, WEEKS, type Plan, type PlanInput } from
 import { redFlag, STOP_MESSAGE } from "../coaching/safety";
 import { notesPrompt, parseNotes } from "../coaching/ai-notes";
 import { askClaude } from "../lib/ai";
+import { alert } from "../lib/alerts";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
 
 const router: IRouter = Router();
@@ -373,6 +374,7 @@ router.post("/me/items/:itemId/hurts", requireUser, async (req, res) => {
   const flag = redFlag(body.data.text);
   if (flag) {
     await db.update(plansTable).set({ status: "paused", pausedReason: `Safety stop: "${flag}"` }).where(eq(plansTable.id, owned.plan.id));
+    void alert("info", `Safety stop: member #${user.id}`, `"This hurts" matched "${flag}". Plan paused; member told to see a doctor or physio.`);
     return void res.json(ReportPainResponse.parse({ stopped: true, message: STOP_MESSAGE, swapped_to: null, needs_tier2: false }));
   }
 

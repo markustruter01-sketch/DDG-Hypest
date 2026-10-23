@@ -1238,6 +1238,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /admin/summary:
+    get:
+      operationId: getAdminSummary
+      tags: [health]
+      summary: Owner's view of Hypest (ADMIN_EMAILS only; 404 for everyone else)
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/progress:
     get:
       operationId: getProgress
@@ -1790,6 +1814,78 @@ components:
           items:
             $ref: "#/components/schemas/ChatMessage"
       required: [enabled, remaining_today, messages]
+    AdminSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        generated_at: {type: string, format: date-time}
+        switches:
+          type: object
+          additionalProperties: false
+          properties:
+            payments: {type: string, enum: ["off", test, live]}
+            ai: {type: boolean}
+            email: {type: boolean}
+            alerts: {type: boolean}
+          required: [payments, ai, email, alerts]
+        members:
+          type: object
+          additionalProperties: false
+          properties:
+            total: {type: integer}
+            new_7d: {type: integer}
+          required: [total, new_7d]
+        memberships:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              kind: {type: string}
+              live: {type: integer}
+              test: {type: integer}
+            required: [kind, live, test]
+        activity_7d:
+          type: object
+          additionalProperties: false
+          properties:
+            plans_built: {type: integer}
+            sessions_done: {type: integer}
+            sets_logged: {type: integer}
+            chat_messages: {type: integer}
+          required: [plans_built, sessions_done, sets_logged, chat_messages]
+        ai:
+          type: object
+          additionalProperties: false
+          properties:
+            month_spend_usd: {type: number}
+            budget_usd: {type: number}
+            calls_month: {type: integer}
+            failed_month: {type: integer}
+          required: [month_spend_usd, budget_usd, calls_month, failed_month]
+        paused_plans:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              plan_id: {type: integer}
+              member_id: {type: integer}
+              reason: {type: string, nullable: true}
+            required: [plan_id, member_id, reason]
+        billing_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: {type: string}
+              type: {type: string}
+              outcome: {type: string}
+              livemode: {type: boolean}
+              received_at: {type: string, format: date-time}
+            required: [id, type, outcome, livemode, received_at]
+      required: [generated_at, switches, members, memberships, activity_7d, ai, paused_plans, billing_events]
     PastPlan:
       type: object
       additionalProperties: false

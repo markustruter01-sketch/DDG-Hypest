@@ -8,6 +8,7 @@ import { verifyPassword } from "../lib/passwords";
 import { stripeClient } from "../lib/stripe";
 import { activeSubscriptionIds, deleteAccount } from "../account/delete";
 import { exportAccount } from "../account/export";
+import { alert } from "../lib/alerts";
 
 const router: IRouter = Router();
 
@@ -32,6 +33,7 @@ router.delete("/auth/me", requireUser, async (req, res) => {
     await deleteAccount(user.id, stripe ? async (id) => void (await stripe.subscriptions.cancel(id)) : null);
   } catch (err) {
     req.log.error({ err }, "account delete failed");
+    void alert("warning", "Account delete failed (Stripe cancel)", `Member #${user.id}. Nothing was deleted.`);
     return void res.status(502).json({ message: "Your membership couldn't be cancelled, so nothing was deleted. Try again in a minute." });
   }
   req.log.info({ user: user.id }, "account deleted");

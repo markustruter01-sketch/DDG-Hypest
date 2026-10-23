@@ -7,6 +7,7 @@ import { paymentsMode, stripeClient, webhookSecret } from "../lib/stripe";
 import { accessFor } from "../coaching/access";
 import { checkoutParams, isMonthly, safeReturnUrl } from "../billing/checkout";
 import { handleEvent } from "../billing/sync";
+import { alert } from "../lib/alerts";
 
 const router: IRouter = Router();
 
@@ -20,6 +21,7 @@ function paymentsOff(res: Response) {
 /** A Stripe call failed (network, bad key, Stripe down): log it, tell the member plainly. Nothing was charged. */
 function stripeFailed(req: Request, res: Response, err: unknown) {
   req.log.error({ err }, "stripe call failed");
+  void alert("critical", "Stripe call failed (checkout or portal)", err instanceof Error ? err.message : String(err));
   res.status(502).json({ message: "Payments are unavailable right now. You weren't charged. Try again in a minute." });
 }
 
@@ -86,6 +88,7 @@ export const billingWebhook: RequestHandler = async (req, res) => {
     event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret());
   } catch {
     req.log.warn("stripe webhook: bad signature");
+    void alert("warning", "Stripe webhook with a bad signature", "Check STRIPE_WEBHOOK_SECRET matches the endpoint in Stripe.");
     return void res.status(400).json({ message: "bad signature" });
   }
   if (event.livemode !== (paymentsMode() === "live")) {
@@ -98,6 +101,7 @@ export const billingWebhook: RequestHandler = async (req, res) => {
     res.json({ received: true, outcome });
   } catch (err) {
     req.log.error({ err, event: event.id, type: event.type }, "stripe webhook failed");
+    void alert("critical", "Stripe webhook failed: access may be out of date", `${event.type} ${event.id}. Stripe retries; see the API log.`);
     res.status(500).json({ message: "webhook failed" });
   }
 };
