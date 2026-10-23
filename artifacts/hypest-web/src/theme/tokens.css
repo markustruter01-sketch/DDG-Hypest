@@ -20,6 +20,7 @@
   --color-draft-bg: #f5ead6;
   --color-draft-ink: #8a5a00;
   --color-error: #b3261e;
+  --color-error-on-dark: #ff8a80; /* error text on the dark player */
 
   /* Type */
   --font-display: "Anton", "Arial Narrow", sans-serif;   /* capitals: headlines + big numbers */
