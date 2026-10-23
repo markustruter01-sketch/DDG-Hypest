@@ -27,6 +27,7 @@ import {
   type AuthUser,
 } from "../lib/session";
 import { authUser, requireUser } from "../middleware/require-user";
+import { sendEmail, siteUrl } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -75,6 +76,9 @@ router.post("/auth/signup", async (req, res) => {
     }
 
     await createSession(res, user.id);
+    // Welcome email (only when email is set up). Not awaited: signup never waits on the mail server.
+    const site = siteUrl();
+    if (site) void sendEmail(user.email, "Welcome to Hypest", `Hi ${user.displayName},\n\nYour account is ready. Pick up where you left off: ${site}\n\nForgot your password one day? Use \"Forgot password?\" on the log-in page.`);
     res.status(201).json(SignupResponse.parse(toCurrentUser(user)));
   } catch (err) {
     if (isUniqueViolation(err)) {
