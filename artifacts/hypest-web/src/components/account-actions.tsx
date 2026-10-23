@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeleteAccount, useLogoutAll } from "@workspace/api-client-react";
 import { serverErrorText } from "@/lib/server-error";
+import { useAppConfig } from "@/lib/config";
+import { ChangePassword } from "@/components/change-password";
+import { LegalLinks } from "@/pages/legal-page";
 
 const request = { credentials: "include" as const };
 
@@ -15,6 +18,7 @@ export function AccountActions() {
   const [confirming, setConfirming] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const config = useAppConfig();
 
   async function leave(action: () => Promise<unknown>) {
     setError(null);
@@ -41,6 +45,7 @@ export function AccountActions() {
           Log out everywhere
         </button>
       </div>
+      <ChangePassword />
       {confirming ? (
         <form className="card delete-account" onSubmit={onDelete}>
           <p className="delete-warning">Deletes your plans, logs and account. Any membership is cancelled. This can't be undone.</p>
@@ -57,6 +62,8 @@ export function AccountActions() {
         <button className="text-link delete-link" type="button" onClick={() => setConfirming(true)}>Delete account</button>
       )}
       {error ? <p className="error-text" role="alert">{error}</p> : null}
+      {config ? <p className="label">Help: <a className="text-link-inline" href={`mailto:${config.support_email}`}>{config.support_email}</a></p> : null}
+      <LegalLinks />
     </section>
   );
 }

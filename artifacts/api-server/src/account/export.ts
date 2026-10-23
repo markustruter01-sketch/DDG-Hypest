@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { db, membershipsTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { coachMessagesTable, db, membershipsTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -19,6 +19,7 @@ export async function exportAccount(userId: number) {
     ? await db.select().from(setLogsTable).where(inArray(setLogsTable.itemId, items.map((i) => i.id))).orderBy(asc(setLogsTable.setNumber))
     : [];
   const memberships = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId)).orderBy(asc(membershipsTable.createdAt));
+  const chat = await db.select().from(coachMessagesTable).where(eq(coachMessagesTable.userId, userId)).orderBy(asc(coachMessagesTable.id));
 
   return {
     exported_at: new Date().toISOString(),
@@ -42,5 +43,6 @@ export async function exportAccount(userId: number) {
       })),
     })),
     memberships: memberships.map((m) => ({ kind: m.kind, status: m.status, test: m.test, starts_at: m.startsAt, ends_at: m.endsAt, used_at: m.usedAt })),
+    coach_chat: chat.map((c) => ({ coach_id: c.coachId, role: c.role, text: c.text, at: c.createdAt })),
   };
 }

@@ -407,6 +407,37 @@ export interface Prices {
   tier2_cents: number;
 }
 
+export interface ChangePasswordRequest {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  current_password: string;
+  /**
+     * @minLength 10
+     * @maxLength 200
+     */
+  new_password: string;
+}
+
+export interface ForgotPasswordRequest {
+  /** @maxLength 320 */
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  /**
+     * @minLength 43
+     * @maxLength 43
+     */
+  token: string;
+  /**
+     * @minLength 10
+     * @maxLength 200
+     */
+  password: string;
+}
+
 export interface DeleteAccountRequest {
   /**
      * @minLength 1
@@ -461,6 +492,9 @@ export const AppConfigPayments = {
 
 export interface AppConfig {
   dev_tools: boolean;
+  support_email: string;
+  /** Emails can be sent (password reset works) */
+  email: boolean;
   /** AI layer on (coach notes on plans, coach chat for Coaching members) */
   ai: boolean;
   /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */

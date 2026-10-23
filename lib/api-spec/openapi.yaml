@@ -211,6 +211,92 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /auth/password:
+    put:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change my password (logs out every other device)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Changed
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Current password is wrong
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /auth/password/forgot:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Email a reset link. Same answer whether or not the email has an account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "202":
+          description: If the email has an account, a link was sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Email isn't set up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /auth/password/reset:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Set a new password with a reset link's token; logs out everywhere, then logs in here
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          description: Invalid, expired or used link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /auth/logout-all:
     post:
       operationId: logoutAll
@@ -1760,6 +1846,26 @@ components:
         tier1_cents: {type: integer}
         tier2_cents: {type: integer}
       required: [intro_plan_cents, plan_cents, tier1_cents, tier2_cents]
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        current_password: {type: string, minLength: 1, maxLength: 200}
+        new_password: {type: string, minLength: 10, maxLength: 200}
+      required: [current_password, new_password]
+    ForgotPasswordRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email: {type: string, format: email, maxLength: 320}
+      required: [email]
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        token: {type: string, minLength: 43, maxLength: 43}
+        password: {type: string, minLength: 10, maxLength: 200}
+      required: [token, password]
     DeleteAccountRequest:
       type: object
       additionalProperties: false
@@ -1808,6 +1914,11 @@ components:
       properties:
         dev_tools:
           type: boolean
+        support_email:
+          type: string
+        email:
+          type: boolean
+          description: Emails can be sent (password reset works)
         ai:
           type: boolean
           description: AI layer on (coach notes on plans, coach chat for Coaching members)
@@ -1827,6 +1938,8 @@ components:
         - prices
         - payments
         - ai
+        - email
+        - support_email
         - dev_tools
         - creator_brought_bps
         - hypest_found_bps
