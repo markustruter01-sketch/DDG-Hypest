@@ -47,12 +47,13 @@ function docs(support: string): Record<"terms" | "privacy" | "health", Doc> {
         { h: "What we collect", p: [
           "Account: your email, display name, an optional bio, and your password stored only as a scrambled (hashed) value.",
           "Training: your answers (goal, experience, days, time, equipment, sore or injured areas, kg or lb), your plans, the sets you log, sessions you finish, and safety stops (the warning word, not your full message).",
+          "Health check: whether you answered yes to any question, and whether you confirmed a health professional cleared you. We do not keep your single answers.",
           "Coach chat (Coaching members, when switched on): the messages you send and the replies.",
           "Payments: Stripe handles your card; we never see or store card numbers. We keep Stripe's customer and payment references and what you bought.",
           "Security: failed log-in attempts (email and time), kept briefly to block password guessing, and password reset requests.",
           "One cookie keeps you logged in (for up to 30 days). We do not use advertising or tracking cookies.",
         ] },
-        { h: "Health information", p: ["Sore or injured areas and safety stops are health information. We use them only to build and adjust your plan and to keep you safe, never for advertising, and we do not sell them."] },
+        { h: "Health information", p: ["Sore or injured areas, your health check result and safety stops are health information. We use them only to build and adjust your plan and to keep you safe, never for advertising, and we do not sell them."] },
         { h: "Who helps us run Hypest", p: [
           "Replit hosts the app and its database. Stripe processes payments. Google delivers our emails. When AI is switched on, Anthropic processes your training answers, plan and chat messages to write your coach's text; we do not send it your name or email.",
           "These providers are mainly in the United States, so your information may be stored or processed outside Australia.",
@@ -70,7 +71,10 @@ function docs(support: string): Record<"terms" | "privacy" | "health", Doc> {
       title: "Health and safety",
       sections: [
         { h: "Not medical advice", p: ["Hypest gives general training plans. It is not medical advice and does not replace a doctor, physiotherapist or other health professional. Hypest's coaches are AI software."] },
-        { h: "Before you start", p: ["If you have a health condition, an injury, are pregnant or have recently given birth, or are unsure whether exercise is safe for you, check with a doctor before you start."] },
+        { h: "Before you start", p: [
+          "Before your first plan, Hypest asks a short health check. If you answer yes to any question, check with your doctor or a health professional before you start, and only go ahead once they have cleared you.",
+          "If you have a health condition, an injury, are pregnant or have recently given birth, or are unsure whether exercise is safe for you, check with a doctor before you start.",
+        ] },
         { h: "While you train", p: [
           "Stop at once if you feel pain, chest pain, dizziness, faintness or unusual shortness of breath.",
           "Tap \"This hurts\" in a session: mild discomfort swaps the exercise for a gentler one; warning signs pause your plan and tell you to see a doctor or physiotherapist before you train again.",

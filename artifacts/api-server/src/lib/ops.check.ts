@@ -2,6 +2,7 @@
 // OPS_CHECK_API is an API started with DISCORD_WEBHOOK_URL=http://localhost:<that port>/hook and
 // ADMIN_EMAILS=<OPS_CHECK_ADMIN>.
 import assert from "node:assert/strict";
+import { SCREENING } from "../coaching/screening";
 import http from "node:http";
 import { alertText } from "./alerts";
 
@@ -32,7 +33,7 @@ if (api && hookPort && admin) {
       return { status: r.status, json, type: r.headers.get("content-type") ?? "" };
     };
   }
-  const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_per_week: 3, minutes: 45, equipment: ["dumbbells"], avoid_areas: [], health_accepted: true };
+  const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_per_week: 3, minutes: 45, equipment: ["dumbbells"], avoid_areas: [], health_accepted: true, screening: { answers: SCREENING.questions.map(() => false), cleared: false } };
 
   // Member: safety stop sends one alert, with no personal details
   const M = browser();

@@ -13,6 +13,7 @@ import { Offers } from "@/components/offers";
 import { AREA_LABEL, EQUIPMENT_LABEL, EXPERIENCE_LABEL, GOAL_LABEL, coachById, dose, img, request, savePendingAnswers, useCoaches, useTraining } from "@/lib/coaching";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 import { useUnits } from "@/lib/units";
+import { useAppConfig } from "@/lib/config";
 
 type Goal = TrainingAnswers["goal"];
 type Experience = TrainingAnswers["experience"];
@@ -42,7 +43,21 @@ function Chips<T extends string | number>({ options, value, onChange, label }: {
   );
 }
 
-/** Two short screens of taps, then the real week 1 for free. Deeper questions come later for Coaching members. */
+/** One health question: Yes / No. */
+function YesNo({ question, value, onChange }: { question: string; value: boolean | null; onChange: (v: boolean) => void }) {
+  return (
+    <fieldset className="chips screen-question">
+      <legend className="screen-copy">{question}</legend>
+      {([[false, "No"], [true, "Yes"]] as const).map(([v, text]) => (
+        <button key={text} type="button" className={value === v ? "chip chip-on" : "chip"} aria-pressed={value === v} onClick={() => onChange(v)}>
+          {text}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** Two short screens of taps and a health check, then the real week 1 for free. Deeper questions come later for Coaching members. */
 export function OnboardingPage() {
   const { coachId = "" } = useParams();
   const coaches = useCoaches();
@@ -54,7 +69,8 @@ export function OnboardingPage() {
   const save = useSaveTrainingProfile({ request });
   const create = useCreatePlan({ request });
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const config = useAppConfig();
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [experience, setExperience] = useState<Experience>("beginner");
   const [days, setDays] = useState(3);
@@ -62,6 +78,8 @@ export function OnboardingPage() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [health, setHealth] = useState(false);
+  const [screen, setScreen] = useState<(boolean | null)[]>([]);
+  const [cleared, setCleared] = useState(false);
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const units = useUnits();
@@ -69,11 +87,16 @@ export function OnboardingPage() {
   if (coaches.isSuccess && !coach) return <Navigate to="/coaches" replace />;
   if (!coach) return <main className="screen-scroll" aria-busy="true" />;
 
+  const questions = config?.screening.questions ?? [];
+  const screenAnswers = questions.map((_, i) => screen[i] ?? null);
+  const anyYes = screenAnswers.some((a) => a === true);
+  const screenDone = questions.length > 0 && screenAnswers.every((a) => a !== null) && (!anyYes || cleared);
   const loggedIn = training.isSuccess;
   const access = training.data?.access;
   const chosenGoal = goal ?? (coach.goals[0] as Goal);
   const answers: TrainingAnswers = {
     coach_id: coach.id, goal: chosenGoal, experience, days_per_week: days, minutes, equipment, avoid_areas: areas, units, health_accepted: true,
+    screening: { answers: screenAnswers.map((a) => a === true), cleared: anyYes && cleared },
   };
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const goalOptions: Option<Goal>[] = (coach.goals as Goal[]).map((g) => [g, GOAL_LABEL[g] ?? g]);
@@ -82,7 +105,7 @@ export function OnboardingPage() {
     setError(null);
     try {
       setPlan(await preview.mutateAsync({ data: answers }));
-      setStep(3);
+      setStep(4);
     } catch (err) {
       setError(serverErrorText(err));
     }
@@ -119,8 +142,8 @@ export function OnboardingPage() {
           <Link className="text-link" to={`/coaches/${coach.id}`}>← Back</Link>
           <img className="coach-face" src={img(coach.photo)} alt={`${coach.name}, AI coach`} />
         </div>
-        <div className="onboard-steps" role="img" aria-label={`Step ${step} of 3`}>
-          {[1, 2, 3].map((n) => <span key={n} className={n <= step ? "on" : undefined} />)}
+        <div className="onboard-steps" role="img" aria-label={`Step ${step} of 4`}>
+          {[1, 2, 3, 4].map((n) => <span key={n} className={n <= step ? "on" : undefined} />)}
         </div>
       </header>
 
@@ -140,19 +163,41 @@ export function OnboardingPage() {
           <h1 className="screen-title">What have you got?</h1>
           <Chips label="Equipment (none is fine)" options={EQUIPMENT_OPTIONS} value={equipment} onChange={(v) => setEquipment(toggle(equipment, v))} />
           <Chips label="Anything sore or injured?" options={AREA_OPTIONS} value={areas} onChange={(v) => setAreas(toggle(areas, v))} />
+          <div className="button-row onboard-next">
+            <button className="secondary-button" type="button" onClick={() => setStep(1)}>Back</button>
+            <button className="primary-button" type="button" onClick={() => setStep(3)}>Next →</button>
+          </div>
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section className="onboard-body">
+          <h1 className="screen-title">Quick health check</h1>
+          {questions.map((q, i) => (
+            <YesNo key={q} question={q} value={screenAnswers[i] ?? null} onChange={(v) => setScreen(questions.map((_, j) => (j === i ? v : screenAnswers[j] ?? null)))} />
+          ))}
+          {anyYes && config ? (
+            <div className="card screen-advice" role="note">
+              <p className="screen-copy">{config.screening.yes_advice}</p>
+              <label className="health-check">
+                <input type="checkbox" checked={cleared} onChange={(e) => setCleared(e.target.checked)} />
+                <span>{config.screening.cleared_label}</span>
+              </label>
+            </div>
+          ) : null}
           <label className="health-check">
             <input type="checkbox" checked={health} onChange={(e) => setHealth(e.target.checked)} />
             <span>I'm training at my own risk. If I have a health condition, injury or am pregnant, I'll check with a doctor first.</span>
           </label>
           {error ? <p className="error-text" role="alert">{error}</p> : null}
           <div className="button-row onboard-next">
-            <button className="secondary-button" type="button" onClick={() => setStep(1)}>Back</button>
-            <button className="primary-button" type="button" onClick={buildPreview} disabled={!health || preview.isPending}>Build my plan</button>
+            <button className="secondary-button" type="button" onClick={() => setStep(2)}>Back</button>
+            <button className="primary-button" type="button" onClick={buildPreview} disabled={!health || !screenDone || preview.isPending}>Build my plan</button>
           </div>
         </section>
       ) : null}
 
-      {step === 3 && plan ? (
+      {step === 4 && plan ? (
         <section className="onboard-body">
           <h1 className="screen-title">Your week 1</h1>
           <p className="label">{coach.name} · {GOAL_LABEL[chosenGoal]} · {days} days · {minutes} min</p>

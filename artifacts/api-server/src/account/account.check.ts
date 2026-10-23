@@ -3,6 +3,7 @@
 //   DATABASE_URL=postgresql://...@127.0.0.1:5432/<db> ACCOUNT_CHECK_API=http://localhost:8099/api \
 //   pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/account/account.check.ts
 import assert from "node:assert/strict";
+import { SCREENING } from "../coaching/screening";
 
 const dbUrl = new URL(process.env["DATABASE_URL"] ?? "postgresql://missing");
 if (!["127.0.0.1", "localhost"].includes(dbUrl.hostname)) throw new Error(`refusing: DATABASE_URL is not a local database (${dbUrl.hostname})`);
@@ -38,7 +39,7 @@ function browser() {
 const email = `account-check-${Date.now()}@example.test`;
 const password = "correct horse battery";
 const A = browser();
-const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_per_week: 3, minutes: 45, equipment: ["dumbbells"], avoid_areas: [], health_accepted: true };
+const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_per_week: 3, minutes: 45, equipment: ["dumbbells"], avoid_areas: [], health_accepted: true, screening: { answers: SCREENING.questions.map(() => false), cleared: false } };
 
 // ---------- headers ----------
 {

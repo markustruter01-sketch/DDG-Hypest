@@ -7,6 +7,7 @@
  */
 import type { AppConfigPayments } from './appConfigPayments';
 import type { Prices } from './prices';
+import type { Screening } from './screening';
 
 export interface AppConfig {
   dev_tools: boolean;
@@ -22,4 +23,5 @@ export interface AppConfig {
   /** Hypest's fee on sales Hypest found, in basis points */
   hypest_found_bps: number;
   prices: Prices;
+  screening: Screening;
 }

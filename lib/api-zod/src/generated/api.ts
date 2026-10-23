@@ -591,6 +591,12 @@ export const GetConfigResponse = zod.object({
   "plan_cents": zod.number().int(),
   "tier1_cents": zod.number().int(),
   "tier2_cents": zod.number().int()
+}),
+  "screening": zod.object({
+  "version": zod.string(),
+  "questions": zod.array(zod.string()),
+  "yes_advice": zod.string(),
+  "cleared_label": zod.string()
 })
 })
 
@@ -676,6 +682,8 @@ export const ListCoachesResponse = zod.array(ListCoachesResponseItem)
 export const previewPlanBodyDaysPerWeekMin = 2;
 export const previewPlanBodyDaysPerWeekMax = 6;
 
+export const previewPlanBodyScreeningAnswersMax = 20;
+
 
 
 export const PreviewPlanBody = zod.object({
@@ -687,7 +695,11 @@ export const PreviewPlanBody = zod.object({
   "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
   "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
   "units": zod.enum(['kg', 'lb']).optional(),
-  "health_accepted": zod.literal(true)
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(previewPlanBodyScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 })
 
 export const PreviewPlanResponse = zod.object({
@@ -736,6 +748,8 @@ export const PreviewPlanResponse = zod.object({
 export const getTrainingResponseProfileOneDaysPerWeekMin = 2;
 export const getTrainingResponseProfileOneDaysPerWeekMax = 6;
 
+export const getTrainingResponseProfileOneScreeningAnswersMax = 20;
+
 
 
 export const GetTrainingResponse = zod.object({
@@ -748,7 +762,11 @@ export const GetTrainingResponse = zod.object({
   "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
   "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
   "units": zod.enum(['kg', 'lb']).optional(),
-  "health_accepted": zod.literal(true)
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(getTrainingResponseProfileOneScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
   "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
@@ -802,6 +820,8 @@ export const GetTrainingResponse = zod.object({
 export const saveTrainingProfileBodyDaysPerWeekMin = 2;
 export const saveTrainingProfileBodyDaysPerWeekMax = 6;
 
+export const saveTrainingProfileBodyScreeningAnswersMax = 20;
+
 
 
 export const SaveTrainingProfileBody = zod.object({
@@ -813,11 +833,17 @@ export const SaveTrainingProfileBody = zod.object({
   "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
   "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
   "units": zod.enum(['kg', 'lb']).optional(),
-  "health_accepted": zod.literal(true)
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(saveTrainingProfileBodyScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 })
 
 export const saveTrainingProfileResponseProfileOneDaysPerWeekMin = 2;
 export const saveTrainingProfileResponseProfileOneDaysPerWeekMax = 6;
+
+export const saveTrainingProfileResponseProfileOneScreeningAnswersMax = 20;
 
 
 
@@ -831,7 +857,11 @@ export const SaveTrainingProfileResponse = zod.object({
   "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
   "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
   "units": zod.enum(['kg', 'lb']).optional(),
-  "health_accepted": zod.literal(true)
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(saveTrainingProfileResponseProfileOneScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
   "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
@@ -889,6 +919,8 @@ export const SetUnitsBody = zod.object({
 export const setUnitsResponseProfileOneDaysPerWeekMin = 2;
 export const setUnitsResponseProfileOneDaysPerWeekMax = 6;
 
+export const setUnitsResponseProfileOneScreeningAnswersMax = 20;
+
 
 
 export const SetUnitsResponse = zod.object({
@@ -901,7 +933,11 @@ export const SetUnitsResponse = zod.object({
   "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
   "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
   "units": zod.enum(['kg', 'lb']).optional(),
-  "health_accepted": zod.literal(true)
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(setUnitsResponseProfileOneScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
   "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
@@ -1301,6 +1337,8 @@ export const DevUnlockBody = zod.object({
 export const devUnlockResponseProfileOneDaysPerWeekMin = 2;
 export const devUnlockResponseProfileOneDaysPerWeekMax = 6;
 
+export const devUnlockResponseProfileOneScreeningAnswersMax = 20;
+
 
 
 export const DevUnlockResponse = zod.object({
@@ -1313,7 +1351,11 @@ export const DevUnlockResponse = zod.object({
   "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
   "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
   "units": zod.enum(['kg', 'lb']).optional(),
-  "health_accepted": zod.literal(true)
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(devUnlockResponseProfileOneScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
   "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),

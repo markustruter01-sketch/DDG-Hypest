@@ -29,6 +29,8 @@ export const trainingProfilesTable = pgTable(
     avoidAreas: text("avoid_areas").array().notNull(),
     units: text("units").notNull().default("kg"),
     healthAcceptedAt: timestamp("health_accepted_at").notNull(),
+    /** Health check result (coaching/screening.ts): { version, any_yes, cleared }. Null = never answered. */
+    screening: jsonb("screening").$type<{ version: string; any_yes: boolean; cleared: boolean }>(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [

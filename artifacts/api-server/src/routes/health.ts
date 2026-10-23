@@ -3,6 +3,7 @@ import { GetConfigResponse, HealthCheckResponse } from "@workspace/api-zod";
 import { commissionRatesTable, db } from "@workspace/db";
 import { devToolsOn } from "../lib/dev-login";
 import { PRICES } from "../coaching/access";
+import { SCREENING } from "../coaching/screening";
 import { paymentsMode } from "../lib/stripe";
 import { aiOn } from "../lib/ai";
 import { emailOn, siteUrl, SUPPORT_EMAIL } from "../lib/email";
@@ -32,6 +33,7 @@ router.get("/config", async (_req, res) => {
       creator_brought_bps: bps("creator_brought"),
       hypest_found_bps: bps("hypest_found"),
       prices: PRICES,
+      screening: SCREENING,
     }),
   );
 });

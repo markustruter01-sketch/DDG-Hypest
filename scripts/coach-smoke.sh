@@ -7,7 +7,9 @@ r(){ local want=$1; shift; local m=$1; shift; local p=$1; shift; local got
   got=$(curl -s -o $BODY -w '%{http_code}' -b $J -c $J -X $m -H 'content-type: application/json' "$B$p" "$@")
   printf '%-4s %-40s %s ' "$([ "$got" = "$want" ] && echo ok || echo FAIL)" "$m $p" "$got"; head -c 150 $BODY; echo
   [ "$got" = "$want" ] || FAIL=1; }
-A='{"coach_id":"rex","goal":"muscle","experience":"beginner","days_per_week":3,"minutes":45,"equipment":["dumbbells"],"avoid_areas":[],"health_accepted":true}'
+# Health check: one "no" per question the server publishes in /config (coaching/screening.ts is the source).
+NO=$(curl -s $B/config | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s).screening.questions.map(()=>false))))')
+A='{"coach_id":"rex","goal":"muscle","experience":"beginner","days_per_week":3,"minutes":45,"equipment":["dumbbells"],"avoid_areas":[],"health_accepted":true,"screening":{"answers":'$NO',"cleared":false}}'
 echo "== public"
 r 200 GET /coaches
 r 200 POST /coaching/preview -d "$A"
