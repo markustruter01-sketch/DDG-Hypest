@@ -26,6 +26,7 @@ import type {
   ChangePasswordRequest,
   ChatRequest,
   CheckoutRequest,
+  ClientErrorReport,
   Coach,
   CoachChat,
   CreateProgramRequest,
@@ -1094,6 +1095,94 @@ export function useExportMyData<TData = Awaited<ReturnType<typeof exportMyData>>
 
 
 
+
+export const getReportClientErrorUrl = () => {
+
+
+
+
+  return `/api/client-errors`
+}
+
+/**
+ * @summary The app tells the server it crashed (no personal details; capped; never fails the page)
+ */
+export const reportClientError = async (clientErrorReport: ClientErrorReport, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getReportClientErrorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clientErrorReport)
+  }
+);}
+
+
+
+
+
+export const getReportClientErrorMutationKey = () => ['reportClientError'] as const;
+
+export const getReportClientErrorMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext> => {
+
+const mutationKey = getReportClientErrorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportClientError>>, ReportClientErrorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportClientError(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportClientErrorMutationResult = NonNullable<Awaited<ReturnType<typeof reportClientError>>>
+    export type ReportClientErrorMutationBody = BodyType<ClientErrorReport>
+    export type ReportClientErrorMutationError = ErrorType<ErrorMessage>
+    export type ReportClientErrorMutationVariables = {data: BodyType<ClientErrorReport>}
+
+    /**
+ * @summary The app tells the server it crashed (no personal details; capped; never fails the page)
+ */
+export const useReportClientError = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportClientError>>,
+        TError,
+        ReportClientErrorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportClientErrorMutationOptions(options));
+    }
 
 export const getListPublishedProgramsUrl = (params?: ListPublishedProgramsParams,) => {
   const normalizedParams = new URLSearchParams();

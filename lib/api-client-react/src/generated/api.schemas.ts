@@ -98,6 +98,22 @@ export interface Coach {
   goals: string[];
 }
 
+export type ClientErrorReportKind = typeof ClientErrorReportKind[keyof typeof ClientErrorReportKind];
+
+
+export const ClientErrorReportKind = {
+  crash: 'crash',
+  unhandled: 'unhandled',
+} as const;
+
+export interface ClientErrorReport {
+  kind: ClientErrorReportKind;
+  /** @maxLength 500 */
+  message: string;
+  /** @maxLength 200 */
+  path: string;
+}
+
 export type UnitsRequestUnits = typeof UnitsRequestUnits[keyof typeof UnitsRequestUnits];
 
 

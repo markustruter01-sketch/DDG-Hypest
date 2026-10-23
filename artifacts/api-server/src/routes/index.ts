@@ -11,6 +11,7 @@ import billingRouter from "./billing";
 import accountRouter from "./account";
 import passwordRouter from "./password";
 import adminRouter from "./admin";
+import clientErrorsRouter from "./client-errors";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(billingRouter);
 router.use(accountRouter);
 router.use(passwordRouter);
 router.use(adminRouter);
+router.use(clientErrorsRouter);
 
 export default router;

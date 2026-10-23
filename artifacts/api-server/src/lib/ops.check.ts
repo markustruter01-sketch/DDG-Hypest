@@ -61,6 +61,18 @@ if (api && hookPort && admin) {
   const lost = await M("GET", "/no-such-route");
   ok(lost.status === 404 && lost.type.includes("application/json") && lost.json?.message === "Not found", "unknown API route: JSON 404");
 
+  // Crash reports from the app: scrubbed, alerted once per page, capped per minute, no login needed
+  const report = (body: unknown) => fetch(`${api}/client-errors`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  ok((await report({ kind: "crash", message: "x is undefined for sam@example.com 1234567", path: "/session/42" })).status === 204, "crash report accepted without login");
+  ok((await report({ kind: "boom", message: "x", path: "/" })).status === 400, "bad crash report refused");
+  await settle();
+  const crash = posts.find((p) => p.includes("App error on /session/:id"));
+  ok(crash && crash.includes("[email]") && crash.includes("[number]") && !crash.includes("sam@example.com"), "crash alert: page id hidden, email and numbers blanked");
+  const beforeFlood = posts.length;
+  for (let i = 0; i < 40; i++) await report({ kind: "unhandled", message: `flood ${i}`, path: `/p${i}` });
+  await settle();
+  ok(posts.length - beforeFlood <= 29, "crash reports capped per minute");
+
   // Admin: hidden from members, visible to ADMIN_EMAILS
   ok((await M("GET", "/admin/summary")).status === 404, "admin hidden from members (404)");
   ok((await browser()("GET", "/admin/summary")).status === 401 || (await browser()("GET", "/admin/summary")).status === 404, "admin hidden when logged out / dev user");

@@ -329,6 +329,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /client-errors:
+    post:
+      operationId: reportClientError
+      tags: [health]
+      summary: The app tells the server it crashed (no personal details; capped; never fails the page)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientErrorReport"
+      responses:
+        "204":
+          description: Noted (or dropped by the rate cap)
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /programs:
     get:
       operationId: listPublishedPrograms
@@ -1629,6 +1649,16 @@ components:
           type: array
           items: {type: string}
       required: [id, name, discipline, title, personality, good_for, photo, goals]
+    ClientErrorReport:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum: [crash, unhandled]
+        message: {type: string, maxLength: 500}
+        path: {type: string, maxLength: 200}
+      required: [kind, message, path]
     UnitsRequest:
       type: object
       additionalProperties: false

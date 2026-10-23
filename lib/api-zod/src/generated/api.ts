@@ -200,6 +200,24 @@ export const ExportMyDataResponse = zod.object({
 
 
 /**
+ * @summary The app tells the server it crashed (no personal details; capped; never fails the page)
+ */
+export const reportClientErrorBodyMessageMax = 500;
+
+export const reportClientErrorBodyPathMax = 200;
+
+
+
+export const ReportClientErrorBody = zod.object({
+  "kind": zod.enum(['crash', 'unhandled']),
+  "message": zod.string().max(reportClientErrorBodyMessageMax),
+  "path": zod.string().max(reportClientErrorBodyPathMax)
+})
+
+export const ReportClientErrorResponse = zod.void()
+
+
+/**
  * Public. Published programs only, with no lesson content. Optional creator filters to one creator's link name.
  * @summary List published programs
  */
