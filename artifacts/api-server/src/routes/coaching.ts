@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Response } from "express";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import {
   CompleteSessionParams,
   CompleteSessionResponse,
@@ -8,6 +8,7 @@ import {
   DevUnlockBody,
   GetProgressResponse,
   GetTrainingResponse,
+  ListPastPlansResponse,
   ListCoachesResponse,
   LogSetBody,
   LogSetParams,
@@ -185,6 +186,24 @@ router.post("/coaching/preview", (req, res) => {
 });
 
 // ---------- Member ----------
+
+// Every block except the current one, newest first, with how many sessions were done.
+router.get("/me/plans/history", requireUser, async (_req, res) => {
+  const user = authUser(res);
+  const current = await currentPlanRow(user.id);
+  const rows = await db
+    .select({
+      id: plansTable.id, block: plansTable.block, coach_id: plansTable.coachId, weeks: plansTable.weeks, created_at: plansTable.createdAt,
+      sessions_done: sql<number>`count(${planSessionsTable.completedAt})::int`,
+      sessions_total: sql<number>`count(${planSessionsTable.id})::int`,
+    })
+    .from(plansTable)
+    .leftJoin(planSessionsTable, eq(planSessionsTable.planId, plansTable.id))
+    .where(and(eq(plansTable.userId, user.id), current ? ne(plansTable.id, current.id) : undefined))
+    .groupBy(plansTable.id)
+    .orderBy(desc(plansTable.id));
+  res.json(ListPastPlansResponse.parse(rows));
+});
 
 router.get("/me/training", requireUser, async (_req, res) => {
   res.json(GetTrainingResponse.parse(await trainingState(authUser(res).id)));

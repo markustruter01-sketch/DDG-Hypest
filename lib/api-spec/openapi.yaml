@@ -1061,6 +1061,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/plans/history:
+    get:
+      operationId: listPastPlans
+      tags: [coaching]
+      summary: Finished and replaced blocks, newest first (not the current one)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PastPlan"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/progress:
     get:
       operationId: getProgress
@@ -1583,6 +1603,18 @@ components:
         swapped_to: {type: string, nullable: true}
         needs_tier2: {type: boolean}
       required: [stopped, message, swapped_to, needs_tier2]
+    PastPlan:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: integer}
+        block: {type: integer}
+        coach_id: {type: string}
+        weeks: {type: integer}
+        created_at: {type: string, format: date-time}
+        sessions_done: {type: integer}
+        sessions_total: {type: integer}
+      required: [id, block, coach_id, weeks, created_at, sessions_done, sessions_total]
     Progress:
       type: object
       additionalProperties: false

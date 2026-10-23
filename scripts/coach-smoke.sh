@@ -40,4 +40,7 @@ echo "== units: lb shown, kg stored"
 r 200 PUT /me/training/units -d '{"units":"lb"}'
 r 400 PUT /me/training/units -d '{"units":"stone"}'
 r 200 PUT /me/training/units -d '{"units":"kg"}'
+echo "== past blocks: block 1 listed after moving to block 2"
+r 200 GET /me/plans/history
+grep -q '"block":1,' $BODY && ! grep -q '"block":2,' $BODY || { echo "FAIL history should list block 1 only"; FAIL=1; }
 [ $FAIL = 0 ] && echo "coach smoke: all as expected" || { echo "coach smoke: FAILED"; exit 1; }

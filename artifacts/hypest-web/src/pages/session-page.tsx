@@ -10,7 +10,9 @@ import {
   type PainResult,
   type PlanItemView,
 } from "@workspace/api-client-react";
-import { AREA_LABEL, dose, request, useTraining } from "@/lib/coaching";
+import { AREA_LABEL, coachById, dose, request, useCoaches, useTraining } from "@/lib/coaching";
+import { FinishCard, type FinishStats } from "@/components/finish-card";
+import { nextSession } from "@/pages/today-page";
 import { serverErrorText } from "@/lib/server-error";
 import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
 
@@ -45,6 +47,10 @@ export function SessionPage() {
   const [sets, setSets] = useState<Record<number, SetEntry[]>>({});
   const [rest, setRest] = useState(0);
   const [hurtOpen, setHurtOpen] = useState(false);
+  const [startedAt] = useState(() => Date.now());
+  const [finished, setFinished] = useState<FinishStats | null>(null);
+  const [finishError, setFinishError] = useState<string | null>(null);
+  const coaches = useCoaches();
 
   useEffect(() => {
     if (rest <= 0) return;
@@ -89,12 +95,39 @@ export function SessionPage() {
   }
 
   async function finish() {
+    setFinishError(null);
+    const all = session!.items.map((it) => sets[it.id ?? 0] ?? initialSets(it, units));
+    const ticked = all.flat().filter((e) => e.done).length;
+    const volume = session!.items.reduce(
+      (sum, it, k) => (it.weighted && it.measure === "reps" ? sum + (all[k] ?? []).filter((e) => e.done).reduce((v, e) => v + e.reps * e.load, 0) : sum),
+      0,
+    );
+    const minutes = Math.round((Date.now() - startedAt) / 60_000);
     try {
       await complete.mutateAsync({ sessionId });
-    } finally {
-      await queryClient.invalidateQueries({ queryKey: getGetTrainingQueryKey() });
-      navigate("/?done=1");
+    } catch (err) {
+      setFinishError(serverErrorText(err));
+      return;
     }
+    await queryClient.invalidateQueries({ queryKey: getGetTrainingQueryKey() });
+    setFinished({
+      week: session!.week, day: session!.day, exercises: session!.items.length, setsDone: ticked, setsTotal: all.flat().length,
+      minutes: minutes >= 1 && minutes <= 240 ? minutes : null, volume: volume > 0 ? Math.round(volume) : null, units,
+    });
+  }
+
+  if (finished) {
+    const plan = training.data?.plan;
+    const upNext = plan ? nextSession(plan) : null;
+    const coachName = coachById(coaches.data, plan?.coach_id)?.name ?? "your coach";
+    return (
+      <FinishCard
+        stats={finished}
+        coachName={coachName}
+        next={upNext ? `Next: Week ${upNext.week} · Day ${upNext.day}.` : "That was the last session of this block."}
+        onDone={() => navigate("/")}
+      />
+    );
   }
 
   const total = session.items.length;
@@ -154,6 +187,7 @@ export function SessionPage() {
         )}
       </div>
 
+      {finishError ? <p className="error-text" role="alert">{finishError}</p> : null}
       {hurtOpen ? <HurtSheet item={item} onClose={() => setHurtOpen(false)} /> : null}
     </main>
   );

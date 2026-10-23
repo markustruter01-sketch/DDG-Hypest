@@ -37,6 +37,7 @@ export * from './myProgramSummaryStatus';
 export * from './painReport';
 export * from './painReportArea';
 export * from './painResult';
+export * from './pastPlan';
 export * from './planItemView';
 export * from './planItemViewMeasure';
 export * from './planSessionView';
