@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { billingEventsTable, db, membershipsTable, usersTable } from "@workspace/db";
 
 /**
@@ -9,7 +9,25 @@ import { billingEventsTable, db, membershipsTable, usersTable } from "@workspace
  */
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-export type Deps = { retrieveSubscription: (id: string) => Promise<Stripe.Subscription> };
+export type Deps = {
+  retrieveSubscription: (id: string) => Promise<Stripe.Subscription>;
+  /** Cancels a subscription now, crediting unused time. Must succeed or throw (Stripe then retries the event). */
+  cancelSubscription: (id: string) => Promise<void>;
+};
+
+/**
+ * Upgrade Plans -> Coaching: once a Coaching subscription is active, the member's other monthly Stripe
+ * subscriptions (their Plans membership) are cancelled, so nobody pays for both.
+ */
+export async function subscriptionsToReplace(sub: Stripe.Subscription): Promise<string[]> {
+  const userId = Number(sub.metadata["user_id"]);
+  if (sub.metadata["kind"] !== "tier2" || !Number.isInteger(userId) || subscriptionAccess(sub).status !== "active") return [];
+  const rows = await db
+    .select({ ref: membershipsTable.stripeRef })
+    .from(membershipsTable)
+    .where(and(eq(membershipsTable.userId, userId), eq(membershipsTable.kind, "tier1"), eq(membershipsTable.status, "active")));
+  return rows.map((r) => r.ref).filter((r): r is string => Boolean(r?.startsWith("sub_")) && r !== sub.id);
+}
 
 /** Unpaid renewal: access continues this many days into the unpaid period while Stripe retries the card. */
 export const PAST_DUE_GRACE_DAYS = 3;
@@ -110,6 +128,9 @@ export async function handleEvent(event: Stripe.Event, deps: Deps): Promise<stri
   // Network read outside the transaction; the write below is atomic.
   const sub = subId ? await deps.retrieveSubscription(subId) : null;
   const test = !event.livemode;
+  // Network calls before the transaction: if a cancel fails this throws, nothing is recorded, Stripe retries.
+  const replaced = sub ? await subscriptionsToReplace(sub) : [];
+  for (const id of replaced) await deps.cancelSubscription(id);
 
   return db.transaction(async (tx) => {
     // Claim the event first: a second delivery (even a concurrent one) waits here, then finds it taken.
@@ -121,7 +142,13 @@ export async function handleEvent(event: Stripe.Event, deps: Deps): Promise<stri
     if (!claimed.length) return "duplicate";
 
     let outcome = "ignored: event type not used";
-    if (sub) outcome = await applySubscription(tx, sub, test);
+    if (sub) {
+      outcome = await applySubscription(tx, sub, test);
+      if (replaced.length) {
+        await tx.update(membershipsTable).set({ status: "ended", endsAt: new Date() }).where(inArray(membershipsTable.stripeRef, replaced));
+        outcome += `; replaced ${replaced.length} Plans membership`;
+      }
+    }
     else if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       outcome = await applyOneOff(tx, event.data.object, test);
     } else if (event.type === "charge.refunded") outcome = await applyRefund(tx, event.data.object);
