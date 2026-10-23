@@ -36,6 +36,8 @@ import { devToolsOn } from "../lib/dev-login";
 import { COACH_BY_ID, COACHES, EXERCISE_BY_ID, type Area, type Coach, type Equipment, type Experience, type Goal } from "../coaching/library";
 import { buildPlan, findSwap, nextLoads, WEEKS, type Plan, type PlanInput } from "../coaching/engine";
 import { redFlag, STOP_MESSAGE } from "../coaching/safety";
+import { notesPrompt, parseNotes } from "../coaching/ai-notes";
+import { askClaude } from "../lib/ai";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
 
 const router: IRouter = Router();
@@ -113,13 +115,39 @@ async function planView(planId: number, withLogs: boolean) {
   const daysPerWeek = Math.max(0, ...sessions.map((s) => s.day));
   return {
     id: plan.id, coach_id: plan.coachId, block: plan.block, weeks: plan.weeks, days_per_week: daysPerWeek,
-    status: plan.status as "active" | "paused" | "done", paused_reason: plan.pausedReason,
+    status: plan.status as "active" | "paused" | "done", paused_reason: plan.pausedReason, intro: plan.intro,
     sessions: sessions.map((s) => ({
-      id: s.id, week: s.week, day: s.day, title: s.title, completed_at: s.completedAt?.toISOString() ?? null,
+      id: s.id, week: s.week, day: s.day, title: s.title, note: s.note, completed_at: s.completedAt?.toISOString() ?? null,
       items: items.filter((i) => i.sessionId === s.id).map((i) =>
         itemView(i, logs.filter((l) => l.itemId === i.id).map((l) => ({ set_number: l.setNumber, reps: l.reps, seconds: l.seconds, load_kg: l.loadKg })))),
     })),
   };
+}
+
+/**
+ * AI personal layer: the coach's welcome and one line per session, added after the plan is saved.
+ * Off, over budget or failed → the plan stays exactly as the rules built it. Never throws.
+ */
+async function addAiNotes(planId: number, userId: number, plan: Plan, input: PlanInput): Promise<void> {
+  const coach = COACH_BY_ID.get(plan.coachId);
+  if (!coach) return;
+  const prompt = notesPrompt(coach, input, plan);
+  const raw = await askClaude({ tier: "plan", purpose: "plan_notes", system: prompt.system, messages: [{ role: "user", content: prompt.user }], maxTokens: 2000, userId });
+  if (!raw) return;
+  const notes = parseNotes(raw, plan);
+  try {
+    const [row] = await db.select({ record: plansTable.record }).from(plansTable).where(eq(plansTable.id, planId));
+    const record = { ...(row?.record as object), ai: { at: new Date().toISOString(), raw, accepted: notes ? { intro: notes.intro, notes: Object.fromEntries(notes.notes) } : null } };
+    await db.transaction(async (tx) => {
+      await tx.update(plansTable).set({ intro: notes?.intro ?? null, record }).where(eq(plansTable.id, planId));
+      for (const [key, note] of notes?.notes ?? []) {
+        const [week, day] = key.split(":").map(Number);
+        await tx.update(planSessionsTable).set({ note }).where(and(eq(planSessionsTable.planId, planId), eq(planSessionsTable.week, week!), eq(planSessionsTable.day, day!)));
+      }
+    });
+  } catch {
+    // The plan is already saved; notes are optional.
+  }
 }
 
 async function savePlan(userId: number, plan: Plan, input: PlanInput, block: number): Promise<number> {
@@ -180,8 +208,8 @@ router.post("/coaching/preview", (req, res) => {
   if (err) return void res.status(400).json({ message: err });
   const plan = buildPlan(toInput(a, 1));
   res.json(PreviewPlanResponse.parse({
-    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null,
-    sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, completed_at: null, items: s.items.map((it) => itemView(it)) })),
+    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null,
+    sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, items: s.items.map((it) => itemView(it)) })),
   }));
 });
 
@@ -251,7 +279,9 @@ router.post("/me/plans", requireUser, async (_req, res) => {
   const [last] = await db.select({ block: plansTable.block }).from(plansTable).where(eq(plansTable.userId, user.id)).orderBy(desc(plansTable.id)).limit(1);
   const block = (last?.block ?? 0) + 1;
   const input = toInput(profile, block);
-  const planId = await savePlan(user.id, buildPlan(input), input, block);
+  const built = buildPlan(input);
+  const planId = await savePlan(user.id, built, input, block);
+  await addAiNotes(planId, user.id, built, input);
   if (access.creditId !== null) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }
@@ -282,6 +312,7 @@ router.post("/me/plans/next", requireUser, async (_req, res) => {
   const plan = buildPlan(input);
   await db.update(plansTable).set({ status: "done" }).where(eq(plansTable.id, current.id));
   const planId = await savePlan(user.id, plan, input, block);
+  await addAiNotes(planId, user.id, plan, input);
   if (!canAutoNext(access) && access.creditId !== null) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }

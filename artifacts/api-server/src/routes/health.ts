@@ -4,6 +4,7 @@ import { commissionRatesTable, db } from "@workspace/db";
 import { devToolsOn } from "../lib/dev-login";
 import { PRICES } from "../coaching/access";
 import { paymentsMode } from "../lib/stripe";
+import { aiOn } from "../lib/ai";
 
 const router: IRouter = Router();
 
@@ -24,6 +25,7 @@ router.get("/config", async (_req, res) => {
     GetConfigResponse.parse({
       dev_tools: devToolsOn(),
       payments: paymentsMode(),
+      ai: aiOn(),
       creator_brought_bps: bps("creator_brought"),
       hypest_found_bps: bps("hypest_found"),
       prices: PRICES,

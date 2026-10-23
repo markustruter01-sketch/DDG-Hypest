@@ -521,6 +521,7 @@ export const GetHomeResponse = zod.object({
  */
 export const GetConfigResponse = zod.object({
   "dev_tools": zod.boolean(),
+  "ai": zod.boolean().describe('AI layer on (coach notes on plans, coach chat for Coaching members)'),
   "payments": zod.enum(['off', 'test', 'live']).describe('off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money'),
   "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),
   "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points'),
@@ -636,11 +637,13 @@ export const PreviewPlanResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -699,11 +702,13 @@ export const GetTrainingResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -780,11 +785,13 @@ export const SaveTrainingProfileResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -848,11 +855,13 @@ export const SetUnitsResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -890,11 +899,13 @@ export const CreatePlanResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -931,11 +942,13 @@ export const CreateNextPlanResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -972,11 +985,13 @@ export const ResumePlanResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -1014,6 +1029,7 @@ export const CompleteSessionResponse = zod.object({
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
@@ -1111,6 +1127,44 @@ export const ListPastPlansResponse = zod.array(ListPastPlansResponseItem)
 
 
 /**
+ * @summary Chat with your coach (Coaching members, when AI is on)
+ */
+export const GetCoachChatResponse = zod.object({
+  "enabled": zod.boolean().describe('Chat can be used now (Coaching member and AI on)'),
+  "remaining_today": zod.number().int(),
+  "messages": zod.array(zod.object({
+  "id": zod.number().int(),
+  "role": zod.enum(['member', 'coach']),
+  "text": zod.string(),
+  "created_at": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Send your coach a message. Warning words get a fixed safety reply (no AI) and pause the plan.
+ */
+export const sendCoachMessageBodyTextMax = 500;
+
+
+
+export const SendCoachMessageBody = zod.object({
+  "text": zod.string().min(1).max(sendCoachMessageBodyTextMax)
+})
+
+export const SendCoachMessageResponse = zod.object({
+  "enabled": zod.boolean().describe('Chat can be used now (Coaching member and AI on)'),
+  "remaining_today": zod.number().int(),
+  "messages": zod.array(zod.object({
+  "id": zod.number().int(),
+  "role": zod.enum(['member', 'coach']),
+  "text": zod.string(),
+  "created_at": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Streak, best lifts and weekly volume (Tier 2)
  */
 export const GetProgressResponse = zod.object({
@@ -1166,11 +1220,13 @@ export const DevUnlockResponse = zod.object({
   "days_per_week": zod.number().int(),
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
   "day": zod.number().int(),
   "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),

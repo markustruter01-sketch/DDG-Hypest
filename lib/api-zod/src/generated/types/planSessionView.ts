@@ -12,6 +12,8 @@ export interface PlanSessionView {
   week: number;
   day: number;
   title: string;
+  /** One line from the coach (AI layer); null when AI is off */
+  note: string | null;
   completed_at: string | null;
   items: PlanItemView[];
 }
