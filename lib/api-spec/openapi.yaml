@@ -832,6 +832,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/training/units:
+    put:
+      operationId: setUnits
+      tags: [coaching]
+      summary: Show weights in kg or lb. Loads are always stored in kg.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingState"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: No training profile yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/plans:
     post:
       operationId: createPlan
@@ -1392,6 +1428,14 @@ components:
           type: array
           items: {type: string}
       required: [id, name, discipline, title, personality, good_for, photo, goals]
+    UnitsRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        units:
+          type: string
+          enum: [kg, lb]
+      required: [units]
     TrainingAnswers:
       type: object
       additionalProperties: false

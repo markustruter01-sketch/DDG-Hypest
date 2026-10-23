@@ -652,7 +652,7 @@ textarea.text-input { resize: vertical; }
 }
 .checklist .done { color: var(--color-muted); text-decoration: line-through; }
 .checklist .done .check { background: var(--color-ink); color: var(--color-on-dark); }
-.checklist .soon { color: var(--color-faint); }
+.checklist .soon { color: var(--color-muted); }
 .checklist .soon .check { border-color: var(--color-faint); }
 
 .tile-empty {
@@ -1253,9 +1253,9 @@ textarea.text-input { resize: vertical; }
   gap: 3px;
   min-height: 3rem;
   color: var(--color-muted);
-  font-size: 0.625rem;
+  font-size: var(--size-small);
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -1288,3 +1288,7 @@ textarea.text-input { resize: vertical; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Me: kg / lb */
+.units-toggle { display: flex; align-items: center; gap: var(--space-2); }
+.units-toggle .label { margin-right: auto; }

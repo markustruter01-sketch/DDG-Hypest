@@ -14,6 +14,7 @@ import { Offers, returnUrl } from "@/components/offers";
 import { AccountActions } from "@/components/account-actions";
 import { useAppConfig } from "@/lib/config";
 import { useTraining } from "@/lib/coaching";
+import { UnitsToggle } from "@/components/units-toggle";
 
 const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
 
@@ -47,6 +48,7 @@ function Membership() {
         <button type="button" className="secondary-button" onClick={manage} disabled={portal.isPending}>Manage membership</button>
       ) : null}
       {portalError ? <p className="error-text" role="alert">{portalError}</p> : null}
+      <UnitsToggle />
       {access.level !== "tier2" ? <Offers access={access} /> : null}
     </section>
   );

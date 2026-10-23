@@ -65,16 +65,16 @@ export function Dashboard({ user }: { user: CurrentUser }) {
   const firstName = user.display_name.trim().split(/\s+/)[0] ?? "";
 
   const tiles = [
-    { to: "/studio", word: "Studio", meta: myCount === null ? "Sell" : `${myCount} ${myCount === 1 ? "program" : "programs"}`, photo: "strength.jpg" },
-    { to: "/library", word: "Train", meta: ownedCount === null ? "Library" : `${ownedCount} owned`, photo: "run.jpg" },
-    { to: "/explore", word: "Explore", meta: show ? `${show.live_programs} live` : "Find", photo: "yoga.jpg" },
+    { to: "/studio", word: "Studio", meta: myCount === null ? "Sell" : `${myCount} ${myCount === 1 ? "program" : "programs"}`, photo: "strength.webp" },
+    { to: "/library", word: "Train", meta: ownedCount === null ? "Library" : `${ownedCount} owned`, photo: "run.webp" },
+    { to: "/explore", word: "Explore", meta: show ? `${show.live_programs} live` : "Find", photo: "yoga.webp" },
     { to: "/profile", word: "Me", meta: user.handle ? `@${user.handle}` : "Profile", photo: null },
   ];
 
   return (
     <main className="home">
       <section className="home-hero">
-        <img className="home-hero-photo" src={img("welcome.jpg")} alt="" aria-hidden="true" />
+        <img className="home-hero-photo" src={img("welcome.webp")} alt="" aria-hidden="true" />
         <div className="home-hero-top page-header">
           <Wordmark tone="light" />
           <Link to="/profile" className="avatar avatar-light" aria-label="Your profile">

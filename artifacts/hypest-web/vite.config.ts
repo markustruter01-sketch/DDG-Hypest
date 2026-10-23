@@ -1,9 +1,35 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+
+/**
+ * Content Security Policy for the published site (build only: the dev server needs inline scripts).
+ * Everything loads from this site: scripts, styles, fonts, images, API calls. Stripe is a page redirect,
+ * which CSP does not limit. If YouTube lessons come back, add frame-src for youtube-nocookie.com.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: 'hypest-csp',
+    apply: 'build',
+    transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP }, injectTo: 'head-prepend' }],
+  };
+}
 
 const rawPort = process.env.PORT;
 
@@ -30,6 +56,7 @@ if (!basePath) {
 export default defineConfig({
   base: basePath,
   plugins: [
+    contentSecurityPolicy(),
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),

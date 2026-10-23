@@ -98,6 +98,18 @@ export interface Coach {
   goals: string[];
 }
 
+export type UnitsRequestUnits = typeof UnitsRequestUnits[keyof typeof UnitsRequestUnits];
+
+
+export const UnitsRequestUnits = {
+  kg: 'kg',
+  lb: 'lb',
+} as const;
+
+export interface UnitsRequest {
+  units: UnitsRequestUnits;
+}
+
 export type TrainingAnswersGoal = typeof TrainingAnswersGoal[keyof typeof TrainingAnswersGoal];
 
 
