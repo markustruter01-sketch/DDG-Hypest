@@ -81,7 +81,8 @@
 /* ---------- Buttons ---------- */
 
 .primary-button,
-.secondary-button {
+.secondary-button,
+.danger-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -108,10 +109,17 @@
   background: transparent;
   color: var(--color-ink);
 }
+.danger-button {
+  border: 0;
+  background: var(--color-error);
+  color: #ffffff;
+}
 .primary-button:active,
-.secondary-button:active { transform: scale(0.98); }
+.secondary-button:active,
+.danger-button:active { transform: scale(0.98); }
 .primary-button:disabled,
-.secondary-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.secondary-button:disabled,
+.danger-button:disabled { opacity: 0.45; cursor: not-allowed; }
 .primary-button:focus-visible,
 .secondary-button:focus-visible,
 .text-link:focus-visible,
@@ -1054,6 +1062,10 @@ textarea.text-input { resize: vertical; }
 }
 
 .offers { display: flex; flex-direction: column; gap: var(--space-2); }
+.account-actions { display: flex; flex-direction: column; gap: var(--space-2); }
+.delete-account { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+.delete-warning { margin: 0; font-weight: 600; color: var(--color-error); }
+.delete-link { color: var(--color-error); }
 .checkout-return { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) var(--space-4) 0; padding: var(--space-3) var(--space-4); font-weight: 600; }
 .offer {
   position: relative;

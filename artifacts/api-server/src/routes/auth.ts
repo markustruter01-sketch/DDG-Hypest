@@ -93,7 +93,7 @@ router.post("/auth/login", async (req, res) => {
   }
 
   const email = parsed.data.email.toLowerCase();
-  if (isLoginRateLimited(email)) {
+  if (await isLoginRateLimited(email)) {
     res.status(429).json({ message: "too many attempts" });
     return;
   }
@@ -110,12 +110,12 @@ router.post("/auth/login", async (req, res) => {
   );
 
   if (!user || !passwordOk) {
-    recordLoginFailure(email);
+    await recordLoginFailure(email);
     res.status(401).json({ message: "invalid email or password" });
     return;
   }
 
-  clearLoginFailures(email);
+  await clearLoginFailures(email);
   await createSession(res, user.id);
   res.json(LoginResponse.parse(toCurrentUser(user)));
 });
