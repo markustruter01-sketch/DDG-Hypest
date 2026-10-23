@@ -12,16 +12,18 @@ import {
 } from "@workspace/api-client-react";
 import { AREA_LABEL, dose, request, useTraining } from "@/lib/coaching";
 import { serverErrorText } from "@/lib/server-error";
+import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
 
 type SetEntry = { done: boolean; reps: number; load: number; seconds: number };
 
-function initialSets(item: PlanItemView): SetEntry[] {
+/** load is in the member's units (kg or lb). */
+function initialSets(item: PlanItemView, units: Units): SetEntry[] {
   return Array.from({ length: item.sets }, (_, i) => {
     const log = item.logs.find((l) => l.set_number === i + 1);
     return {
       done: Boolean(log),
       reps: log?.reps ?? item.reps ?? 0,
-      load: log?.load_kg ?? item.target_load_kg ?? 0,
+      load: log?.load_kg != null ? shownLoad(log.load_kg, units) : item.target_load_kg ? targetLoad(item.target_load_kg, units) : 0,
       seconds: log?.seconds ?? item.seconds ?? 0,
     };
   });
@@ -38,6 +40,7 @@ export function SessionPage() {
   const logSet = useLogSet({ request });
   const session = training.data?.plan?.sessions.find((s) => s.id === sessionId) ?? null;
   const canLog = training.data?.access.level === "tier2";
+  const units = useUnits();
   const [index, setIndex] = useState(0);
   const [sets, setSets] = useState<Record<number, SetEntry[]>>({});
   const [rest, setRest] = useState(0);
@@ -50,7 +53,7 @@ export function SessionPage() {
   }, [rest]);
 
   const item = session?.items.at(index) ?? null;
-  const entries = useMemo(() => (item ? sets[item.id ?? 0] ?? initialSets(item) : []), [item, sets]);
+  const entries = useMemo(() => (item ? sets[item.id ?? 0] ?? initialSets(item, units) : []), [item, sets, units]);
 
   if (training.isSuccess && !session) {
     return <main className="player"><Link className="text-link" to="/" style={{ color: "var(--color-on-dark)" }}>← Today</Link><p>Session not found.</p></main>;
@@ -76,7 +79,7 @@ export function SessionPage() {
           await logSet.mutateAsync({ itemId, setNumber: i + 1, data: {
             reps: item!.measure === "reps" ? entry.reps : null,
             seconds: item!.measure === "time" ? entry.seconds : null,
-            load_kg: item!.weighted ? entry.load : null,
+            load_kg: item!.weighted ? toKg(entry.load, units) : null,
           } });
         } catch {
           update(i, { done: false });
@@ -111,7 +114,7 @@ export function SessionPage() {
         <span className="label" style={{ color: "var(--color-on-dark-muted)" }}>Week {session.week} · Day {session.day}{item.swapped_from ? " · swapped for you" : ""}</span>
         <h1 className="hero-title" style={{ margin: 0, fontSize: "2.6rem" }}>{item.name}</h1>
         <p className="player-body">{item.cue}</p>
-        <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${item.target_load_kg} kg` : ""}</span>
+        <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${targetLoad(item.target_load_kg, units)} ${units}` : ""}</span>
       </div>
 
       <ol className="set-list">
@@ -119,7 +122,7 @@ export function SessionPage() {
           <li key={i} className={e.done ? "set set-done" : "set"}>
             <span className="set-n">{i + 1}</span>
             {item.weighted ? (
-              <Stepper label="kg" value={e.load} step={2.5} disabled={!canLog} onChange={(v) => update(i, { load: v })} />
+              <Stepper label={units} value={e.load} step={loadStep(units)} disabled={!canLog} onChange={(v) => update(i, { load: v })} />
             ) : null}
             {item.measure === "reps" ? (
               <Stepper label="reps" value={e.reps} step={1} disabled={!canLog} onChange={(v) => update(i, { reps: v })} />

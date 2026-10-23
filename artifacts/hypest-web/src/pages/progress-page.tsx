@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { getGetProgressQueryKey, useGetProgress } from "@workspace/api-client-react";
 import { Offers } from "@/components/offers";
 import { request, useTraining } from "@/lib/coaching";
+import { shownLoad, useUnits } from "@/lib/units";
 
 /** Tier 2: streak, best lifts, weekly volume. Everyone else sees a blurred example and the offers. */
 export function ProgressPage() {
@@ -9,6 +10,7 @@ export function ProgressPage() {
   const tier2 = training.data?.access.level === "tier2";
   const progress = useGetProgress({ query: { queryKey: getGetProgressQueryKey(), enabled: tier2, retry: false }, request });
   const p = progress.data;
+  const units = useUnits();
 
   if (training.isSuccess && !tier2) {
     return (
@@ -34,7 +36,7 @@ export function ProgressPage() {
       </div>
       {p.weekly_volume.length > 0 ? (
         <div className="card" style={{ padding: "var(--space-4)" }}>
-          <span className="label">Weekly volume (kg lifted)</span>
+          <span className="label">Weekly volume ({units} lifted)</span>
           <VolumeChart data={p.weekly_volume} />
         </div>
       ) : null}
@@ -43,7 +45,7 @@ export function ProgressPage() {
       <ul className="program-list">
         {p.best_lifts.map((b) => (
           <li key={b.exercise_id} className="card best-lift">
-            <span>{b.name}</span><b className="big-number" style={{ fontSize: "1.5rem" }}>{b.load_kg} kg × {b.reps}</b>
+            <span>{b.name}</span><b className="big-number" style={{ fontSize: "1.5rem" }}>{shownLoad(b.load_kg, units)} {units} × {b.reps}</b>
           </li>
         ))}
       </ul>

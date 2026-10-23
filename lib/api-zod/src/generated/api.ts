@@ -783,6 +783,74 @@ export const SaveTrainingProfileResponse = zod.object({
 
 
 /**
+ * @summary Show weights in kg or lb. Loads are always stored in kg.
+ */
+export const SetUnitsBody = zod.object({
+  "units": zod.enum(['kg', 'lb'])
+})
+
+export const setUnitsResponseProfileOneDaysPerWeekMin = 2;
+export const setUnitsResponseProfileOneDaysPerWeekMax = 6;
+
+
+
+export const SetUnitsResponse = zod.object({
+  "profile": zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(setUnitsResponseProfileOneDaysPerWeekMin).max(setUnitsResponseProfileOneDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true)
+}).nullable(),
+  "access": zod.object({
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "intro_available": zod.boolean(),
+  "plan_credits": zod.number().int()
+}),
+  "plan": zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+}))
+}))
+}))
+}).nullable()
+})
+
+
+/**
  * @summary Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership (members may replace a current plan).
  */
 export const CreatePlanResponse = zod.object({

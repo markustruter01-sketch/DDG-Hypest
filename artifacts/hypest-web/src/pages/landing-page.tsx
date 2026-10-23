@@ -23,8 +23,8 @@ export function LandingPage() {
     <main className="landing">
       <section className="landing-hero">
         <picture className="landing-hero-photo">
-          <source media="(min-width: 900px)" srcSet={img("welcome-wide.jpg")} />
-          <img src={img("welcome.jpg")} alt="Group of women training outdoors" />
+          <source media="(min-width: 900px)" srcSet={img("welcome-wide.webp")} />
+          <img src={img("welcome.webp")} alt="Group of women training outdoors" />
         </picture>
         <div className="landing-inner landing-hero-content">
           <div className="page-header">

@@ -12,6 +12,7 @@ import {
 import { Offers } from "@/components/offers";
 import { AREA_LABEL, EQUIPMENT_LABEL, EXPERIENCE_LABEL, GOAL_LABEL, coachById, dose, img, request, savePendingAnswers, useCoaches, useTraining } from "@/lib/coaching";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
+import { useUnits } from "@/lib/units";
 
 type Goal = TrainingAnswers["goal"];
 type Experience = TrainingAnswers["experience"];
@@ -63,6 +64,7 @@ export function OnboardingPage() {
   const [health, setHealth] = useState(false);
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const units = useUnits();
 
   if (coaches.isSuccess && !coach) return <Navigate to="/coaches" replace />;
   if (!coach) return <main className="screen-scroll" aria-busy="true" />;
@@ -71,7 +73,7 @@ export function OnboardingPage() {
   const access = training.data?.access;
   const chosenGoal = goal ?? (coach.goals[0] as Goal);
   const answers: TrainingAnswers = {
-    coach_id: coach.id, goal: chosenGoal, experience, days_per_week: days, minutes, equipment, avoid_areas: areas, health_accepted: true,
+    coach_id: coach.id, goal: chosenGoal, experience, days_per_week: days, minutes, equipment, avoid_areas: areas, units, health_accepted: true,
   };
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const goalOptions: Option<Goal>[] = (coach.goals as Goal[]).map((g) => [g, GOAL_LABEL[g] ?? g]);

@@ -31,3 +31,7 @@ r POST /me/items/$ITEM/hurts -d '{"text":"knee feels sore","area":"knee"}'
 r POST /me/sessions/$SESS/complete
 r GET /me/progress
 r POST /me/plans/next
+echo "== units: lb shown, kg stored"
+r PUT /me/training/units -d '{"units":"lb"}'
+r PUT /me/training/units -d '{"units":"stone"}'
+r PUT /me/training/units -d '{"units":"kg"}'

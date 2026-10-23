@@ -64,6 +64,8 @@ export * from './trainingAnswersGoal';
 export * from './trainingAnswersMinutes';
 export * from './trainingAnswersUnits';
 export * from './trainingState';
+export * from './unitsRequest';
+export * from './unitsRequestUnits';
 export * from './unlockRequest';
 export * from './unlockRequestKind';
 export * from './updateProfileRequest';

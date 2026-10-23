@@ -19,6 +19,7 @@ import {
   ReportPainResponse,
   ResumePlanResponse,
   SaveTrainingProfileBody,
+  SetUnitsBody,
 } from "@workspace/api-zod";
 import {
   db,
@@ -187,6 +188,20 @@ router.post("/coaching/preview", (req, res) => {
 
 router.get("/me/training", requireUser, async (_req, res) => {
   res.json(GetTrainingResponse.parse(await trainingState(authUser(res).id)));
+});
+
+// Display choice only: loads stay in kg. Doesn't touch the answers or the health acceptance time.
+router.put("/me/training/units", requireUser, async (req, res) => {
+  const user = authUser(res);
+  const parsed = SetUnitsBody.strict().safeParse(req.body);
+  if (!parsed.success) return bad(res, parsed.error.issues);
+  const updated = await db
+    .update(trainingProfilesTable)
+    .set({ units: parsed.data.units })
+    .where(eq(trainingProfilesTable.userId, user.id))
+    .returning({ id: trainingProfilesTable.id });
+  if (!updated.length) return void res.status(409).json({ message: "no training profile yet" });
+  res.json(GetTrainingResponse.parse(await trainingState(user.id)));
 });
 
 router.put("/me/training/profile", requireUser, async (req, res) => {

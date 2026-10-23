@@ -103,7 +103,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
   return (
     <main className="home">
       <section className="home-hero">
-        <img className="home-hero-photo" src={img(coach?.photo ?? "welcome.jpg")} alt="" aria-hidden="true" />
+        <img className="home-hero-photo" src={img(coach?.photo ?? "welcome.webp")} alt="" aria-hidden="true" />
         <div className="home-hero-top page-header">
           <Wordmark tone="light" />
           <Link to="/profile" className="avatar avatar-light" aria-label="Your profile">{firstName.charAt(0).toUpperCase() || "?"}</Link>
