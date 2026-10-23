@@ -1,0 +1,39 @@
+#!/bin/bash
+# Every Hypest check in one go. LOCAL, EMPTY database only (it creates users, plans and payments rows).
+#   DATABASE_URL=postgresql://user:pass@127.0.0.1:5432/<empty db> bash scripts/check-all.sh
+# Used by GitHub Actions on every PR (.github/workflows/checks.yml). Runs: typecheck, builds, schema push,
+# coach smoke test, and every *.check.ts file, against two local API servers:
+#   :8099 payments off (dev unlock)   :8098 Stripe test mode with a dummy key (nothing reaches Stripe)
+set -euo pipefail
+cd "$(dirname "$0")/.."
+case "${DATABASE_URL:-}" in *@127.0.0.1:*|*@localhost:*) ;; *) echo "refusing: DATABASE_URL must be a local database"; exit 1;; esac
+
+LOGS=$(mktemp -d); PIDS=()
+cleanup(){ for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null || true; done; }
+trap cleanup EXIT
+step(){ echo; echo "=== $*"; }
+
+step "typecheck";             pnpm run typecheck
+step "database schema";       pnpm --filter @workspace/db run push
+step "build api";             pnpm --filter @workspace/api-server run build
+step "build web";             PORT=5199 BASE_PATH=/ pnpm --filter @workspace/hypest-web run build
+
+start(){ local port=$1; shift
+  if curl -s "http://localhost:$port" >/dev/null; then echo "port $port is already in use: stop that server first"; exit 1; fi
+  (cd artifacts/api-server && exec env NODE_ENV=development DEV_AUTO_LOGIN=1 PORT=$port "$@" node ./dist/index.mjs > "$LOGS/api-$port.log" 2>&1) &
+  PIDS+=($!)
+  for _ in $(seq 1 40); do curl -sf "http://localhost:$port/api/healthz" >/dev/null && return 0; sleep 0.5; done
+  echo "API on $port did not start"; cat "$LOGS/api-$port.log"; exit 1; }
+step "start APIs"
+start 8099
+start 8098 STRIPE_SECRET_KEY=sk_test_check_dummy STRIPE_WEBHOOK_SECRET=whsec_check_dummy
+
+step "coach smoke test";      bash scripts/coach-smoke.sh http://localhost:8099/api
+
+export ACCOUNT_CHECK_API=http://localhost:8099/api BILLING_CHECK_API=http://localhost:8098/api BILLING_CHECK_WHSEC=whsec_check_dummy
+for f in $(find artifacts lib -name '*.check.ts' -not -path '*/node_modules/*' | sort); do
+  step "$f";                  pnpm --filter @workspace/scripts exec tsx "../$f"
+done
+
+if grep -h '"level":50' "$LOGS"/api-*.log; then echo "API logged errors (above)"; exit 1; fi
+echo; echo "ALL CHECKS PASSED"
