@@ -15,11 +15,14 @@ export const usersTable = pgTable(
     referredByCreatorId: integer("referred_by_creator_id").references((): AnyPgColumn => usersTable.id),
     referredAt: timestamp("referred_at"),
     adultConfirmedAt: timestamp("adult_confirmed_at").notNull(),
+    // Stripe Customer created by the first checkout; used for the billing portal.
+    stripeCustomerId: text("stripe_customer_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     // A unique index (not a unique constraint) so `db push` adds it without a truncate prompt on tables that have rows.
     uniqueIndex("users_handle_unique").on(table.handle),
+    uniqueIndex("users_stripe_customer_unique").on(table.stripeCustomerId),
     check("users_email_lowercase", sql`${table.email} = lower(${table.email})`),
     check(
       "users_display_name_length",

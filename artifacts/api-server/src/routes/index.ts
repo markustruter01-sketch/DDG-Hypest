@@ -6,6 +6,7 @@ import homeRouter from "./home";
 import coachingRouter from "./coaching";
 import healthRouter from "./health";
 import programsRouter from "./programs";
+import billingRouter from "./billing";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(creatorsRouter);
 router.use(libraryRouter);
 router.use(homeRouter);
 router.use(coachingRouter);
+router.use(billingRouter);
 
 export default router;

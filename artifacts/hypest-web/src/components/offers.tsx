@@ -1,18 +1,29 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { getGetTrainingQueryKey, useDevUnlock, type Access } from "@workspace/api-client-react";
+import { getGetTrainingQueryKey, useCreateCheckout, useDevUnlock, type Access } from "@workspace/api-client-react";
 import { useAppConfig } from "@/lib/config";
 import { money, request } from "@/lib/coaching";
 import { serverErrorText } from "@/lib/server-error";
 
 type Kind = "intro_plan" | "plan" | "tier1" | "tier2";
 
-/** The three ways in. Until Stripe exists, dev builds unlock with no charge and live builds say "coming soon". */
-export function Offers({ access, onUnlocked }: { access: Access; onUnlocked?: () => void }) {
+/** A page on this site (a router path, or the current page), as an absolute URL Stripe can send the member back to. */
+export function returnUrl(routerPath?: string): string {
+  const path = routerPath === undefined ? window.location.pathname : `${import.meta.env.BASE_URL.replace(/\/$/, "")}${routerPath}`;
+  return new URL(path, window.location.origin).toString();
+}
+
+/**
+ * The three ways in. payments test/live → Stripe Checkout (access arrives by webhook after the member comes back);
+ * payments off → dev builds unlock with no charge, other builds say "coming soon".
+ * beforePay runs before leaving for Stripe (e.g. save the onboarding answers); returnTo is the page to come back to.
+ */
+export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Access; onUnlocked?: () => void; beforePay?: () => Promise<unknown>; returnTo?: string }) {
   const config = useAppConfig();
   const queryClient = useQueryClient();
   const unlock = useDevUnlock({ request });
+  const checkout = useCreateCheckout({ request });
   const [error, setError] = useState<string | null>(null);
   if (!config) return null;
   const p = config.prices;
@@ -30,10 +41,20 @@ export function Offers({ access, onUnlocked }: { access: Access; onUnlocked?: ()
     { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", perks: ["New plan every 4 weeks", "Log every set", "Plans adapt to you", "This-hurts swaps"], best: true },
   ];
 
+  const paying = config.payments !== "off";
+  const usable = paying || config.dev_tools;
+  const busy = unlock.isPending || checkout.isPending;
+
   async function pick(kind: Kind) {
     setError(null);
-    if (!config?.dev_tools) return;
     try {
+      if (paying) {
+        await beforePay?.();
+        const { url } = await checkout.mutateAsync({ data: { kind, return_url: returnUrl(returnTo) } });
+        window.location.assign(url);
+        return;
+      }
+      if (!config?.dev_tools) return;
       await unlock.mutateAsync({ data: { kind } });
       await queryClient.invalidateQueries({ queryKey: getGetTrainingQueryKey() });
       onUnlocked?.();
@@ -42,10 +63,12 @@ export function Offers({ access, onUnlocked }: { access: Access; onUnlocked?: ()
     }
   }
 
+  const note = config.payments === "live" ? "Secure checkout by Stripe" : config.payments === "test" ? "Test mode · no real charge" : config.dev_tools ? "Dev unlock · no charge" : "Payments coming soon";
+
   return (
     <div className="offers">
       {options.map((o) => (
-        <button key={o.kind} type="button" className={o.best ? "offer offer-best" : "offer"} onClick={() => pick(o.kind)} disabled={!config.dev_tools || unlock.isPending}>
+        <button key={o.kind} type="button" className={o.best ? "offer offer-best" : "offer"} onClick={() => pick(o.kind)} disabled={!usable || busy}>
           {o.best ? <span className="offer-tag">Best value</span> : null}
           <span className="offer-name">{o.name}</span>
           <span className="offer-price">
@@ -61,7 +84,7 @@ export function Offers({ access, onUnlocked }: { access: Access; onUnlocked?: ()
         </button>
       ))}
       <p className="label" style={{ textAlign: "center" }}>
-        {config.dev_tools ? "Test mode · no charge" : "Payments coming soon"} · US$
+        {note} · US$
       </p>
       {error ? <p className="error-text" role="alert">{error}</p> : null}
     </div>

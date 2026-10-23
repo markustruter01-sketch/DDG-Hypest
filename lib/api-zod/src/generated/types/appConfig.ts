@@ -5,10 +5,13 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AppConfigPayments } from './appConfigPayments';
 import type { Prices } from './prices';
 
 export interface AppConfig {
   dev_tools: boolean;
+  /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */
+  payments: AppConfigPayments;
   /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
   creator_brought_bps: number;
   /** Hypest's fee on sales Hypest found, in basis points */

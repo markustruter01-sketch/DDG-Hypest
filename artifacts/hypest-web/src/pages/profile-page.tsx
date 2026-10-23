@@ -3,21 +3,38 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetCurrentUserQueryKey,
+  useCreateBillingPortal,
   useGetCurrentUser,
   useLogout,
   useUpdateCurrentUser,
   type CurrentUser,
 } from "@workspace/api-client-react";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
-import { Offers } from "@/components/offers";
+import { Offers, returnUrl } from "@/components/offers";
+import { useAppConfig } from "@/lib/config";
 import { useTraining } from "@/lib/coaching";
 
 const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
 
 function Membership() {
   const training = useTraining();
+  const config = useAppConfig();
+  const portal = useCreateBillingPortal({ request: { credentials: "include" } });
+  const [portalError, setPortalError] = useState<string | null>(null);
   const access = training.data?.access;
   if (!access) return null;
+  const subscribed = access.level === "tier1" || access.level === "tier2";
+
+  async function manage() {
+    setPortalError(null);
+    try {
+      const { url } = await portal.mutateAsync({ data: { return_url: returnUrl() } });
+      window.location.assign(url);
+    } catch (err) {
+      setPortalError(serverErrorText(err));
+    }
+  }
+
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
       <h2 className="section-title" style={{ margin: 0 }}>Membership</h2>
@@ -25,6 +42,10 @@ function Membership() {
         <span>{LEVEL_NAME[access.level] ?? access.level}</span>
         <span className="label">{access.plan_credits > 0 ? `${access.plan_credits} plan${access.plan_credits === 1 ? "" : "s"} ready` : ""}</span>
       </div>
+      {subscribed && config && config.payments !== "off" ? (
+        <button type="button" className="secondary-button" onClick={manage} disabled={portal.isPending}>Manage membership</button>
+      ) : null}
+      {portalError ? <p className="error-text" role="alert">{portalError}</p> : null}
       {access.level !== "tier2" ? <Offers access={access} /> : null}
     </section>
   );

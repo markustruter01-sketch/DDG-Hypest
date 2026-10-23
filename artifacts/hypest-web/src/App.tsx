@@ -12,6 +12,7 @@ import { LoginPage } from '@/pages/login-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { SignupPage } from '@/pages/signup-page';
 import { errorStatus } from '@/lib/server-error';
+import { CheckoutReturn } from '@/components/checkout-return';
 
 // AI-coach app (pivot, 18 Oct 2026). The creator-marketplace pages (Studio, Create, Explore,
 // Library, creator links) stay in src/pages but are no longer routed.
@@ -53,6 +54,7 @@ function AppShell() {
 
   return (
     <div className={onLanding ? 'app-shell app-shell-wide' : 'app-shell'}>
+      <CheckoutReturn />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/plan" element={<PlanPage />} />
