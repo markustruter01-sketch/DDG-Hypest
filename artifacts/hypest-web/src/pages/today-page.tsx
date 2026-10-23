@@ -112,7 +112,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
 
       <section className="home-copy">
         <span className="label rise" style={{ animationDelay: "60ms" }}>{greeting()}{firstName ? `, ${firstName}` : ""}</span>
-        <blockquote className="home-quote rise" style={{ animationDelay: "140ms" }}>{coach ? coachLine(coach.id) : "Your coach. Your plan. Every week."}</blockquote>
+        <blockquote className="home-quote rise" style={{ animationDelay: "140ms" }}>{coach ? (plan?.intro && done === 0 ? plan.intro : coachLine(coach.id)) : "Your coach. Your plan. Every week."}</blockquote>
         {coach ? <span className="home-quote-by rise" style={{ animationDelay: "220ms" }}>{coach.name} · AI coach</span> : null}
       </section>
 

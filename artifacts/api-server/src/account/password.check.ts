@@ -55,7 +55,8 @@ function browser(base: string) {
     return { status: r.status, json: t ? JSON.parse(t) : null };
   };
 }
-const waitForMail = async (count: number) => { for (let i = 0; i < 40 && mail.length < count; i++) await new Promise((r) => setTimeout(r, 100)); };
+const waitForMail = async (count: number) => { for (let i = 0; i < 40 && resets().length < count; i++) await new Promise((r) => setTimeout(r, 100)); };
+const resets = () => mail.filter((m) => plain(m.body).includes("reset?token="));
 /** Undo quoted-printable (how mail clients wrap long lines) so the link can be read. */
 const plain = (body: string) => body.replace(/=\r?\n/g, "").replace(/=([0-9A-F]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
 const tokenIn = (body: string) => /reset\?token=([A-Za-z0-9_-]{43})/.exec(plain(body))?.[1] ?? null;
@@ -67,6 +68,8 @@ const third = "third password 789";
 const A = browser(api);
 ok((await A("POST", "/auth/signup", { email, password: first, display_name: "PW Check", adult_confirmed: true })).status === 201, "signup");
 ok((await A("GET", "/config")).json.email === true, "config: email on");
+for (let i = 0; i < 40 && !mail.some((m) => m.to === email); i++) await new Promise((r) => setTimeout(r, 100));
+ok(mail.some((m) => m.to === email && plain(m.body).includes("Your account is ready")), "welcome email on signup");
 ok((await browser(offApi)("GET", "/config")).json.email === false, "config: email off without settings");
 
 // ---------- change password ----------
@@ -83,13 +86,13 @@ ok((await browser(api)("POST", "/auth/login", { email, password: second })).stat
 ok((await browser(offApi)("POST", "/auth/password/forgot", { email })).status === 503, "email off: says how to get help");
 const unknown = await browser(api)("POST", "/auth/password/forgot", { email: `nobody-${Date.now()}@example.test` });
 await new Promise((r) => setTimeout(r, 300));
-ok(unknown.status === 202 && mail.length === 0, "unknown email: same answer, no email sent");
+ok(unknown.status === 202 && resets().length === 0, "unknown email: same answer, no email sent");
 const asked = await browser(api)("POST", "/auth/password/forgot", { email });
 await waitForMail(1);
 ok(asked.status === 202 && asked.json.message === unknown.json.message, "known email: same answer");
-ok(mail.length === 1 && mail[0]!.to === email, "reset email sent to the account");
-const token = tokenIn(mail[0]!.body);
-ok(token !== null && plain(mail[0]!.body).includes("http://localhost:5199/reset?token="), "link uses the site's own address");
+ok(resets().length === 1 && resets()[0]!.to === email, "reset email sent to the account");
+const token = tokenIn(resets()[0]!.body);
+ok(token !== null && plain(resets()[0]!.body).includes("http://localhost:5199/reset?token="), "link uses the site's own address");
 const [stored] = await db.select().from(passwordResetsTable).where(eq(passwordResetsTable.tokenHash, token!));
 ok(stored === undefined, "only a hash of the token is stored");
 
@@ -105,7 +108,7 @@ ok((await C("POST", "/auth/password/reset", { token: "x".repeat(43), password: "
 // Expired link
 await browser(api)("POST", "/auth/password/forgot", { email });
 await waitForMail(2);
-const late = tokenIn(mail[1]!.body);
+const late = tokenIn(resets()[1]!.body);
 const [u] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
 await db.update(passwordResetsTable).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(passwordResetsTable.userId, u!.id));
 ok((await browser(api)("POST", "/auth/password/reset", { token: late, password: "another password 1" })).status === 400, "expired link refused");
@@ -115,7 +118,7 @@ await browser(api)("POST", "/auth/password/forgot", { email });
 await waitForMail(3);
 await browser(api)("POST", "/auth/password/forgot", { email });
 await new Promise((r) => setTimeout(r, 500));
-ok(mail.length === 3, "4th request in an hour sends nothing");
+ok(resets().length === 3, "4th request in an hour sends nothing");
 
 // ---------- delete account also removes chat and reset links ----------
 await db.insert(coachMessagesTable).values({ userId: u!.id, coachId: "rex", role: "member", text: "hello" });
