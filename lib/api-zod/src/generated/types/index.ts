@@ -8,6 +8,7 @@
 
 export * from './access';
 export * from './accessLevel';
+export * from './accountExport';
 export * from './appConfig';
 export * from './appConfigPayments';
 export * from './chatMessage';
@@ -19,6 +20,7 @@ export * from './coach';
 export * from './coachChat';
 export * from './createProgramRequest';
 export * from './currentUser';
+export * from './deleteAccountRequest';
 export * from './errorMessage';
 export * from './healthStatus';
 export * from './homeShowcase';

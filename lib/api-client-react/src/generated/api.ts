@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountExport,
   AppConfig,
   ChatRequest,
   CheckoutRequest,
@@ -27,6 +28,7 @@ import type {
   CoachChat,
   CreateProgramRequest,
   CurrentUser,
+  DeleteAccountRequest,
   ErrorMessage,
   HealthStatus,
   HomeShowcase,
@@ -584,6 +586,246 @@ export const useUpdateCurrentUser = <TError = ErrorType<ErrorMessage>,
       > => {
       return useMutation(getUpdateCurrentUserMutationOptions(options));
     }
+
+export const getDeleteAccountUrl = () => {
+
+
+
+
+  return `/api/auth/me`
+}
+
+/**
+ * Cancels any Stripe subscription first (nothing is deleted if that fails), then deletes training answers, plans, logs and logins. Payment records are kept without personal details.
+ * @summary Delete my account
+ */
+export const deleteAccount = async (deleteAccountRequest: DeleteAccountRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getDeleteAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(deleteAccountRequest)
+  }
+);}
+
+
+
+
+
+export const getDeleteAccountMutationKey = () => ['deleteAccount'] as const;
+
+export const getDeleteAccountMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAccountMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAccount>>, DeleteAccountMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAccount>>>
+    export type DeleteAccountMutationBody = BodyType<DeleteAccountRequest>
+    export type DeleteAccountMutationError = ErrorType<ErrorMessage>
+    export type DeleteAccountMutationVariables = {data: BodyType<DeleteAccountRequest>}
+
+    /**
+ * @summary Delete my account
+ */
+export const useDeleteAccount = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAccount>>,
+        TError,
+        DeleteAccountMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAccountMutationOptions(options));
+    }
+
+export const getLogoutAllUrl = () => {
+
+
+
+
+  return `/api/auth/logout-all`
+}
+
+/**
+ * @summary Log out on every device
+ */
+export const logoutAll = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLogoutAllUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutAllMutationKey = () => ['logoutAll'] as const;
+
+export const getLogoutAllMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutAll>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutAll>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutAllMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutAll>>, void> = () => {
+
+
+          return  logoutAll(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutAllMutationResult = NonNullable<Awaited<ReturnType<typeof logoutAll>>>
+
+    export type LogoutAllMutationError = ErrorType<ErrorMessage>
+
+
+    /**
+ * @summary Log out on every device
+ */
+export const useLogoutAll = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutAll>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutAll>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutAllMutationOptions(options));
+    }
+
+export const getExportMyDataUrl = () => {
+
+
+
+
+  return `/api/me/export`
+}
+
+/**
+ * @summary Download everything Hypest holds about me, as JSON
+ */
+export const exportMyData = async ( options?: Parameters<typeof customFetch>[1]): Promise<AccountExport> => {
+
+  return customFetch<AccountExport>(getExportMyDataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportMyDataQueryKey = () => {
+    return [
+    `/api/me/export`
+    ] as const;
+    }
+
+
+export const getExportMyDataQueryOptions = <TData = Awaited<ReturnType<typeof exportMyData>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportMyData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportMyDataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportMyData>>> = ({ signal }) => exportMyData({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportMyData>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportMyDataQueryResult = NonNullable<Awaited<ReturnType<typeof exportMyData>>>
+export type ExportMyDataQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Download everything Hypest holds about me, as JSON
+ */
+
+export function useExportMyData<TData = Awaited<ReturnType<typeof exportMyData>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportMyData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportMyDataQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListPublishedProgramsUrl = (params?: ListPublishedProgramsParams,) => {
   const normalizedParams = new URLSearchParams();

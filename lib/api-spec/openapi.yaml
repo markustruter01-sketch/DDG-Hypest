@@ -167,6 +167,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+    delete:
+      operationId: deleteAccount
+      tags: [auth]
+      summary: Delete my account
+      description: Cancels any Stripe subscription first (nothing is deleted if that fails), then deletes training answers, plans, logs and logins. Payment records are kept without personal details.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountRequest"
+      responses:
+        "204":
+          description: Deleted and logged out
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Wrong password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: Stripe could not cancel the membership; nothing was deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Payments are off, so the membership can't be cancelled; nothing was deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /auth/logout-all:
+    post:
+      operationId: logoutAll
+      tags: [auth]
+      summary: Log out on every device
+      responses:
+        "204":
+          description: All sessions deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/export:
+    get:
+      operationId: exportMyData
+      tags: [auth]
+      summary: Download everything Hypest holds about me, as JSON
+      responses:
+        "200":
+          description: My data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /programs:
     get:
       operationId: listPublishedPrograms
@@ -1684,6 +1760,23 @@ components:
         tier1_cents: {type: integer}
         tier2_cents: {type: integer}
       required: [intro_plan_cents, plan_cents, tier1_cents, tier2_cents]
+    DeleteAccountRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [password]
+    AccountExport:
+      type: object
+      description: Account, training answers, plans with sessions, items and logs, and memberships
+      additionalProperties: true
+      properties:
+        exported_at:
+          type: string
+      required: [exported_at]
     CheckoutRequest:
       type: object
       additionalProperties: false

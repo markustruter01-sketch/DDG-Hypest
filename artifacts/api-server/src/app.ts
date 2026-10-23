@@ -1,12 +1,13 @@
 import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { billingWebhook } from "./routes/billing";
 import { logger } from "./lib/logger";
+import { securityHeaders } from "./lib/security-headers";
 
 const app: Express = express();
+app.disable("x-powered-by");
 
 app.use(
   pinoHttp({
@@ -27,7 +28,7 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(securityHeaders);
 app.use(cookieParser());
 // Stripe signs the raw body, so the webhook must be mounted before express.json.
 app.post("/api/billing/webhook", express.raw({ type: "application/json", limit: "1mb" }), billingWebhook);

@@ -112,6 +112,35 @@ export const UpdateCurrentUserResponse = zod.object({
 
 
 /**
+ * Cancels any Stripe subscription first (nothing is deleted if that fails), then deletes training answers, plans, logs and logins. Payment records are kept without personal details.
+ * @summary Delete my account
+ */
+export const deleteAccountBodyPasswordMax = 200;
+
+
+
+export const DeleteAccountBody = zod.object({
+  "password": zod.string().min(1).max(deleteAccountBodyPasswordMax)
+})
+
+export const DeleteAccountResponse = zod.void()
+
+
+/**
+ * @summary Log out on every device
+ */
+export const LogoutAllResponse = zod.void()
+
+
+/**
+ * @summary Download everything Hypest holds about me, as JSON
+ */
+export const ExportMyDataResponse = zod.object({
+  "exported_at": zod.string()
+}).describe('Account, training answers, plans with sessions, items and logs, and memberships')
+
+
+/**
  * Public. Published programs only, with no lesson content. Optional creator filters to one creator's link name.
  * @summary List published programs
  */

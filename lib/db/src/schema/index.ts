@@ -7,3 +7,4 @@ export { purchasesTable } from "./purchases";
 export { trainingProfilesTable, membershipsTable, plansTable, planSessionsTable, planItemsTable, setLogsTable } from "./training";
 export { aiUsageTable, coachMessagesTable } from "./ai";
 export { billingEventsTable } from "./billing";
+export { authFailuresTable } from "./auth-failures";

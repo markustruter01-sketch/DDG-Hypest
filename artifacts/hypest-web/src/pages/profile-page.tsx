@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-client-react";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 import { Offers, returnUrl } from "@/components/offers";
+import { AccountActions } from "@/components/account-actions";
 import { useAppConfig } from "@/lib/config";
 import { useTraining } from "@/lib/coaching";
 import { UnitsToggle } from "@/components/units-toggle";
@@ -167,6 +168,7 @@ export function ProfilePage() {
         </div>
       ) : null}
       {user && !editing ? <Membership /> : null}
+      {user && !editing ? <AccountActions /> : null}
       {user && editing ? (
         <form className="account-form" onSubmit={onSave}>
           <label className="field">

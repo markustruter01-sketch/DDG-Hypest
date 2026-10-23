@@ -407,6 +407,22 @@ export interface Prices {
   tier2_cents: number;
 }
 
+export interface DeleteAccountRequest {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  password: string;
+}
+
+/**
+ * Account, training answers, plans with sessions, items and logs, and memberships
+ */
+export interface AccountExport {
+  exported_at: string;
+  [key: string]: unknown;
+ }
+
 export type CheckoutRequestKind = typeof CheckoutRequestKind[keyof typeof CheckoutRequestKind];
 
 
