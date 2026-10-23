@@ -98,6 +98,24 @@ export interface Coach {
   goals: string[];
 }
 
+export interface RemindersState {
+  on: boolean;
+  /** Hypest can send email (EMAIL_* set). When false the app hides the switch. */
+  available: boolean;
+}
+
+export interface RemindersRequest {
+  on: boolean;
+}
+
+export interface TurnOffRemindersRequest {
+  /**
+     * @minLength 43
+     * @maxLength 43
+     */
+  token: string;
+}
+
 export type ClientErrorReportKind = typeof ClientErrorReportKind[keyof typeof ClientErrorReportKind];
 
 

@@ -54,6 +54,8 @@ import type {
   PublicCreator,
   PublicProgram,
   Purchase,
+  RemindersRequest,
+  RemindersState,
   ReorderLessonsRequest,
   ResetPasswordRequest,
   SetLog,
@@ -62,6 +64,7 @@ import type {
   StripeLink,
   TrainingAnswers,
   TrainingState,
+  TurnOffRemindersRequest,
   UnitsRequest,
   UnlockRequest,
   UpdateProfileRequest,
@@ -1095,6 +1098,259 @@ export function useExportMyData<TData = Awaited<ReturnType<typeof exportMyData>>
 
 
 
+
+export const getGetRemindersUrl = () => {
+
+
+
+
+  return `/api/me/reminders`
+}
+
+/**
+ * @summary Are reminder emails on for me, and can Hypest send email at all?
+ */
+export const getReminders = async ( options?: Parameters<typeof customFetch>[1]): Promise<RemindersState> => {
+
+  return customFetch<RemindersState>(getGetRemindersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRemindersQueryKey = () => {
+    return [
+    `/api/me/reminders`
+    ] as const;
+    }
+
+
+export const getGetRemindersQueryOptions = <TData = Awaited<ReturnType<typeof getReminders>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReminders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRemindersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReminders>>> = ({ signal }) => getReminders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReminders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRemindersQueryResult = NonNullable<Awaited<ReturnType<typeof getReminders>>>
+export type GetRemindersQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Are reminder emails on for me, and can Hypest send email at all?
+ */
+
+export function useGetReminders<TData = Awaited<ReturnType<typeof getReminders>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReminders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRemindersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetRemindersUrl = () => {
+
+
+
+
+  return `/api/me/reminders`
+}
+
+/**
+ * @summary Turn reminder emails on or off (an email when I miss 3 days of an active plan)
+ */
+export const setReminders = async (remindersRequest: RemindersRequest, options?: Parameters<typeof customFetch>[1]): Promise<RemindersState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RemindersState>(getSetRemindersUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(remindersRequest)
+  }
+);}
+
+
+
+
+
+export const getSetRemindersMutationKey = () => ['setReminders'] as const;
+
+export const getSetRemindersMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminders>>, TError,SetRemindersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setReminders>>, TError,SetRemindersMutationVariables, TContext> => {
+
+const mutationKey = getSetRemindersMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setReminders>>, SetRemindersMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  setReminders(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetRemindersMutationResult = NonNullable<Awaited<ReturnType<typeof setReminders>>>
+    export type SetRemindersMutationBody = BodyType<RemindersRequest>
+    export type SetRemindersMutationError = ErrorType<ErrorMessage>
+    export type SetRemindersMutationVariables = {data: BodyType<RemindersRequest>}
+
+    /**
+ * @summary Turn reminder emails on or off (an email when I miss 3 days of an active plan)
+ */
+export const useSetReminders = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminders>>, TError,SetRemindersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setReminders>>,
+        TError,
+        SetRemindersMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetRemindersMutationOptions(options));
+    }
+
+export const getTurnOffRemindersUrl = () => {
+
+
+
+
+  return `/api/reminders/off`
+}
+
+/**
+ * @summary The "turn these off" link in a reminder email. No login needed; the token only turns reminders off.
+ */
+export const turnOffReminders = async (turnOffRemindersRequest: TurnOffRemindersRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getTurnOffRemindersUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(turnOffRemindersRequest)
+  }
+);}
+
+
+
+
+
+export const getTurnOffRemindersMutationKey = () => ['turnOffReminders'] as const;
+
+export const getTurnOffRemindersMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof turnOffReminders>>, TError,TurnOffRemindersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof turnOffReminders>>, TError,TurnOffRemindersMutationVariables, TContext> => {
+
+const mutationKey = getTurnOffRemindersMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof turnOffReminders>>, TurnOffRemindersMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  turnOffReminders(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TurnOffRemindersMutationResult = NonNullable<Awaited<ReturnType<typeof turnOffReminders>>>
+    export type TurnOffRemindersMutationBody = BodyType<TurnOffRemindersRequest>
+    export type TurnOffRemindersMutationError = ErrorType<ErrorMessage>
+    export type TurnOffRemindersMutationVariables = {data: BodyType<TurnOffRemindersRequest>}
+
+    /**
+ * @summary The "turn these off" link in a reminder email. No login needed; the token only turns reminders off.
+ */
+export const useTurnOffReminders = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof turnOffReminders>>, TError,TurnOffRemindersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof turnOffReminders>>,
+        TError,
+        TurnOffRemindersMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTurnOffRemindersMutationOptions(options));
+    }
 
 export const getReportClientErrorUrl = () => {
 

@@ -200,6 +200,43 @@ export const ExportMyDataResponse = zod.object({
 
 
 /**
+ * @summary Are reminder emails on for me, and can Hypest send email at all?
+ */
+export const GetRemindersResponse = zod.object({
+  "on": zod.boolean(),
+  "available": zod.boolean().describe('Hypest can send email (EMAIL_* set). When false the app hides the switch.')
+})
+
+
+/**
+ * @summary Turn reminder emails on or off (an email when I miss 3 days of an active plan)
+ */
+export const SetRemindersBody = zod.object({
+  "on": zod.boolean()
+})
+
+export const SetRemindersResponse = zod.object({
+  "on": zod.boolean(),
+  "available": zod.boolean().describe('Hypest can send email (EMAIL_* set). When false the app hides the switch.')
+})
+
+
+/**
+ * @summary The "turn these off" link in a reminder email. No login needed; the token only turns reminders off.
+ */
+export const turnOffRemindersBodyTokenMin = 43;
+export const turnOffRemindersBodyTokenMax = 43;
+
+
+
+export const TurnOffRemindersBody = zod.object({
+  "token": zod.string().min(turnOffRemindersBodyTokenMin).max(turnOffRemindersBodyTokenMax)
+})
+
+export const TurnOffRemindersResponse = zod.void()
+
+
+/**
  * @summary The app tells the server it crashed (no personal details; capped; never fails the page)
  */
 export const reportClientErrorBodyMessageMax = 500;
