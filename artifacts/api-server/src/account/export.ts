@@ -28,7 +28,7 @@ export async function exportAccount(userId: number) {
       ? {
           coach_id: profile.coachId, goal: profile.goal, experience: profile.experience, days_per_week: profile.daysPerWeek,
           minutes: profile.minutes, equipment: profile.equipment, avoid_areas: profile.avoidAreas, units: profile.units,
-          health_accepted_at: profile.healthAcceptedAt, updated_at: profile.updatedAt,
+          health_accepted_at: profile.healthAcceptedAt, health_check: profile.screening, updated_at: profile.updatedAt,
         }
       : null,
     plans: plans.map((p) => ({

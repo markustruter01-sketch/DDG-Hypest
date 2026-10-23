@@ -70,6 +70,8 @@ export * from './purchaseCommissionSource';
 export * from './purchaseStatus';
 export * from './reorderLessonsRequest';
 export * from './resetPasswordRequest';
+export * from './screening';
+export * from './screeningAnswers';
 export * from './setLog';
 export * from './setLogInput';
 export * from './showcaseCreator';

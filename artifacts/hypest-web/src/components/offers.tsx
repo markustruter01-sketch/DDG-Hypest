@@ -29,7 +29,11 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
   const p = config.prices;
   const oneOff: Kind = access.intro_available ? "intro_plan" : "plan";
 
-  const options: { kind: Kind; name: string; price: string; was?: string; per?: string; perks: string[]; best?: boolean }[] = [
+  type Option = { kind: Kind; name: string; price: string; was?: string; per?: string; perks: string[]; best?: boolean };
+  const coaching: Option = { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", perks: ["New plan every 4 weeks", "Log every set", "Plans adapt to you", "This-hurts swaps"], best: true };
+  // Plans members can only upgrade; the server cancels Plans once Coaching is paid (billing/sync.ts).
+  const upgrade = access.level === "tier1";
+  const options: Option[] = upgrade ? [{ ...coaching, name: "Upgrade to Coaching", best: false }] : [
     {
       kind: oneOff,
       name: access.intro_available ? "First plan" : "One plan",
@@ -38,7 +42,7 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
       perks: ["Your 4-week plan"],
     },
     { kind: "tier1", name: "Plans", price: money(p.tier1_cents), per: "/mo", perks: ["New plan every 4 weeks"] },
-    { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", perks: ["New plan every 4 weeks", "Log every set", "Plans adapt to you", "This-hurts swaps"], best: true },
+    coaching,
   ];
 
   const paying = config.payments !== "off";
@@ -86,6 +90,7 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
       <p className="label" style={{ textAlign: "center" }}>
         {note} · US$
       </p>
+      {upgrade ? <p className="label" style={{ textAlign: "center" }}>Your Plans membership is cancelled when Coaching starts.</p> : null}
       {error ? <p className="error-text" role="alert">{error}</p> : null}
     </div>
   );

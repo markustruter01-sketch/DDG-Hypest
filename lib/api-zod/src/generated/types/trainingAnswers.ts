@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ScreeningAnswers } from './screeningAnswers';
 import type { TrainingAnswersAvoidAreasItem } from './trainingAnswersAvoidAreasItem';
 import type { TrainingAnswersEquipmentItem } from './trainingAnswersEquipmentItem';
 import type { TrainingAnswersExperience } from './trainingAnswersExperience';
@@ -26,4 +27,5 @@ export interface TrainingAnswers {
   avoid_areas: TrainingAnswersAvoidAreasItem[];
   units?: TrainingAnswersUnits;
   health_accepted: true;
+  screening?: ScreeningAnswers;
 }

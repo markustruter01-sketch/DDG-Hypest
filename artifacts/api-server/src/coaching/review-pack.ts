@@ -3,6 +3,7 @@
 //   pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/coaching/review-pack.ts > review-pack.md
 import { AREAS, COACHES, COACH_BY_ID, EXERCISES, EXERCISE_BY_ID, type Area, type Equipment, type Experience, type Goal } from "./library";
 import { buildPlan, WEEKS, type PlanItem } from "./engine";
+import { SCREENING } from "./screening";
 
 const out: string[] = [];
 const say = (s = "") => out.push(s);
@@ -11,6 +12,13 @@ const dose = (it: PlanItem) => {
   const what = it.reps !== null ? `${it.sets} × ${it.reps}` : it.sets > 1 ? `${it.sets} × ${it.seconds}s` : `${Math.round((it.seconds ?? 0) / 60)} min`;
   return `${what}, rest ${it.restSeconds}s`;
 };
+
+say("## Health check (before the first plan)");
+say(`Version ${SCREENING.version}. Yes / No per question. All "no": the member goes on. Any "yes": the app shows the advice below and the member can only go on after ticking the clearance box. Stored: any yes (true/false) and clearance (true/false), not the single answers. DRAFT wording modelled on the topics of standard adult pre-exercise screening tools (e.g. the Adult Pre-Exercise Screening System, ESSA / Fitness Australia / SMA): please confirm, change, or replace it with an official tool.`);
+SCREENING.questions.forEach((q, i) => say(`${i + 1}. ${q}`));
+say(`- Advice on any yes: "${SCREENING.yes_advice}"`);
+say(`- Clearance box: "${SCREENING.cleared_label}"`);
+say();
 
 say("## Exercise list");
 say(`${EXERCISES.length} exercises. "Loads" = body areas the exercise puts real load on: a member who marks that area as sore never gets it. Level: 1 = beginner, 2 = intermediate, 3 = advanced (members only get their level and below). Swaps = what "This hurts" offers, best first, if it fits the member.`);

@@ -40,6 +40,7 @@ import { notesPrompt, parseNotes } from "../coaching/ai-notes";
 import { askClaude } from "../lib/ai";
 import { alert } from "../lib/alerts";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
+import { screeningResult, type ScreeningInput } from "../coaching/screening";
 
 const router: IRouter = Router();
 
@@ -53,6 +54,7 @@ type Answers = {
   avoid_areas: Area[];
   units?: "kg" | "lb";
   health_accepted: true;
+  screening?: ScreeningInput;
 };
 
 function bad(res: Response, issues: { message: string }[]) {
@@ -85,6 +87,12 @@ async function profileOf(userId: number): Promise<Answers | null> {
     coach_id: p.coachId, goal: p.goal as Goal, experience: p.experience as Experience, days_per_week: p.daysPerWeek,
     minutes: p.minutes, equipment: p.equipment as Equipment[], avoid_areas: p.avoidAreas as Area[], units: p.units as "kg" | "lb", health_accepted: true,
   };
+}
+
+/** Has this member done the health check? (Profiles saved before it existed have not.) */
+async function screened(userId: number): Promise<boolean> {
+  const [p] = await db.select({ s: trainingProfilesTable.screening }).from(trainingProfilesTable).where(eq(trainingProfilesTable.userId, userId)).limit(1);
+  return Boolean(p?.s);
 }
 
 function itemView(it: Plan["sessions"][number]["items"][number] & { id?: number | null; swappedFrom?: string | null }, logs: { set_number: number; reps: number | null; seconds: number | null; load_kg: number | null }[] = []) {
@@ -259,9 +267,12 @@ router.put("/me/training/profile", requireUser, async (req, res) => {
   const a = parsed.data as Answers;
   const err = answersError(a);
   if (err) return void res.status(400).json({ message: err });
+  const check = screeningResult(a.screening);
+  if (!check.ok) return void res.status(400).json({ message: check.message });
   const values = {
     coachId: a.coach_id, goal: a.goal, experience: a.experience, daysPerWeek: a.days_per_week, minutes: a.minutes,
-    equipment: [...new Set(a.equipment)], avoidAreas: [...new Set(a.avoid_areas)], units: a.units ?? "kg", healthAcceptedAt: new Date(), updatedAt: new Date(),
+    equipment: [...new Set(a.equipment)], avoidAreas: [...new Set(a.avoid_areas)], units: a.units ?? "kg", healthAcceptedAt: new Date(),
+    screening: check.record, updatedAt: new Date(),
   };
   await db.insert(trainingProfilesTable).values({ userId: user.id, ...values }).onConflictDoUpdate({ target: trainingProfilesTable.userId, set: values });
   res.json(GetTrainingResponse.parse(await trainingState(user.id)));
@@ -270,7 +281,7 @@ router.put("/me/training/profile", requireUser, async (req, res) => {
 router.post("/me/plans", requireUser, async (_req, res) => {
   const user = authUser(res);
   const profile = await profileOf(user.id);
-  if (!profile) return void res.status(409).json({ message: "answer the questions first" });
+  if (!profile || !(await screened(user.id))) return void res.status(409).json({ message: "answer the questions first" });
   const access = await accessFor(user.id);
   const current = await currentPlanRow(user.id);
   // Members (Tier 1/2) can restart with new answers or a new coach; one-off buyers finish the block they paid for.

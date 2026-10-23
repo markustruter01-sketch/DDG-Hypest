@@ -14,7 +14,11 @@ import './index.css';
 
 const queryClient = new QueryClient();
 
-createRoot(document.getElementById('root')!, {
+// The published site is static files, which can't send a frame-ancestors header, so the app itself refuses to
+// run inside another site's frame (stops click-jacking, e.g. a hidden "Delete account"). Dev previews are framed.
+const framed = import.meta.env.PROD && window.top !== window.self;
+if (framed) document.getElementById('root')!.textContent = 'Open Hypest at its own address.';
+else createRoot(document.getElementById('root')!, {
   // Keeps caught errors off reportError(), which would raise the dev overlay.
   onCaughtError: (error, errorInfo) => {
     console.error(error, errorInfo.componentStack);

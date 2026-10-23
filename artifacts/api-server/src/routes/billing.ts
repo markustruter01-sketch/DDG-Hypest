@@ -5,7 +5,7 @@ import { db, usersTable } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { paymentsMode, stripeClient, webhookSecret } from "../lib/stripe";
 import { accessFor } from "../coaching/access";
-import { checkoutParams, isMonthly, safeReturnUrl } from "../billing/checkout";
+import { checkoutBlocked, checkoutParams, safeReturnUrl } from "../billing/checkout";
 import { handleEvent } from "../billing/sync";
 import { alert } from "../lib/alerts";
 
@@ -36,10 +36,8 @@ router.post("/billing/checkout", requireUser, async (req, res) => {
   const user = authUser(res);
   const { kind } = body.data;
   const access = await accessFor(user.id);
-  if (kind === "intro_plan" && !access.intro_available) return void res.status(409).json({ message: "The intro offer is already used" });
-  if (isMonthly(kind) && (access.level === "tier1" || access.level === "tier2")) {
-    return void res.status(409).json({ message: "You already have a membership. Manage or cancel it first." });
-  }
+  const blocked = checkoutBlocked(kind, access);
+  if (blocked) return void res.status(409).json({ message: blocked });
   const [row] = await db.select({ email: usersTable.email, customer: usersTable.stripeCustomerId }).from(usersTable).where(eq(usersTable.id, user.id));
   if (!row) return void res.status(401).json({ message: "unauthorized" });
 
@@ -96,7 +94,14 @@ export const billingWebhook: RequestHandler = async (req, res) => {
     return void res.json({ received: true, outcome: "ignored: mode mismatch" });
   }
   try {
-    const outcome = await handleEvent(event, { retrieveSubscription: (id) => stripe.subscriptions.retrieve(id) });
+    const outcome = await handleEvent(event, {
+      retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      cancelSubscription: async (id) => {
+        // Already cancelled (e.g. a retried event) counts as done; any error throws so Stripe retries the event.
+        if ((await stripe.subscriptions.retrieve(id)).status === "canceled") return;
+        await stripe.subscriptions.cancel(id, { prorate: true, invoice_now: true });
+      },
+    });
     req.log.info({ event: event.id, type: event.type, outcome }, "stripe webhook");
     res.json({ received: true, outcome });
   } catch (err) {

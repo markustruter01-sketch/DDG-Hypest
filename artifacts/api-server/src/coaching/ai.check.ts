@@ -2,6 +2,7 @@
 // AI_CHECK_API points at a local API started with ANTHROPIC_API_KEY=<anything> AI_MONTHLY_BUDGET_USD=1
 // ANTHROPIC_BASE_URL=http://localhost:<AI_CHECK_FAKE_PORT> (this script serves the fake Claude API on that port).
 import assert from "node:assert/strict";
+import { SCREENING } from "./screening";
 import http from "node:http";
 
 const dbUrl = new URL(process.env["DATABASE_URL"] ?? "postgresql://missing");
@@ -79,7 +80,7 @@ if (api && fakePort) {
   }
   const A = browser();
   const email = `ai-check-${Date.now()}@example.test`;
-  const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_per_week: 3, minutes: 45, equipment: ["dumbbells"], avoid_areas: ["knee"], health_accepted: true };
+  const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_per_week: 3, minutes: 45, equipment: ["dumbbells"], avoid_areas: ["knee"], health_accepted: true, screening: { answers: SCREENING.questions.map(() => false), cleared: false } };
   ok((await A("GET", "/config")).json.ai === true, "config: AI on");
   ok((await A("POST", "/auth/signup", { email, password: "correct horse battery", display_name: "AI Check", adult_confirmed: true })).status === 201, "signup");
   const [u] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));

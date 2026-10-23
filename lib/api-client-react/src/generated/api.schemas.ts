@@ -177,6 +177,16 @@ export const TrainingAnswersUnits = {
   lb: 'lb',
 } as const;
 
+/**
+ * Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.
+ */
+export interface ScreeningAnswers {
+  /** @maxItems 20 */
+  answers: boolean[];
+  /** The member confirmed a doctor or health professional cleared them (needed if any answer is yes) */
+  cleared: boolean;
+}
+
 export interface TrainingAnswers {
   coach_id: string;
   goal: TrainingAnswersGoal;
@@ -191,6 +201,14 @@ export interface TrainingAnswers {
   avoid_areas: TrainingAnswersAvoidAreasItem[];
   units?: TrainingAnswersUnits;
   health_accepted: true;
+  screening?: ScreeningAnswers;
+}
+
+export interface Screening {
+  version: string;
+  questions: string[];
+  yes_advice: string;
+  cleared_label: string;
 }
 
 export type AccessLevel = typeof AccessLevel[keyof typeof AccessLevel];
@@ -570,6 +588,7 @@ export interface AppConfig {
   /** Hypest's fee on sales Hypest found, in basis points */
   hypest_found_bps: number;
   prices: Prices;
+  screening: Screening;
 }
 
 export type LessonMediaSource = typeof LessonMediaSource[keyof typeof LessonMediaSource] | null;

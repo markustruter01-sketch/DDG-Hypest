@@ -1,7 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedCommissionRatesIfEmpty } from "./lib/seed-commission-rates";
-import { alert } from "./lib/alerts";
+import { tidyExpired } from "./lib/tidy";
 
 const rawPort = process.env["PORT"];
 
@@ -31,6 +31,6 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  // In the published app only: confirms each publish/restart reached the phone.
-  if (process.env["NODE_ENV"] === "production") void alert("info", "Hypest API started");
+  // No "started" alert: the published app cold-starts often (autoscale), which would flood the alerts chat.
+  void tidyExpired();
 });

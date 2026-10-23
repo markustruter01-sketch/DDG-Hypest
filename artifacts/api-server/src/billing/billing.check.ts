@@ -10,7 +10,7 @@ if (!["127.0.0.1", "localhost"].includes(dbUrl.hostname)) throw new Error(`refus
 
 const { db, membershipsTable, usersTable, billingEventsTable } = await import("@workspace/db");
 const { eq } = await import("drizzle-orm");
-const { checkoutParams, safeReturnUrl } = await import("./checkout");
+const { checkoutBlocked, checkoutParams, safeReturnUrl } = await import("./checkout");
 const { handleEvent, subscriptionAccess, subscriptionIdOf, PAST_DUE_GRACE_DAYS, RENEWAL_BUFFER_HOURS } = await import("./sync");
 const { accessFor, PRICES } = await import("../coaching/access");
 
@@ -32,6 +32,15 @@ const event = (type: string, object: object, livemode = false) => ({ id: evId(),
   ok(sub.mode === "subscription" && sub.customer === "cus_1" && !("customer_email" in sub), "subscription reuses the customer");
   ok(sub.line_items?.[0]?.price_data?.recurring?.interval === "month" && sub.line_items?.[0]?.price_data?.unit_amount === PRICES.tier2_cents, "monthly tier2 price");
   ok(sub.subscription_data?.metadata?.["kind"] === "tier2", "kind on the subscription");
+}
+// ---------- pure: who can buy what ----------
+{
+  const as = (level: string, intro_available = true) => ({ level, intro_available }) as Parameters<typeof checkoutBlocked>[1];
+  ok(checkoutBlocked("tier1", as("none")) === null && checkoutBlocked("tier2", as("plan")) === null, "non-members can join");
+  ok(checkoutBlocked("tier2", as("tier1")) === null, "Plans -> Coaching: upgrade allowed");
+  ok(checkoutBlocked("tier1", as("tier1")) !== null && checkoutBlocked("tier2", as("tier2")) !== null, "same membership twice: refused");
+  ok(checkoutBlocked("tier1", as("tier2")) !== null, "Coaching -> Plans: refused (manage in the portal)");
+  ok(checkoutBlocked("intro_plan", as("none", false)) !== null && checkoutBlocked("plan", as("tier2")) === null, "intro once; extra plans always OK");
 }
 // ---------- pure: return url ----------
 ok(safeReturnUrl("https://hypest.app/profile?x=1#y", "https://hypest.app") === "https://hypest.app/profile", "same site, query stripped");
@@ -62,7 +71,8 @@ async function newUser(): Promise<number> {
   return u!.id;
 }
 const rowsOf = (userId: number) => db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId));
-const noRetrieve = { retrieveSubscription: async (): Promise<Stripe.Subscription> => { throw new Error("should not retrieve"); } };
+const noCancel = async (): Promise<void> => { throw new Error("should not cancel"); };
+const noRetrieve = { retrieveSubscription: async (): Promise<Stripe.Subscription> => { throw new Error("should not retrieve"); }, cancelSubscription: noCancel };
 
 {
   const userId = await newUser();
@@ -86,7 +96,7 @@ const noRetrieve = { retrieveSubscription: async (): Promise<Stripe.Subscription
 {
   const userId = await newUser();
   let current = subObj("active", now, now + 30 * 86_400, { metadata: { user_id: String(userId), kind: "tier2" }, customer: `cus_sub_${userId}` });
-  const deps = { retrieveSubscription: async (id: string) => { assert.equal(id, current.id); return current; } };
+  const deps = { retrieveSubscription: async (id: string) => { assert.equal(id, current.id); return current; }, cancelSubscription: noCancel };
   ok((await handleEvent(event("checkout.session.completed", { mode: "subscription", subscription: current.id }), deps)) === "subscription active", "subscription checkout: active");
   ok((await accessFor(userId)).level === "tier2", "access: tier2");
   current = { ...current, status: "past_due", items: { data: [{ current_period_start: now - 10 * 86_400, current_period_end: now + 20 * 86_400 }] } } as unknown as Stripe.Subscription;
@@ -101,11 +111,48 @@ const noRetrieve = { retrieveSubscription: async (): Promise<Stripe.Subscription
 }
 {
   const ghost = subObj("active", now, now + 86_400, { metadata: { user_id: "999999999", kind: "tier1" } });
-  ok((await handleEvent(event("customer.subscription.created", ghost), { retrieveSubscription: async () => ghost })).startsWith("skipped"), "unknown user skipped");
+  ok((await handleEvent(event("customer.subscription.created", ghost), { retrieveSubscription: async () => ghost, cancelSubscription: noCancel })).startsWith("skipped"), "unknown user skipped");
   const e = event("customer.created", { id: "cus_x" });
   ok((await handleEvent(e, noRetrieve)).startsWith("ignored"), "unused type ignored");
   const [logged] = await db.select().from(billingEventsTable).where(eq(billingEventsTable.id, e.id));
   ok(logged?.outcome.startsWith("ignored") && logged.livemode === false, "every event logged once");
+}
+
+// ---------- upgrade: Plans -> Coaching cancels the Plans subscription ----------
+{
+  const userId = await newUser();
+  const meta = (kind: string) => ({ metadata: { user_id: String(userId), kind }, customer: `cus_up_${userId}` });
+  const plans = subObj("active", now, now + 30 * 86_400, meta("tier1"));
+  const plansDeps = { retrieveSubscription: async () => plans, cancelSubscription: noCancel };
+  ok((await handleEvent(event("customer.subscription.created", plans), plansDeps)) === "subscription active", "Plans membership active");
+  ok((await accessFor(userId)).level === "tier1", "access: tier1");
+
+  const coaching = subObj("active", now, now + 30 * 86_400, meta("tier2"));
+  const cancelled: string[] = [];
+  let failCancel = true;
+  const upDeps = {
+    retrieveSubscription: async () => coaching,
+    cancelSubscription: async (id: string) => { if (failCancel) throw new Error("stripe down"); cancelled.push(id); },
+  };
+  const up = event("checkout.session.completed", { mode: "subscription", subscription: coaching.id });
+  await assert.rejects(handleEvent(up, upDeps), /stripe down/);
+  ok((await db.select().from(billingEventsTable).where(eq(billingEventsTable.id, up.id))).length === 0, "cancel failed: event not recorded (Stripe retries)");
+  ok((await accessFor(userId)).level === "tier1", "cancel failed: still on Plans, nothing half-done");
+  failCancel = false;
+  ok((await handleEvent(up, upDeps)).endsWith("replaced 1 Plans membership"), "retry: Coaching active, Plans replaced");
+  ok(cancelled.length === 1 && cancelled[0] === plans.id, "the Plans subscription was cancelled at Stripe");
+  ok((await accessFor(userId)).level === "tier2", "access: tier2");
+  const rows = await rowsOf(userId);
+  ok(rows.find((r) => r.stripeRef === plans.id)?.status === "ended" && rows.find((r) => r.stripeRef === coaching.id)?.status === "active", "rows: Plans ended, Coaching active");
+  ok((await handleEvent(event("invoice.paid", { parent: { subscription_details: { subscription: coaching.id } } }), upDeps)) === "subscription active" && cancelled.length === 1, "later Coaching events cancel nothing more");
+
+  // A Plans subscription's own events never cancel anything; an inactive Coaching subscription doesn't either.
+  const other = await newUser();
+  const p2 = subObj("active", now, now + 30 * 86_400, { metadata: { user_id: String(other), kind: "tier1" } });
+  await handleEvent(event("customer.subscription.created", p2), { retrieveSubscription: async () => p2, cancelSubscription: noCancel });
+  const pending = subObj("incomplete", now, now + 30 * 86_400, { metadata: { user_id: String(other), kind: "tier2" } });
+  ok((await handleEvent(event("customer.subscription.created", pending), { retrieveSubscription: async () => pending, cancelSubscription: noCancel })) === "subscription ended", "unpaid Coaching: Plans kept");
+  ok((await accessFor(other)).level === "tier1", "still on Plans");
 }
 
 // ---------- HTTP: signature check on the running server (optional) ----------

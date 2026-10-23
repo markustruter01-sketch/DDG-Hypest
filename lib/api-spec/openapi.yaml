@@ -1668,7 +1668,33 @@ components:
         health_accepted:
           type: boolean
           enum: [true]
+        screening:
+          $ref: "#/components/schemas/ScreeningAnswers"
       required: [coach_id, goal, experience, days_per_week, minutes, equipment, avoid_areas, health_accepted]
+    ScreeningAnswers:
+      type: object
+      additionalProperties: false
+      description: Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.
+      properties:
+        answers:
+          type: array
+          maxItems: 20
+          items: {type: boolean}
+        cleared:
+          type: boolean
+          description: The member confirmed a doctor or health professional cleared them (needed if any answer is yes)
+      required: [answers, cleared]
+    Screening:
+      type: object
+      additionalProperties: false
+      properties:
+        version: {type: string}
+        questions:
+          type: array
+          items: {type: string}
+        yes_advice: {type: string}
+        cleared_label: {type: string}
+      required: [version, questions, yes_advice, cleared_label]
     Access:
       type: object
       additionalProperties: false
@@ -2030,8 +2056,11 @@ components:
           description: Hypest's fee on sales Hypest found, in basis points
         prices:
           $ref: "#/components/schemas/Prices"
+        screening:
+          $ref: "#/components/schemas/Screening"
       required:
         - prices
+        - screening
         - payments
         - ai
         - email
