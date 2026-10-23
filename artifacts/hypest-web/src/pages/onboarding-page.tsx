@@ -119,7 +119,7 @@ export function OnboardingPage() {
           <Link className="text-link" to={`/coaches/${coach.id}`}>← Back</Link>
           <img className="coach-face" src={img(coach.photo)} alt={`${coach.name}, AI coach`} />
         </div>
-        <div className="onboard-steps" aria-label={`Step ${step} of 3`}>
+        <div className="onboard-steps" role="img" aria-label={`Step ${step} of 3`}>
           {[1, 2, 3].map((n) => <span key={n} className={n <= step ? "on" : undefined} />)}
         </div>
       </header>
