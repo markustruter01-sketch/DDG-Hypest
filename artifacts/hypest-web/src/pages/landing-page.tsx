@@ -34,7 +34,7 @@ export function LandingPage() {
           <h1 className="hero-title">Your coach.<br />Your plan.<br />Every week.</h1>
           <div className="hero-stats">
             <div><span className="big-number">{p ? money(p.intro_plan_cents) : "–"}</span><span className="label">First plan</span></div>
-            <div><span className="big-number">{coaches.data?.length ?? 5}</span><span className="label">AI coaches</span></div>
+            <div><span className="big-number">{coaches.data?.length ?? "–"}</span><span className="label">AI coaches</span></div>
           </div>
           <div className="button-row landing-ctas">
             <Link className="primary-button" to="/coaches" style={{ justifyContent: "space-between" }}>Meet your coach <span aria-hidden="true">→</span></Link>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="600" height="750">
+  <title>Rex, Hypest AI coach</title>
+  <style>
+    .eyes { transform-origin: 300px 316px; }
+    .ping { transform-origin: 300px 100px; }
+    @media (prefers-reduced-motion: no-preference) {
+      .blink { animation: blink 5s infinite; }
+      .ping { animation: ping 2.4s ease-in-out infinite; }
+    }
+    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+    @keyframes ping { 50% { transform: scale(1.4); opacity: 0.6; } }
+  </style>
+  <rect width="600" height="750" fill="#0e0e0e"/>
+  <path d="M300 160 L300 112" fill="none" stroke="#d4ff3f" stroke-width="12" stroke-linecap="round"/>
+  <circle class="ping" cx="300" cy="100" r="16" fill="#d4ff3f"/>
+  <rect x="130" y="172" width="340" height="316" rx="58" fill="#d4ff3f" stroke="#d4ff3f" stroke-linejoin="round"/>
+  <g class="eyes blink"><rect x="222" y="306" width="56" height="18" rx="6" fill="#111111"/><rect x="322" y="306" width="56" height="18" rx="6" fill="#111111"/></g>
+</svg>

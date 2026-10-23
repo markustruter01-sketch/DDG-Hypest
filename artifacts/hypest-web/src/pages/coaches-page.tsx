@@ -1,7 +1,7 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { GOAL_LABEL, coachById, img, useCoaches } from "@/lib/coaching";
 
-/** Pick a coach. Photos: this is a hero page. Every card says AI coach, so nobody mistakes the photo for a person. */
+/** Pick a coach. Each coach is a drawn head (public/img/coach-*.svg, from scripts/coach-faces.mjs) tagged AI coach. */
 export function CoachesPage() {
   const coaches = useCoaches();
   return (
