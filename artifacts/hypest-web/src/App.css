@@ -1280,3 +1280,16 @@ textarea.text-input { resize: vertical; }
 /* Me: kg / lb */
 .units-toggle { display: flex; align-items: center; gap: var(--space-2); }
 .units-toggle .label { margin-right: auto; }
+
+/* Session finish */
+.finish { justify-content: center; }
+.finish-title { margin: 0; font-size: 4rem; line-height: 0.95; }
+.finish-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.finish-stats > div { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); border: var(--hairline) solid var(--color-dark-line); }
+.finish-stats > div:first-child { border-color: var(--color-volt); }
+.finish-stats .label { color: var(--color-on-dark-muted); }
+
+/* Plan: past blocks */
+.past-blocks { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+.past-block { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); }
+

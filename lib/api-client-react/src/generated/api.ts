@@ -38,6 +38,7 @@ import type {
   MyProgramSummary,
   PainReport,
   PainResult,
+  PastPlan,
   PlanSessionView,
   PlanView,
   PortalRequest,
@@ -2997,6 +2998,83 @@ export const useReportPain = <TError = ErrorType<ErrorMessage>,
       > => {
       return useMutation(getReportPainMutationOptions(options));
     }
+
+export const getListPastPlansUrl = () => {
+
+
+
+
+  return `/api/me/plans/history`
+}
+
+/**
+ * @summary Finished and replaced blocks, newest first (not the current one)
+ */
+export const listPastPlans = async ( options?: Parameters<typeof customFetch>[1]): Promise<PastPlan[]> => {
+
+  return customFetch<PastPlan[]>(getListPastPlansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPastPlansQueryKey = () => {
+    return [
+    `/api/me/plans/history`
+    ] as const;
+    }
+
+
+export const getListPastPlansQueryOptions = <TData = Awaited<ReturnType<typeof listPastPlans>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPastPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPastPlansQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPastPlans>>> = ({ signal }) => listPastPlans({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPastPlans>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPastPlansQueryResult = NonNullable<Awaited<ReturnType<typeof listPastPlans>>>
+export type ListPastPlansQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary Finished and replaced blocks, newest first (not the current one)
+ */
+
+export function useListPastPlans<TData = Awaited<ReturnType<typeof listPastPlans>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPastPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPastPlansQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetProgressUrl = () => {
 

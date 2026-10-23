@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
+import { getListPastPlansQueryKey, useListPastPlans, type Coach, type PastPlan } from "@workspace/api-client-react";
 import { Offers } from "@/components/offers";
-import { coachById, dose, useCoaches, useTraining } from "@/lib/coaching";
+import { coachById, dose, request, useCoaches, useTraining } from "@/lib/coaching";
 import { nextSession } from "@/pages/today-page";
 
 /** The 4-week block: week tabs, then each day's exercises. */
@@ -14,6 +15,7 @@ export function PlanPage() {
   const [week, setWeek] = useState<number | null>(null);
   const shown = week ?? upNext?.week ?? 1;
   const coach = coachById(coaches.data, plan?.coach_id);
+  const history = useListPastPlans({ query: { queryKey: getListPastPlansQueryKey(), enabled: training.isSuccess }, request });
 
   if (training.isSuccess && !plan) {
     return (
@@ -24,6 +26,7 @@ export function PlanPage() {
         ) : (
           <Link className="primary-button" to="/coaches">Meet your coach</Link>
         )}
+        <PastBlocks plans={history.data} coaches={coaches.data} />
       </main>
     );
   }
@@ -57,6 +60,28 @@ export function PlanPage() {
           </ul>
         </Link>
       ))}
+      <PastBlocks plans={history.data} coaches={coaches.data} />
     </main>
+  );
+}
+
+/** Earlier blocks: which coach, when, how many sessions were done. */
+function PastBlocks({ plans, coaches }: { plans: PastPlan[] | undefined; coaches: Coach[] | undefined }) {
+  if (!plans?.length) return null;
+  return (
+    <section className="past-blocks">
+      <h2 className="section-title" style={{ margin: 0 }}>Past blocks</h2>
+      {plans.map((p) => (
+        <div key={p.id} className="card past-block">
+          <span>
+            <b>Block {p.block}</b>
+            <span className="label" style={{ display: "block" }}>
+              {coachById(coaches, p.coach_id)?.name ?? ""} · {new Date(p.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          </span>
+          <span className="label">{p.sessions_done}/{p.sessions_total} done</span>
+        </div>
+      ))}
+    </section>
   );
 }

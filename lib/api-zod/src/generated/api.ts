@@ -1067,6 +1067,21 @@ export const ReportPainResponse = zod.object({
 
 
 /**
+ * @summary Finished and replaced blocks, newest first (not the current one)
+ */
+export const ListPastPlansResponseItem = zod.object({
+  "id": zod.number().int(),
+  "block": zod.number().int(),
+  "coach_id": zod.string(),
+  "weeks": zod.number().int(),
+  "created_at": zod.coerce.date(),
+  "sessions_done": zod.number().int(),
+  "sessions_total": zod.number().int()
+})
+export const ListPastPlansResponse = zod.array(ListPastPlansResponseItem)
+
+
+/**
  * @summary Streak, best lifts and weekly volume (Tier 2)
  */
 export const GetProgressResponse = zod.object({

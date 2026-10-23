@@ -323,6 +323,16 @@ export interface PainResult {
   needs_tier2: boolean;
 }
 
+export interface PastPlan {
+  id: number;
+  block: number;
+  coach_id: string;
+  weeks: number;
+  created_at: string;
+  sessions_done: number;
+  sessions_total: number;
+}
+
 export type ProgressBestLiftsItem = {
   exercise_id: string;
   name: string;
