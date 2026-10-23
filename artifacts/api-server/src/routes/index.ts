@@ -9,6 +9,7 @@ import programsRouter from "./programs";
 import coachChatRouter from "./coach-chat";
 import billingRouter from "./billing";
 import accountRouter from "./account";
+import passwordRouter from "./password";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(coachingRouter);
 router.use(coachChatRouter);
 router.use(billingRouter);
 router.use(accountRouter);
+router.use(passwordRouter);
 
 export default router;

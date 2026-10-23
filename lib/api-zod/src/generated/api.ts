@@ -127,6 +127,65 @@ export const DeleteAccountResponse = zod.void()
 
 
 /**
+ * @summary Change my password (logs out every other device)
+ */
+export const changePasswordBodyCurrentPasswordMax = 200;
+
+export const changePasswordBodyNewPasswordMin = 10;
+export const changePasswordBodyNewPasswordMax = 200;
+
+
+
+export const ChangePasswordBody = zod.object({
+  "current_password": zod.string().min(1).max(changePasswordBodyCurrentPasswordMax),
+  "new_password": zod.string().min(changePasswordBodyNewPasswordMin).max(changePasswordBodyNewPasswordMax)
+})
+
+export const ChangePasswordResponse = zod.void()
+
+
+/**
+ * @summary Email a reset link. Same answer whether or not the email has an account.
+ */
+export const forgotPasswordBodyEmailMax = 320;
+
+
+
+export const ForgotPasswordBody = zod.object({
+  "email": zod.string().email().max(forgotPasswordBodyEmailMax)
+})
+
+export const ForgotPasswordResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Set a new password with a reset link's token; logs out everywhere, then logs in here
+ */
+export const resetPasswordBodyTokenMin = 43;
+export const resetPasswordBodyTokenMax = 43;
+
+export const resetPasswordBodyPasswordMin = 10;
+export const resetPasswordBodyPasswordMax = 200;
+
+
+
+export const ResetPasswordBody = zod.object({
+  "token": zod.string().min(resetPasswordBodyTokenMin).max(resetPasswordBodyTokenMax),
+  "password": zod.string().min(resetPasswordBodyPasswordMin).max(resetPasswordBodyPasswordMax)
+})
+
+export const ResetPasswordResponse = zod.object({
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "display_name": zod.string(),
+  "bio": zod.string().nullable(),
+  "handle": zod.string().nullable()
+})
+
+
+/**
  * @summary Log out on every device
  */
 export const LogoutAllResponse = zod.void()
@@ -521,6 +580,8 @@ export const GetHomeResponse = zod.object({
  */
 export const GetConfigResponse = zod.object({
   "dev_tools": zod.boolean(),
+  "support_email": zod.string(),
+  "email": zod.boolean().describe('Emails can be sent (password reset works)'),
   "ai": zod.boolean().describe('AI layer on (coach notes on plans, coach chat for Coaching members)'),
   "payments": zod.enum(['off', 'test', 'live']).describe('off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money'),
   "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),

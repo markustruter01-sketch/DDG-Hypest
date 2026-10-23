@@ -5,6 +5,7 @@ import { devToolsOn } from "../lib/dev-login";
 import { PRICES } from "../coaching/access";
 import { paymentsMode } from "../lib/stripe";
 import { aiOn } from "../lib/ai";
+import { emailOn, siteUrl, SUPPORT_EMAIL } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -26,6 +27,8 @@ router.get("/config", async (_req, res) => {
       dev_tools: devToolsOn(),
       payments: paymentsMode(),
       ai: aiOn(),
+      email: emailOn() && siteUrl() !== null,
+      support_email: SUPPORT_EMAIL,
       creator_brought_bps: bps("creator_brought"),
       hypest_found_bps: bps("hypest_found"),
       prices: PRICES,

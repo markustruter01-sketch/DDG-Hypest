@@ -100,6 +100,9 @@ export function SignupPage() {
             {error}
           </p>
         ) : null}
+        <p className="label legal-agree">
+          By signing up you agree to the <Link to="/terms">Terms</Link>, <Link to="/privacy">Privacy policy</Link> and <Link to="/health">Health and safety</Link>.
+        </p>
         <button className="primary-button" type="submit" disabled={signup.isPending}>
           Sign up
         </button>

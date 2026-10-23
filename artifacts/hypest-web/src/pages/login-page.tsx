@@ -71,6 +71,9 @@ export function LoginPage() {
         <Link className="text-link" to="/signup">
           Sign up
         </Link>
+        <Link className="text-link" to="/forgot">
+          Forgot password?
+        </Link>
       </form>
     </main>
   );

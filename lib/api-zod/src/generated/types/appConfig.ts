@@ -10,6 +10,9 @@ import type { Prices } from './prices';
 
 export interface AppConfig {
   dev_tools: boolean;
+  support_email: string;
+  /** Emails can be sent (password reset works) */
+  email: boolean;
   /** AI layer on (coach notes on plans, coach chat for Coaching members) */
   ai: boolean;
   /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */

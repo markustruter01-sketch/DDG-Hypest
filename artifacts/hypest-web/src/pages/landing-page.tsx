@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Activity, CalendarCheck, LifeBuoy, Repeat, ShieldCheck } from "lucide-react";
+import { LegalLinks } from "@/pages/legal-page";
 import { Wordmark } from "@/components/wordmark";
 import { ShowMe } from "@/components/show-me";
 import { useAppConfig } from "@/lib/config";
@@ -99,7 +100,7 @@ export function LandingPage() {
           <ShieldCheck size={32} aria-hidden="true" />
           <div>
             <h2 className="landing-h2" style={{ marginBottom: "var(--space-2)" }}>Safe by design</h2>
-            <p className="screen-copy">Every exercise comes from a vetted list. Every plan is checked before you see it. Warning signs pause your plan and send you to a doctor. Hypest is not medical advice; your health and safety are your call, and we do our part.</p>
+            <p className="screen-copy">Every exercise comes from Hypest's own list. Every plan is checked by code before you see it. Warning signs pause your plan and send you to a doctor. Hypest is not medical advice; your health and safety are your call, and we do our part.</p>
           </div>
         </div>
       </section>
@@ -115,6 +116,9 @@ export function LandingPage() {
         <div className="landing-inner page-header">
           <Wordmark tone="dark" />
           <Link className="text-link" to="/login">Log in</Link>
+        </div>
+        <div className="landing-inner">
+          <LegalLinks />
         </div>
       </footer>
     </main>
