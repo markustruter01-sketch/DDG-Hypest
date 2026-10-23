@@ -37,6 +37,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+app.use("/api", (_req: Request, res: Response) => void res.status(404).json({ message: "Not found" }));
 
 // Last stop for any error: JSON (never a stack trace), and an alert for real server faults (500s).
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
