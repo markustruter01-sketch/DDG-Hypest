@@ -3,6 +3,7 @@ import { GetConfigResponse, HealthCheckResponse } from "@workspace/api-zod";
 import { commissionRatesTable, db } from "@workspace/db";
 import { devToolsOn } from "../lib/dev-login";
 import { PRICES } from "../coaching/access";
+import { paymentsMode } from "../lib/stripe";
 
 const router: IRouter = Router();
 
@@ -22,6 +23,7 @@ router.get("/config", async (_req, res) => {
   res.json(
     GetConfigResponse.parse({
       dev_tools: devToolsOn(),
+      payments: paymentsMode(),
       creator_brought_bps: bps("creator_brought"),
       hypest_found_bps: bps("hypest_found"),
       prices: PRICES,

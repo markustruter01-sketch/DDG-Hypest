@@ -492,6 +492,7 @@ export const GetHomeResponse = zod.object({
  */
 export const GetConfigResponse = zod.object({
   "dev_tools": zod.boolean(),
+  "payments": zod.enum(['off', 'test', 'live']).describe('off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money'),
   "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),
   "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points'),
   "prices": zod.object({
@@ -782,7 +783,7 @@ export const SaveTrainingProfileResponse = zod.object({
 
 
 /**
- * @summary Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership.
+ * @summary Build a plan from the saved answers. Uses a plan credit, or a Tier 1/2 membership (members may replace a current plan).
  */
 export const CreatePlanResponse = zod.object({
   "id": zod.number().int().nullable(),
@@ -1081,6 +1082,31 @@ export const DevUnlockResponse = zod.object({
 }))
 }))
 }).nullable()
+})
+
+
+/**
+ * @summary Start a Stripe Checkout for a plan or membership. Returns the Stripe page to send the member to.
+ */
+export const CreateCheckoutBody = zod.object({
+  "kind": zod.enum(['intro_plan', 'plan', 'tier1', 'tier2']),
+  "return_url": zod.string().describe('Page on this site to come back to after Stripe')
+})
+
+export const CreateCheckoutResponse = zod.object({
+  "url": zod.string()
+})
+
+
+/**
+ * @summary Open the Stripe billing portal (cancel, update card, invoices).
+ */
+export const CreateBillingPortalBody = zod.object({
+  "return_url": zod.string()
+})
+
+export const CreateBillingPortalResponse = zod.object({
+  "url": zod.string()
 })
 
 

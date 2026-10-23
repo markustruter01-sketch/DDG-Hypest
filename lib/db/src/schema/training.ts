@@ -42,7 +42,9 @@ export const trainingProfilesTable = pgTable(
 /**
  * What a member has paid for. kind: intro_plan (first plan, discounted, once per person),
  * plan (one-off), tier1 (plans subscription), tier2 (plans + coaching + logging).
- * test = dev-only unlock with no money moved.
+ * test = no real money moved (a dev-only unlock, or a Stripe test-mode payment).
+ * stripe_ref = the Stripe Checkout Session (one-off plans) or Subscription (tier1/tier2) that created the row;
+ * null for dev unlocks. Access only ever comes from a verified Stripe webhook (routes/billing.ts).
  */
 export const membershipsTable = pgTable(
   "memberships",
@@ -55,9 +57,12 @@ export const membershipsTable = pgTable(
     startsAt: timestamp("starts_at").notNull().defaultNow(),
     endsAt: timestamp("ends_at"),
     usedAt: timestamp("used_at"),
+    stripeRef: text("stripe_ref"),
+    stripePaymentIntent: text("stripe_payment_intent"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex("memberships_stripe_ref_unique").on(table.stripeRef),
     check("memberships_kind", sql`${table.kind} in ('intro_plan', 'plan', 'tier1', 'tier2')`),
     check("memberships_status", sql`${table.status} in ('active', 'ended')`),
   ],

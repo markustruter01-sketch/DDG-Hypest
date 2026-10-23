@@ -171,7 +171,7 @@ export function OnboardingPage() {
             </div>
           </div>
           {needsPayment && access ? (
-            <Offers access={access} onUnlocked={savePlan} />
+            <Offers access={access} onUnlocked={savePlan} beforePay={() => save.mutateAsync({ data: answers })} returnTo="/" />
           ) : (
             <button className="primary-button" type="button" onClick={savePlan} disabled={save.isPending || create.isPending}>
               {loggedIn ? "Start my plan →" : "Save my plan →"}

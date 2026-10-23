@@ -351,8 +351,46 @@ export interface Prices {
   tier2_cents: number;
 }
 
+export type CheckoutRequestKind = typeof CheckoutRequestKind[keyof typeof CheckoutRequestKind];
+
+
+export const CheckoutRequestKind = {
+  intro_plan: 'intro_plan',
+  plan: 'plan',
+  tier1: 'tier1',
+  tier2: 'tier2',
+} as const;
+
+export interface CheckoutRequest {
+  kind: CheckoutRequestKind;
+  /** Page on this site to come back to after Stripe */
+  return_url: string;
+}
+
+export interface PortalRequest {
+  return_url: string;
+}
+
+export interface StripeLink {
+  url: string;
+}
+
+/**
+ * off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money
+ */
+export type AppConfigPayments = typeof AppConfigPayments[keyof typeof AppConfigPayments];
+
+
+export const AppConfigPayments = {
+  off: 'off',
+  test: 'test',
+  live: 'live',
+} as const;
+
 export interface AppConfig {
   dev_tools: boolean;
+  /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */
+  payments: AppConfigPayments;
   /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
   creator_brought_bps: number;
   /** Hypest's fee on sales Hypest found, in basis points */

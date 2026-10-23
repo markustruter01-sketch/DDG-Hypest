@@ -10,6 +10,9 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Payments (Stripe, TEST MODE ONLY until Markus approves live): Secrets `STRIPE_SECRET_KEY` (sk_test_…) and `STRIPE_WEBHOOK_SECRET` (whsec_…). Both missing → payments off (dev unlock only). A live key is refused unless `STRIPE_LIVE_APPROVED=yes`. Optional `APP_BASE_URL` = the site's https origin (return pages must be on it).
+- Stripe webhook endpoint: `https://<site>/api/billing/webhook`, events: checkout.session.completed, checkout.session.async_payment_succeeded, customer.subscription.created/updated/deleted, invoice.paid, charge.refunded.
+- Billing checks (local DB only): `DATABASE_URL=<local> pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/billing/billing.check.ts`
 
 ## Stack
 
@@ -38,7 +41,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Paid access comes ONLY from the verified Stripe webhook (`artifacts/api-server/src/billing/sync.ts`). Never grant access from the Checkout return page.
+- The webhook is mounted in `app.ts` BEFORE `express.json` (Stripe signs the raw body). Moving it breaks every signature.
+- Prices live only in `PRICES` (`artifacts/api-server/src/coaching/access.ts`); Checkout builds its line items from them.
 
 ## Pointers
 
