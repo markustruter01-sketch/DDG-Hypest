@@ -80,8 +80,10 @@ export const plansTable = pgTable(
     status: text("status").notNull(),
     engine: text("engine").notNull(),
     pausedReason: text("paused_reason"),
-    // The exact inputs and output, kept so any plan can be reviewed later.
+    // The exact inputs and output, kept so any plan can be reviewed later (AI notes included, under record.ai).
     record: jsonb("record").notNull(),
+    // The coach's short welcome for this block, written by the AI layer; null when AI is off or failed.
+    intro: text("intro"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -98,6 +100,8 @@ export const planSessionsTable = pgTable(
     week: integer("week").notNull(),
     day: integer("day").notNull(),
     title: text("title").notNull(),
+    // One line from the coach about this session (AI layer); null when AI is off or failed.
+    note: text("note"),
     completedAt: timestamp("completed_at"),
   },
   (table) => [uniqueIndex("plan_sessions_slot_unique").on(table.planId, table.week, table.day)],

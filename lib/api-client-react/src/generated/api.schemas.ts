@@ -263,6 +263,8 @@ export interface PlanSessionView {
   week: number;
   day: number;
   title: string;
+  /** One line from the coach (AI layer); null when AI is off */
+  note: string | null;
   completed_at: string | null;
   items: PlanItemView[];
 }
@@ -285,6 +287,8 @@ export interface PlanView {
   days_per_week: number;
   status: PlanViewStatus;
   paused_reason: string | null;
+  /** The coach's welcome to this block (AI layer); null when AI is off */
+  intro: string | null;
   sessions: PlanSessionView[];
 }
 
@@ -321,6 +325,36 @@ export interface PainResult {
   message: string;
   swapped_to: string | null;
   needs_tier2: boolean;
+}
+
+export interface ChatRequest {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  text: string;
+}
+
+export type ChatMessageRole = typeof ChatMessageRole[keyof typeof ChatMessageRole];
+
+
+export const ChatMessageRole = {
+  member: 'member',
+  coach: 'coach',
+} as const;
+
+export interface ChatMessage {
+  id: number;
+  role: ChatMessageRole;
+  text: string;
+  created_at: string;
+}
+
+export interface CoachChat {
+  /** Chat can be used now (Coaching member and AI on) */
+  enabled: boolean;
+  remaining_today: number;
+  messages: ChatMessage[];
 }
 
 export interface PastPlan {
@@ -411,6 +445,8 @@ export const AppConfigPayments = {
 
 export interface AppConfig {
   dev_tools: boolean;
+  /** AI layer on (coach notes on plans, coach chat for Coaching members) */
+  ai: boolean;
   /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */
   payments: AppConfigPayments;
   /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */

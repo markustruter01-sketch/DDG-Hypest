@@ -10,6 +10,8 @@ import type { Prices } from './prices';
 
 export interface AppConfig {
   dev_tools: boolean;
+  /** AI layer on (coach notes on plans, coach chat for Coaching members) */
+  ai: boolean;
   /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */
   payments: AppConfigPayments;
   /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */

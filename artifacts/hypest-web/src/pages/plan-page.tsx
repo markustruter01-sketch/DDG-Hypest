@@ -38,6 +38,7 @@ export function PlanPage() {
         <h1 className="screen-title">Block {plan.block}</h1>
         <span className="label">{coach?.name ?? ""} · {plan.days_per_week} days</span>
       </div>
+      {plan.intro ? <p className="coach-intro">“{plan.intro}” <span className="label">{coach?.name ?? ""} · AI coach</span></p> : null}
       <div className="week-tabs" role="tablist">
         {Array.from({ length: plan.weeks }, (_, i) => i + 1).map((w) => {
           const all = plan.sessions.filter((s) => s.week === w);
@@ -55,6 +56,7 @@ export function PlanPage() {
             <span className="tile-title" style={{ color: "var(--color-ink)" }}>Day {s.day}</span>
             <span className="label">{s.completed_at ? "Done" : s.id === upNext?.id ? "Up next" : `${s.items.length} exercises`}</span>
           </div>
+          {s.note ? <p className="session-note">{s.note}</p> : null}
           <ul>
             {s.items.map((it) => <li key={it.id ?? it.exercise_id}><span>{it.name}</span><b>{dose(it)}</b></li>)}
           </ul>

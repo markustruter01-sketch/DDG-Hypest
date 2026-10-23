@@ -16,5 +16,7 @@ export interface PlanView {
   days_per_week: number;
   status: PlanViewStatus;
   paused_reason: string | null;
+  /** The coach's welcome to this block (AI layer); null when AI is off */
+  intro: string | null;
   sessions: PlanSessionView[];
 }

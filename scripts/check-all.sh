@@ -4,6 +4,7 @@
 # Used by GitHub Actions on every PR (.github/workflows/checks.yml). Runs: typecheck, builds, schema push,
 # coach smoke test, and every *.check.ts file, against two local API servers:
 #   :8099 payments off (dev unlock)   :8098 Stripe test mode with a dummy key (nothing reaches Stripe)
+#   :8096 AI on, pointed at a fake Claude API that ai.check.ts serves on :8097 (nothing reaches Anthropic)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 case "${DATABASE_URL:-}" in *@127.0.0.1:*|*@localhost:*) ;; *) echo "refusing: DATABASE_URL must be a local database"; exit 1;; esac
@@ -27,10 +28,12 @@ start(){ local port=$1; shift
 step "start APIs"
 start 8099
 start 8098 STRIPE_SECRET_KEY=sk_test_check_dummy STRIPE_WEBHOOK_SECRET=whsec_check_dummy
+start 8096 ANTHROPIC_API_KEY=check-dummy AI_MONTHLY_BUDGET_USD=1 ANTHROPIC_BASE_URL=http://localhost:8097
 
 step "coach smoke test";      bash scripts/coach-smoke.sh http://localhost:8099/api
 
 export ACCOUNT_CHECK_API=http://localhost:8099/api BILLING_CHECK_API=http://localhost:8098/api BILLING_CHECK_WHSEC=whsec_check_dummy
+export AI_CHECK_API=http://localhost:8096/api AI_CHECK_FAKE_PORT=8097
 for f in $(find artifacts lib -name '*.check.ts' -not -path '*/node_modules/*' | sort); do
   step "$f";                  pnpm --filter @workspace/scripts exec tsx "../$f"
 done

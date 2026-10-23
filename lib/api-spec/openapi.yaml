@@ -1005,6 +1005,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/coach/messages:
+    get:
+      operationId: getCoachChat
+      tags: [coaching]
+      summary: Chat with your coach (Coaching members, when AI is on)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachChat"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    post:
+      operationId: sendCoachMessage
+      tags: [coaching]
+      summary: Send your coach a message. Warning words get a fixed safety reply (no AI) and pause the plan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: The chat, with the coach's reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachChat"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Needs Coaching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Pick a coach first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "429":
+          description: Daily message limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Chat is off, or the coach can't reply right now
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/progress:
     get:
       operationId: getProgress
@@ -1470,12 +1541,13 @@ components:
         week: {type: integer}
         day: {type: integer}
         title: {type: string}
+        note: {type: string, nullable: true, description: "One line from the coach (AI layer); null when AI is off"}
         completed_at: {type: string, nullable: true}
         items:
           type: array
           items:
             $ref: "#/components/schemas/PlanItemView"
-      required: [id, week, day, title, completed_at, items]
+      required: [id, week, day, title, note, completed_at, items]
     PlanView:
       type: object
       additionalProperties: false
@@ -1489,11 +1561,12 @@ components:
           type: string
           enum: [preview, active, paused, done]
         paused_reason: {type: string, nullable: true}
+        intro: {type: string, nullable: true, description: "The coach's welcome to this block (AI layer); null when AI is off"}
         sessions:
           type: array
           items:
             $ref: "#/components/schemas/PlanSessionView"
-      required: [id, coach_id, block, weeks, days_per_week, status, paused_reason, sessions]
+      required: [id, coach_id, block, weeks, days_per_week, status, paused_reason, intro, sessions]
     TrainingState:
       type: object
       additionalProperties: false
@@ -1527,6 +1600,34 @@ components:
         swapped_to: {type: string, nullable: true}
         needs_tier2: {type: boolean}
       required: [stopped, message, swapped_to, needs_tier2]
+    ChatRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        text: {type: string, minLength: 1, maxLength: 500}
+      required: [text]
+    ChatMessage:
+      type: object
+      additionalProperties: false
+      properties:
+        id: {type: integer}
+        role:
+          type: string
+          enum: [member, coach]
+        text: {type: string}
+        created_at: {type: string, format: date-time}
+      required: [id, role, text, created_at]
+    CoachChat:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: {type: boolean, description: "Chat can be used now (Coaching member and AI on)"}
+        remaining_today: {type: integer}
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+      required: [enabled, remaining_today, messages]
     PastPlan:
       type: object
       additionalProperties: false
@@ -1614,6 +1715,9 @@ components:
       properties:
         dev_tools:
           type: boolean
+        ai:
+          type: boolean
+          description: AI layer on (coach notes on plans, coach chat for Coaching members)
         payments:
           type: string
           enum: ["off", test, live]
@@ -1629,6 +1733,7 @@ components:
       required:
         - prices
         - payments
+        - ai
         - dev_tools
         - creator_brought_bps
         - hypest_found_bps

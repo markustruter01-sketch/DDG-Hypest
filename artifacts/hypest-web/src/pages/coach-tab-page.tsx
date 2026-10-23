@@ -2,12 +2,15 @@ import { Link } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
 import { Offers } from "@/components/offers";
 import { coachById, coachLine, img, useCoaches, useTraining } from "@/lib/coaching";
+import { useAppConfig } from "@/lib/config";
+import { CoachChat } from "@/components/coach-chat";
 
 /** Your coach: who they are, what they can do for you, change coach. Chat arrives with the AI layer. */
 export function CoachTabPage() {
   const training = useTraining();
   const coaches = useCoaches();
   const state = training.data;
+  const config = useAppConfig();
   const coach = coachById(coaches.data, state?.plan?.coach_id ?? state?.profile?.coach_id);
 
   if (training.isSuccess && !coach) {
@@ -32,10 +35,12 @@ export function CoachTabPage() {
           <div><span className="label">Style</span><b>{coach.personality}</b></div>
           <div><span className="label">Your plan</span><b>{state.plan ? `Block ${state.plan.block}` : "Not started"}</b></div>
         </div>
+        {tier2 && config?.ai ? <CoachChat coach={coach} /> : (
         <div className={tier2 ? "card chat-soon" : "card chat-soon locked"}>
           <MessageCircle size={22} aria-hidden="true" />
           <span><b>Chat with {coach.name}</b><br /><span className="label">{tier2 ? "Coming soon" : "Part of Coaching"}</span></span>
         </div>
+        )}
         {!tier2 ? <Offers access={state.access} /> : null}
         <Link className="secondary-button" to="/coaches">Change coach</Link>
       </section>

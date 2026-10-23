@@ -147,6 +147,7 @@ export function SessionPage() {
 
       <div className="session-head">
         <span className="label" style={{ color: "var(--color-on-dark-muted)" }}>Week {session.week} · Day {session.day}{item.swapped_from ? " · swapped for you" : ""}</span>
+        {index === 0 && session.note ? <p className="player-body session-note-dark">{session.note}</p> : null}
         <h1 className="hero-title" style={{ margin: 0, fontSize: "2.6rem" }}>{item.name}</h1>
         <p className="player-body">{item.cue}</p>
         <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${targetLoad(item.target_load_kg, units)} ${units}` : ""}</span>

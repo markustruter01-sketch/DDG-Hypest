@@ -6,6 +6,7 @@ import homeRouter from "./home";
 import coachingRouter from "./coaching";
 import healthRouter from "./health";
 import programsRouter from "./programs";
+import coachChatRouter from "./coach-chat";
 import billingRouter from "./billing";
 
 const router: IRouter = Router();
@@ -17,6 +18,7 @@ router.use(creatorsRouter);
 router.use(libraryRouter);
 router.use(homeRouter);
 router.use(coachingRouter);
+router.use(coachChatRouter);
 router.use(billingRouter);
 
 export default router;
