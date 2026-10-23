@@ -357,6 +357,72 @@ export interface CoachChat {
   messages: ChatMessage[];
 }
 
+export type AdminSummarySwitchesPayments = typeof AdminSummarySwitchesPayments[keyof typeof AdminSummarySwitchesPayments];
+
+
+export const AdminSummarySwitchesPayments = {
+  off: 'off',
+  test: 'test',
+  live: 'live',
+} as const;
+
+export type AdminSummarySwitches = {
+  payments: AdminSummarySwitchesPayments;
+  ai: boolean;
+  email: boolean;
+  alerts: boolean;
+};
+
+export type AdminSummaryMembers = {
+  total: number;
+  new_7d: number;
+};
+
+export type AdminSummaryMembershipsItem = {
+  kind: string;
+  live: number;
+  test: number;
+};
+
+export type AdminSummaryActivity7d = {
+  plans_built: number;
+  sessions_done: number;
+  sets_logged: number;
+  chat_messages: number;
+};
+
+export type AdminSummaryAi = {
+  month_spend_usd: number;
+  budget_usd: number;
+  calls_month: number;
+  failed_month: number;
+};
+
+export type AdminSummaryPausedPlansItem = {
+  plan_id: number;
+  member_id: number;
+  reason: string | null;
+};
+
+export type AdminSummaryBillingEventsItem = {
+  id: string;
+  type: string;
+  outcome: string;
+  livemode: boolean;
+  received_at: string;
+};
+
+export interface AdminSummary {
+  generated_at: string;
+  switches: AdminSummarySwitches;
+  members: AdminSummaryMembers;
+  memberships: AdminSummaryMembershipsItem[];
+  activity_7d: AdminSummaryActivity7d;
+  ai: AdminSummaryAi;
+  paused_plans: AdminSummaryPausedPlansItem[];
+  billing_events: AdminSummaryBillingEventsItem[];
+}
+
 export interface PastPlan {
   id: number;
   block: number;

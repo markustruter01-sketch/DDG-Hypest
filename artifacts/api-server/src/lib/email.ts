@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { logger } from "./logger";
+import { alert } from "./alerts";
 
 /** Shown in the app and in every email. Markus, 24 Oct 2026. */
 export const SUPPORT_EMAIL = "support@hypestapp.com";
@@ -25,6 +26,7 @@ export async function sendEmail(to: string, subject: string, text: string): Prom
     return true;
   } catch (err) {
     logger.error({ err: err instanceof Error ? err.message : String(err), subject }, "email send failed");
+    void alert("warning", "Email not sent", `${subject}: ${err instanceof Error ? err.message : String(err)}`);
     return false;
   }
 }

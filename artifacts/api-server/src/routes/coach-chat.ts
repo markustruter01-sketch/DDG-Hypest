@@ -7,6 +7,7 @@ import { accessFor, canLog } from "../coaching/access";
 import { COACH_BY_ID } from "../coaching/library";
 import { chatSystem, DAILY_MESSAGES, HISTORY, screenMessage, STOP_MESSAGE, WELLBEING_MESSAGE, type ChatContext } from "../coaching/chat";
 import { aiOn, askClaude } from "../lib/ai";
+import { alert } from "../lib/alerts";
 
 const router: IRouter = Router();
 
@@ -81,8 +82,10 @@ router.post("/me/coach/messages", requireUser, async (req, res) => {
       .set({ status: "paused", pausedReason: `Safety stop (chat): "${screen.flag}"` })
       .where(and(eq(plansTable.userId, user.id), eq(plansTable.status, "active")));
     reply = { text: STOP_MESSAGE, source: "safety" };
+    void alert("info", `Safety stop: member #${user.id}`, `Coach chat matched "${screen.flag}". Plan paused; member told to see a doctor or physio.`);
   } else if (screen.kind === "wellbeing") {
     reply = { text: WELLBEING_MESSAGE, source: "safety" };
+    void alert("warning", `Wellbeing words in coach chat: member #${user.id}`, "The member was shown the fixed help message (emergency numbers). Their text is not in this alert.");
   } else {
     const history = state.messages.slice(-HISTORY).map((m) => ({ role: m.role === "member" ? ("user" as const) : ("assistant" as const), content: m.text }));
     const answer = await askClaude({

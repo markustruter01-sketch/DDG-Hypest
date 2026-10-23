@@ -1226,6 +1226,53 @@ export const SendCoachMessageResponse = zod.object({
 
 
 /**
+ * @summary Owner's view of Hypest (ADMIN_EMAILS only; 404 for everyone else)
+ */
+export const GetAdminSummaryResponse = zod.object({
+  "generated_at": zod.coerce.date(),
+  "switches": zod.object({
+  "payments": zod.enum(['off', 'test', 'live']),
+  "ai": zod.boolean(),
+  "email": zod.boolean(),
+  "alerts": zod.boolean()
+}),
+  "members": zod.object({
+  "total": zod.number().int(),
+  "new_7d": zod.number().int()
+}),
+  "memberships": zod.array(zod.object({
+  "kind": zod.string(),
+  "live": zod.number().int(),
+  "test": zod.number().int()
+})),
+  "activity_7d": zod.object({
+  "plans_built": zod.number().int(),
+  "sessions_done": zod.number().int(),
+  "sets_logged": zod.number().int(),
+  "chat_messages": zod.number().int()
+}),
+  "ai": zod.object({
+  "month_spend_usd": zod.number(),
+  "budget_usd": zod.number(),
+  "calls_month": zod.number().int(),
+  "failed_month": zod.number().int()
+}),
+  "paused_plans": zod.array(zod.object({
+  "plan_id": zod.number().int(),
+  "member_id": zod.number().int(),
+  "reason": zod.string().nullable()
+})),
+  "billing_events": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "outcome": zod.string(),
+  "livemode": zod.boolean(),
+  "received_at": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Streak, best lifts and weekly volume (Tier 2)
  */
 export const GetProgressResponse = zod.object({

@@ -197,7 +197,8 @@
   border-radius: var(--radius-field);
   background: var(--color-card);
   color: var(--color-ink);
-  font: 500 var(--size-body) var(--font-body);
+  /* 16px: phones zoom into any smaller field when it's tapped (pinch zoom stays allowed for everyone). */
+  font: 500 1rem var(--font-body);
 }
 .text-input:focus {
   outline: 2px solid var(--color-ink);
@@ -1325,4 +1326,11 @@ textarea.text-input { resize: vertical; }
 .legal-links a, .legal-agree a, .text-link-inline { color: var(--color-ink); text-decoration: underline; }
 .legal-agree { margin: 0; text-transform: none; letter-spacing: 0; }
 .change-password { padding: var(--space-4); }
+
+/* Admin */
+.admin-switches { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.admin-block { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); }
+.admin-block .section-title { margin: 0; }
+.admin-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-3); align-items: baseline; }
+.admin-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; padding-bottom: var(--space-2); border-bottom: var(--hairline) solid var(--color-line-soft); }
 

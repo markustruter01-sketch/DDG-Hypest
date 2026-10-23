@@ -1,10 +1,11 @@
-import express, { type Express } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { billingWebhook } from "./routes/billing";
 import { logger } from "./lib/logger";
 import { securityHeaders } from "./lib/security-headers";
+import { alert } from "./lib/alerts";
 
 const app: Express = express();
 app.disable("x-powered-by");
@@ -36,5 +37,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Last stop for any error: JSON (never a stack trace), and an alert for real server faults (500s).
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const e = err as { status?: number; statusCode?: number; expose?: boolean; message?: string };
+  const status = e.status ?? e.statusCode ?? 500;
+  if (status >= 500) {
+    req.log.error({ err }, "unhandled error");
+    void alert("critical", `Server error: ${req.method} ${req.path}`, e.message ?? "unknown error");
+  }
+  if (res.headersSent) return;
+  res.status(status).json({ message: status >= 500 ? "Something went wrong. Try again." : e.expose && e.message ? e.message : "Bad request" });
+});
 
 export default app;
