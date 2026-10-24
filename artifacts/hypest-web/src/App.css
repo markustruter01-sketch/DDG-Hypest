@@ -1147,6 +1147,19 @@ textarea.text-input { resize: vertical; }
 .dot-next { border: 2px solid var(--color-ink); }
 .week-strip-meta { margin-left: auto; }
 .today-quote { margin: auto var(--space-5) var(--space-3); font-size: var(--size-small); color: var(--color-muted); line-height: 1.4; }
+/* New members (no coach yet): compact start card, coach faces, 4 icon steps, spread over one screen (no scrolling). */
+.today-main:has(.start-steps) { justify-content: space-evenly; padding-bottom: var(--space-2); }
+.today-card-compact { min-height: 5.5rem; padding-top: var(--space-3); padding-bottom: var(--space-3); }
+.today-card-compact .today-big { font-size: 2rem; }
+.today-card-compact .today-play { top: 50%; transform: translateY(-50%); }
+.coach-faces { display: flex; justify-content: space-between; gap: var(--space-1); }
+.coach-faces-item { display: grid; justify-items: center; gap: 2px; min-width: 0; color: var(--color-ink); text-decoration: none; font-size: 0.75rem; font-weight: 700; }
+.coach-faces-item .coach-face { width: clamp(2.6rem, 13vw, 3.4rem); height: clamp(2.6rem, 13vw, 3.4rem); }
+.start-steps { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 0; list-style: none; }
+.start-steps li { position: relative; display: grid; justify-items: center; gap: 4px; text-align: center; font-size: 0.75rem; font-weight: 700; line-height: 1.15; }
+.start-step-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--color-ink); color: var(--color-volt); }
+.start-step-arrow { position: absolute; top: 0.85rem; right: -7px; color: var(--color-muted); }
+.start-price { margin: 0; text-align: center; }
 .today-quote span { font-weight: 700; }
 
 .week-tabs { display: flex; gap: var(--space-2); }

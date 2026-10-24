@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Play } from "lucide-react";
+import { Bot, CalendarDays, Check, ChevronRight, Dumbbell, ListChecks, Play } from "lucide-react";
 import {
   getGetTrainingQueryKey,
   useCreateNextPlan,
@@ -12,7 +12,8 @@ import {
 } from "@workspace/api-client-react";
 import { Wordmark } from "@/components/wordmark";
 import { Offers } from "@/components/offers";
-import { coachById, coachLine, img, request, useCoaches, useTraining } from "@/lib/coaching";
+import { coachById, coachLine, img, money, request, useCoaches, useTraining } from "@/lib/coaching";
+import { useAppConfig } from "@/lib/config";
 import { quoteOfTheDay } from "@/lib/quotes";
 import { serverErrorText } from "@/lib/server-error";
 
@@ -23,6 +24,42 @@ function greeting(now = new Date()): string {
 
 export function nextSession(plan: PlanView) {
   return plan.sessions.find((s) => !s.completed_at) ?? null;
+}
+
+/** New members: the coaches as faces (tap one) and how it works as four icons. Fits one screen with the start card. */
+function GettingStarted() {
+  const coaches = useCoaches();
+  const config = useAppConfig();
+  const steps = [
+    { Icon: Bot, label: "Pick a coach" },
+    { Icon: ListChecks, label: "Tap answers" },
+    { Icon: CalendarDays, label: "See week 1" },
+    { Icon: Dumbbell, label: "Train" },
+  ];
+  return (
+    <>
+      {coaches.data?.length ? (
+        <nav className="coach-faces" aria-label="AI coaches">
+          {coaches.data.map((c) => (
+            <Link key={c.id} to={`/coaches/${c.id}`} className="coach-faces-item">
+              <img className="coach-face" src={img(c.photo)} alt="" />
+              <span>{c.name}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+      <ol className="start-steps" aria-label="How it works">
+        {steps.map(({ Icon, label }, i) => (
+          <li key={label}>
+            <span className="start-step-icon" aria-hidden="true"><Icon size={20} strokeWidth={2.25} /></span>
+            <span>{label}</span>
+            {i < steps.length - 1 ? <ChevronRight className="start-step-arrow" size={14} aria-hidden="true" /> : null}
+          </li>
+        ))}
+      </ol>
+      {config ? <p className="start-price label">Week 1 preview free · first plan US{money(config.prices.intro_plan_cents)}</p> : null}
+    </>
+  );
 }
 
 /** Today: one screen, one job. What do I do now, and how am I tracking? */
@@ -54,7 +91,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
     main = <div className="today-card" aria-busy="true" />;
   } else if (!state.profile) {
     main = (
-      <Link to="/coaches" className="today-card today-go">
+      <Link to="/coaches" className="today-card today-go today-card-compact">
         <span className="label">Start here</span>
         <span className="today-big">Meet your coach</span>
         <span className="today-play" aria-hidden="true"><Play size={22} fill="currentColor" /></span>
@@ -128,6 +165,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
             <span className="week-strip-meta label">{done}/{total} done</span>
           </div>
         ) : null}
+        {state && !state.profile ? <GettingStarted /> : null}
         {create.isError || next.isError ? <p className="error-text" role="alert">{serverErrorText(create.error ?? next.error)}</p> : null}
       </section>
 
