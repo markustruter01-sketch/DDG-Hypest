@@ -26,6 +26,8 @@ export * from './chatMessageRole';
 export * from './chatRequest';
 export * from './checkoutRequest';
 export * from './checkoutRequestKind';
+export * from './clientErrorReport';
+export * from './clientErrorReportKind';
 export * from './coach';
 export * from './coachChat';
 export * from './createProgramRequest';

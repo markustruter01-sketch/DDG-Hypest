@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { reportUncaughtErrors } from '@/lib/report-error';
 
 // Fonts are served from this site (no Google Fonts request): Anton for headlines, Archivo for the rest.
 import '@fontsource/anton/400.css';
@@ -13,6 +14,7 @@ import '@fontsource/archivo/800.css';
 import './index.css';
 
 const queryClient = new QueryClient();
+reportUncaughtErrors();
 
 // The published site is static files, which can't send a frame-ancestors header, so the app itself refuses to
 // run inside another site's frame (stops click-jacking, e.g. a hidden "Delete account"). Dev previews are framed.
