@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { coachMessagesTable, db, membershipsTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { coachMessagesTable, db, membershipsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -20,10 +20,12 @@ export async function exportAccount(userId: number) {
     : [];
   const memberships = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId)).orderBy(asc(membershipsTable.createdAt));
   const chat = await db.select().from(coachMessagesTable).where(eq(coachMessagesTable.userId, userId)).orderBy(asc(coachMessagesTable.id));
+  const [reminders] = await db.select({ lastSentAt: remindersTable.lastSentAt, createdAt: remindersTable.createdAt }).from(remindersTable).where(eq(remindersTable.userId, userId));
 
   return {
     exported_at: new Date().toISOString(),
     account: user ?? null,
+    reminder_emails: reminders ? { on: true, since: reminders.createdAt, last_sent_at: reminders.lastSentAt } : { on: false },
     training_profile: profile
       ? {
           coach_id: profile.coachId, goal: profile.goal, experience: profile.experience, days_per_week: profile.daysPerWeek,

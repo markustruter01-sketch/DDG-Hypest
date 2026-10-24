@@ -329,6 +329,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/reminders:
+    get:
+      operationId: getReminders
+      tags: [coaching]
+      summary: Are reminder emails on for me, and can Hypest send email at all?
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemindersState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    put:
+      operationId: setReminders
+      tags: [coaching]
+      summary: Turn reminder emails on or off (an email when I miss 3 days of an active plan)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemindersRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemindersState"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /reminders/off:
+    post:
+      operationId: turnOffReminders
+      tags: [coaching]
+      summary: The "turn these off" link in a reminder email. No login needed; the token only turns reminders off.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TurnOffRemindersRequest"
+      responses:
+        "204":
+          description: Off (same answer for an unknown token)
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /programs:
     get:
       operationId: listPublishedPrograms
@@ -1629,6 +1696,27 @@ components:
           type: array
           items: {type: string}
       required: [id, name, discipline, title, personality, good_for, photo, goals]
+    RemindersState:
+      type: object
+      additionalProperties: false
+      properties:
+        "on": {type: boolean}
+        available:
+          type: boolean
+          description: Hypest can send email (EMAIL_* set). When false the app hides the switch.
+      required: ["on", available]
+    RemindersRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        "on": {type: boolean}
+      required: ["on"]
+    TurnOffRemindersRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        token: {type: string, minLength: 43, maxLength: 43}
+      required: [token]
     UnitsRequest:
       type: object
       additionalProperties: false

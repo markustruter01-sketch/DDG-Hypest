@@ -48,6 +48,7 @@ function docs(support: string): Record<"terms" | "privacy" | "health", Doc> {
           "Account: your email, display name, an optional bio, and your password stored only as a scrambled (hashed) value.",
           "Training: your answers (goal, experience, days, time, equipment, sore or injured areas, kg or lb), your plans, the sets you log, sessions you finish, and safety stops (the warning word, not your full message).",
           "Health check: whether you answered yes to any question, and whether you confirmed a health professional cleared you. We do not keep your single answers.",
+          "Reminder emails (only if you turn them on): that they are on, and when we last sent one.",
           "Coach chat (Coaching members, when switched on): the messages you send and the replies.",
           "Payments: Stripe handles your card; we never see or store card numbers. We keep Stripe's customer and payment references and what you bought.",
           "Security: failed log-in attempts (email and time), kept briefly to block password guessing, and password reset requests.",
@@ -60,6 +61,7 @@ function docs(support: string): Record<"terms" | "privacy" | "health", Doc> {
         ] },
         { h: "Your choices", p: [
           "Download everything we hold about you any time: Me, My data.",
+          "Reminder emails are off unless you turn them on in Me. Turn them off there, or with the link in any reminder.",
           "Delete your account any time: Me, Delete account. This cancels any membership first, then deletes your training answers, plans, logs, messages and logins. We keep payment records, without your name or email, because the law requires business records.",
           `To correct something, or for any other request, email ${support}.`,
         ] },

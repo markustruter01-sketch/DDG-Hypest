@@ -7,6 +7,7 @@
 #   :8096 AI on, pointed at a fake Claude API that ai.check.ts serves on :8097 (nothing reaches Anthropic)
 #   :8095 email on, pointed at a fake mail server that password.check.ts serves on :2525
 #   :8094 alerts on (fake Discord webhook from ops.check.ts on :2526) and an admin email
+#   :8093 email on (fake mail server from reminders.check.ts on :2527) and a JOBS_TOKEN for the daily job
 set -euo pipefail
 cd "$(dirname "$0")/.."
 case "${DATABASE_URL:-}" in *@127.0.0.1:*|*@localhost:*) ;; *) echo "refusing: DATABASE_URL must be a local database"; exit 1;; esac
@@ -33,6 +34,7 @@ start 8098 STRIPE_SECRET_KEY=sk_test_check_dummy STRIPE_WEBHOOK_SECRET=whsec_che
 start 8096 ANTHROPIC_API_KEY=check-dummy AI_MONTHLY_BUDGET_USD=1 ANTHROPIC_BASE_URL=http://localhost:8097
 start 8095 EMAIL_SMTP_URL=smtp://localhost:2525 "EMAIL_FROM=Hypest <support@hypestapp.com>" APP_BASE_URL=http://localhost:5199
 start 8094 DISCORD_WEBHOOK_URL=http://localhost:2526/hook ADMIN_EMAILS=owner-check@example.test
+start 8093 EMAIL_SMTP_URL=smtp://localhost:2527 "EMAIL_FROM=Hypest <support@hypestapp.com>" APP_BASE_URL=http://localhost:5199 JOBS_TOKEN=check-jobs-token-0123456789abcdef0123
 
 step "coach smoke test";      bash scripts/coach-smoke.sh http://localhost:8099/api
 
@@ -40,6 +42,7 @@ export ACCOUNT_CHECK_API=http://localhost:8099/api BILLING_CHECK_API=http://loca
 export AI_CHECK_API=http://localhost:8096/api AI_CHECK_FAKE_PORT=8097
 export PASSWORD_CHECK_API=http://localhost:8095/api PASSWORD_CHECK_SMTP_PORT=2525
 export OPS_CHECK_API=http://localhost:8094/api OPS_CHECK_HOOK_PORT=2526 OPS_CHECK_ADMIN=owner-check@example.test
+export REMINDERS_CHECK_API=http://localhost:8093/api REMINDERS_CHECK_SMTP_PORT=2527 REMINDERS_CHECK_TOKEN=check-jobs-token-0123456789abcdef0123
 for f in $(find artifacts lib -name '*.check.ts' -not -path '*/node_modules/*' | sort); do
   step "$f";                  pnpm --filter @workspace/scripts exec tsx "../$f"
 done
