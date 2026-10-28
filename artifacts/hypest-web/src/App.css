@@ -1071,6 +1071,16 @@ textarea.text-input { resize: vertical; }
 .delete-warning { margin: 0; font-weight: 600; color: var(--color-error); }
 .delete-link { color: var(--color-error); }
 .checkout-return { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) var(--space-4) 0; padding: var(--space-3) var(--space-4); font-weight: 600; }
+/* Buying: instant feedback on the tapped offer; unlocking: full-screen while the server confirms with Stripe. */
+.spinner { display: inline-block; width: 1.1rem; height: 1.1rem; border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -0.2em; }
+.spinner-lg { width: 2.75rem; height: 2.75rem; border-width: 4px; color: var(--color-ink); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+.offer-pending { border-color: var(--color-ink); box-shadow: 0 0 0 2px var(--color-ink); }
+.offers:has(.offer-pending) .offer:not(.offer-pending) { opacity: 0.45; }
+.offer-wait { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); font-weight: 700; font-size: var(--size-small); }
+.unlock-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); background: var(--color-page); }
+.unlock-title { font-family: var(--font-display); font-size: 2rem; text-transform: uppercase; }
 .offer {
   position: relative;
   display: grid;

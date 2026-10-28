@@ -25,12 +25,14 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
   const unlock = useDevUnlock({ request });
   const checkout = useCreateCheckout({ request });
   const [error, setError] = useState<string | null>(null);
+  // The option being bought: shows its spinner from the tap until Stripe's page opens (or an error comes back).
+  const [pending, setPending] = useState<Kind | null>(null);
   if (!config) return null;
   const p = config.prices;
   const oneOff: Kind = access.intro_available ? "intro_plan" : "plan";
 
   type Option = { kind: Kind; name: string; price: string; was?: string; per?: string; perks: string[]; best?: boolean };
-  const coaching: Option = { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", perks: ["New plan every 4 weeks", "Log every set", "Plans adapt to you", "This-hurts swaps"], best: true };
+  const coaching: Option = { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", perks: ["New plan every 4 weeks", "Log every set", "Plans adapt to you", "Swap any move that hurts"], best: true };
   // Plans members can only upgrade; the server cancels Plans once Coaching is paid (billing/sync.ts).
   const upgrade = access.level === "tier1";
   const options: Option[] = upgrade ? [{ ...coaching, name: "Upgrade to Coaching", best: false }] : [
@@ -47,22 +49,25 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
 
   const paying = config.payments !== "off";
   const usable = paying || config.dev_tools;
-  const busy = unlock.isPending || checkout.isPending;
+  const busy = pending !== null || unlock.isPending || checkout.isPending;
 
   async function pick(kind: Kind) {
     setError(null);
+    setPending(kind);
     try {
       if (paying) {
         await beforePay?.();
         const { url } = await checkout.mutateAsync({ data: { kind, return_url: returnUrl(returnTo) } });
-        window.location.assign(url);
+        window.location.assign(url); // keep the spinner while the browser leaves for Stripe
         return;
       }
-      if (!config?.dev_tools) return;
+      if (!config?.dev_tools) return setPending(null);
       await unlock.mutateAsync({ data: { kind } });
       await queryClient.invalidateQueries({ queryKey: getGetTrainingQueryKey() });
+      setPending(null);
       onUnlocked?.();
     } catch (err) {
+      setPending(null);
       setError(serverErrorText(err));
     }
   }
@@ -72,8 +77,13 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
   return (
     <div className="offers">
       {options.map((o) => (
-        <button key={o.kind} type="button" className={o.best ? "offer offer-best" : "offer"} onClick={() => pick(o.kind)} disabled={!usable || busy}>
+        <button key={o.kind} type="button" className={`offer${o.best ? " offer-best" : ""}${pending === o.kind ? " offer-pending" : ""}`} onClick={() => pick(o.kind)} disabled={!usable || busy} aria-busy={pending === o.kind}>
           {o.best ? <span className="offer-tag">Best value</span> : null}
+          {pending === o.kind ? (
+            <span className="offer-wait" role="status">
+              <span className="spinner" aria-hidden="true" /> {paying ? "Opening secure checkout…" : "Unlocking…"}
+            </span>
+          ) : null}
           <span className="offer-name">{o.name}</span>
           <span className="offer-price">
             {o.was ? <s>{o.was}</s> : null}

@@ -1472,6 +1472,29 @@ export const CreateCheckoutResponse = zod.object({
 
 
 /**
+ * @summary Back from Stripe Checkout. The server reads the session from Stripe and unlocks access at once (the webhook stays the backup).
+ */
+export const confirmCheckoutBodySessionIdMax = 255;
+
+
+export const confirmCheckoutBodySessionIdRegExp = new RegExp('^cs_(test|live)_[A-Za-z0-9]+$');
+
+
+export const ConfirmCheckoutBody = zod.object({
+  "session_id": zod.string().max(confirmCheckoutBodySessionIdMax).regex(confirmCheckoutBodySessionIdRegExp)
+})
+
+export const ConfirmCheckoutResponse = zod.object({
+  "outcome": zod.string(),
+  "access": zod.object({
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "intro_available": zod.boolean(),
+  "plan_credits": zod.number().int()
+})
+})
+
+
+/**
  * @summary Open the Stripe billing portal (cancel, update card, invoices).
  */
 export const CreateBillingPortalBody = zod.object({
