@@ -13,6 +13,7 @@ import passwordRouter from "./password";
 import adminRouter from "./admin";
 import clientErrorsRouter from "./client-errors";
 import remindersRouter from "./reminders";
+import ddgRouter from "./ddg";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(passwordRouter);
 router.use(adminRouter);
 router.use(clientErrorsRouter);
 router.use(remindersRouter);
+router.use(ddgRouter);
 
 export default router;

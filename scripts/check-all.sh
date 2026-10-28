@@ -34,7 +34,7 @@ start 8098 STRIPE_SECRET_KEY=sk_test_check_dummy STRIPE_WEBHOOK_SECRET=whsec_che
 start 8096 ANTHROPIC_API_KEY=check-dummy AI_MONTHLY_BUDGET_USD=1 ANTHROPIC_BASE_URL=http://localhost:8097
 start 8095 EMAIL_SMTP_URL=smtp://localhost:2525 "EMAIL_FROM=Hypest <support@hypestapp.com>" APP_BASE_URL=http://localhost:5199
 start 8094 DISCORD_WEBHOOK_URL=http://localhost:2526/hook ADMIN_EMAILS=owner-check@example.test
-start 8093 EMAIL_SMTP_URL=smtp://localhost:2527 "EMAIL_FROM=Hypest <support@hypestapp.com>" APP_BASE_URL=http://localhost:5199 JOBS_TOKEN=check-jobs-token-0123456789abcdef0123
+start 8093 EMAIL_SMTP_URL=smtp://localhost:2527 "EMAIL_FROM=Hypest <support@hypestapp.com>" APP_BASE_URL=http://localhost:5199 JOBS_TOKEN=check-jobs-token-0123456789abcdef0123 DDG_STATS_KEY=check-ddg-key-0123456789abcdef0123456
 
 step "coach smoke test";      bash scripts/coach-smoke.sh http://localhost:8099/api
 
@@ -43,6 +43,7 @@ export AI_CHECK_API=http://localhost:8096/api AI_CHECK_FAKE_PORT=8097
 export PASSWORD_CHECK_API=http://localhost:8095/api PASSWORD_CHECK_SMTP_PORT=2525
 export OPS_CHECK_API=http://localhost:8094/api OPS_CHECK_HOOK_PORT=2526 OPS_CHECK_ADMIN=owner-check@example.test
 export REMINDERS_CHECK_API=http://localhost:8093/api REMINDERS_CHECK_SMTP_PORT=2527 REMINDERS_CHECK_TOKEN=check-jobs-token-0123456789abcdef0123
+export DDG_CHECK_API=http://localhost:8093/api DDG_CHECK_KEY=check-ddg-key-0123456789abcdef0123456
 for f in $(find artifacts lib -name '*.check.ts' -not -path '*/node_modules/*' | sort); do
   step "$f";                  pnpm --filter @workspace/scripts exec tsx "../$f"
 done
