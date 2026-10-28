@@ -588,6 +588,19 @@ export interface CheckoutRequest {
   return_url: string;
 }
 
+export interface CheckoutConfirmRequest {
+  /**
+     * @maxLength 255
+     * @pattern ^cs_(test|live)_[A-Za-z0-9]+$
+     */
+  session_id: string;
+}
+
+export interface CheckoutConfirmation {
+  outcome: string;
+  access: Access;
+}
+
 export interface PortalRequest {
   return_url: string;
 }

@@ -119,6 +119,31 @@ async function applyRefund(tx: Tx, charge: Stripe.Charge): Promise<string> {
   return ended.length ? "plan ended: refunded" : "ignored: refund not for a plan";
 }
 
+/** One purchase into memberships: a subscription (latest state from Stripe) or a paid one-off Checkout Session. */
+async function applyPurchase(tx: Tx, sub: Stripe.Subscription | null, session: Stripe.Checkout.Session | null, test: boolean, replaced: string[]): Promise<string> {
+  if (!sub) return session ? applyOneOff(tx, session, test) : "ignored: nothing to apply";
+  let outcome = await applySubscription(tx, sub, test);
+  if (replaced.length) {
+    await tx.update(membershipsTable).set({ status: "ended", endsAt: new Date() }).where(inArray(membershipsTable.stripeRef, replaced));
+    outcome += `; replaced ${replaced.length} Plans membership`;
+  }
+  return outcome;
+}
+
+/**
+ * The member is back from Checkout: apply their session at once instead of waiting for the webhook.
+ * The session is read from Stripe by the server (never taken from the browser) and must be this member's.
+ * Same writes as the webhook; when the webhook lands later it finds the row already there (stripe_ref is unique).
+ */
+export async function confirmCheckout(session: Stripe.Checkout.Session, userId: number, deps: Deps): Promise<string> {
+  if (Number(session.metadata?.["user_id"]) !== userId) return "not yours";
+  const subId = session.mode === "subscription" ? idOf(session.subscription) : null;
+  const sub = subId ? await deps.retrieveSubscription(subId) : null;
+  const replaced = sub ? await subscriptionsToReplace(sub) : [];
+  for (const id of replaced) await deps.cancelSubscription(id);
+  return db.transaction((tx) => applyPurchase(tx, sub, sub ? null : session, !session.livemode, replaced));
+}
+
 /**
  * Applies one verified event. Returns the outcome stored in billing_events, or "duplicate".
  * Throws on failure, so the caller answers 500 and Stripe retries.
@@ -142,15 +167,9 @@ export async function handleEvent(event: Stripe.Event, deps: Deps): Promise<stri
     if (!claimed.length) return "duplicate";
 
     let outcome = "ignored: event type not used";
-    if (sub) {
-      outcome = await applySubscription(tx, sub, test);
-      if (replaced.length) {
-        await tx.update(membershipsTable).set({ status: "ended", endsAt: new Date() }).where(inArray(membershipsTable.stripeRef, replaced));
-        outcome += `; replaced ${replaced.length} Plans membership`;
-      }
-    }
+    if (sub) outcome = await applyPurchase(tx, sub, null, test, replaced);
     else if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-      outcome = await applyOneOff(tx, event.data.object, test);
+      outcome = await applyPurchase(tx, null, event.data.object, test, replaced);
     } else if (event.type === "charge.refunded") outcome = await applyRefund(tx, event.data.object);
 
     await tx.update(billingEventsTable).set({ outcome }).where(eq(billingEventsTable.id, event.id));

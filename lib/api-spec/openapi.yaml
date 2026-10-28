@@ -1457,6 +1457,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /billing/confirm:
+    post:
+      operationId: confirmCheckout
+      tags: [billing]
+      summary: Back from Stripe Checkout. The server reads the session from Stripe and unlocks access at once (the webhook stays the backup).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutConfirmRequest"
+      responses:
+        "200":
+          description: Applied (or already applied)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutConfirmation"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not this member's checkout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: Stripe could not be reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Payments are off
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /billing/portal:
     post:
       operationId: createBillingPortal
@@ -2134,6 +2182,23 @@ components:
           type: string
           description: Page on this site to come back to after Stripe
       required: [kind, return_url]
+    CheckoutConfirmRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        session_id:
+          type: string
+          pattern: "^cs_(test|live)_[A-Za-z0-9]+$"
+          maxLength: 255
+      required: [session_id]
+    CheckoutConfirmation:
+      type: object
+      additionalProperties: false
+      properties:
+        outcome: {type: string}
+        access:
+          $ref: "#/components/schemas/Access"
+      required: [outcome, access]
     PortalRequest:
       type: object
       additionalProperties: false

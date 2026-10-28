@@ -11,7 +11,7 @@ if (!["127.0.0.1", "localhost"].includes(dbUrl.hostname)) throw new Error(`refus
 const { db, membershipsTable, usersTable, billingEventsTable } = await import("@workspace/db");
 const { eq } = await import("drizzle-orm");
 const { checkoutBlocked, checkoutParams, safeReturnUrl } = await import("./checkout");
-const { handleEvent, subscriptionAccess, subscriptionIdOf, PAST_DUE_GRACE_DAYS, RENEWAL_BUFFER_HOURS } = await import("./sync");
+const { confirmCheckout, handleEvent, subscriptionAccess, subscriptionIdOf, PAST_DUE_GRACE_DAYS, RENEWAL_BUFFER_HOURS } = await import("./sync");
 const { accessFor, PRICES } = await import("../coaching/access");
 
 let n = 0;
@@ -27,7 +27,7 @@ const event = (type: string, object: object, livemode = false) => ({ id: evId(),
   ok(pay.mode === "payment" && pay.customer_email === "a@b.co" && pay.customer_creation === "always", "one-off: payment mode, new customer");
   ok(pay.line_items?.[0]?.price_data?.unit_amount === PRICES.intro_plan_cents, "intro price from PRICES");
   ok(pay.metadata?.["user_id"] === "7" && pay.payment_intent_data?.metadata?.["kind"] === "intro_plan", "metadata on session and payment");
-  ok(pay.success_url === "https://hypest.app/?checkout=done" && pay.cancel_url === "https://hypest.app/?checkout=cancelled", "return urls");
+  ok(pay.success_url === "https://hypest.app/?checkout=done&session_id={CHECKOUT_SESSION_ID}" && pay.cancel_url === "https://hypest.app/?checkout=cancelled", "return urls (success carries the session id)");
   const sub = checkoutParams({ kind: "tier2", userId: 7, email: "a@b.co", customerId: "cus_1", returnUrl: "https://hypest.app/profile" });
   ok(sub.mode === "subscription" && sub.customer === "cus_1" && !("customer_email" in sub), "subscription reuses the customer");
   ok(sub.line_items?.[0]?.price_data?.recurring?.interval === "month" && sub.line_items?.[0]?.price_data?.unit_amount === PRICES.tier2_cents, "monthly tier2 price");
@@ -155,6 +155,25 @@ const noRetrieve = { retrieveSubscription: async (): Promise<Stripe.Subscription
   ok((await accessFor(other)).level === "tier1", "still on Plans");
 }
 
+// ---------- back from Checkout: unlock at once; the webhook arriving later changes nothing ----------
+{
+  const userId = await newUser();
+  const stranger = await newUser();
+  const session = { id: `cs_conf_${userId}`, object: "checkout.session", mode: "payment", livemode: false, payment_status: "paid", payment_intent: `pi_conf_${userId}`, customer: `cus_conf_${userId}`, metadata: { user_id: String(userId), kind: "intro_plan" } } as unknown as Stripe.Checkout.Session;
+  ok((await confirmCheckout(session, stranger, noRetrieve)) === "not yours" && (await rowsOf(stranger)).length === 0 && (await rowsOf(userId)).length === 0, "someone else's checkout: nothing unlocked");
+  ok((await confirmCheckout(session, userId, noRetrieve)) === "plan granted" && (await accessFor(userId)).plan_credits === 1, "own paid checkout: plan unlocked at once");
+  ok((await confirmCheckout(session, userId, noRetrieve)) === "plan granted" && (await rowsOf(userId)).length === 1, "confirming twice: still one plan");
+  ok((await handleEvent(event("checkout.session.completed", session), noRetrieve)) === "plan granted" && (await rowsOf(userId)).length === 1, "webhook after the confirm: still one plan");
+  const unpaid = { ...session, id: `cs_conf_unpaid_${userId}`, payment_status: "unpaid" } as unknown as Stripe.Checkout.Session;
+  ok((await confirmCheckout(unpaid, userId, noRetrieve)).startsWith("waiting") && (await rowsOf(userId)).length === 1, "unpaid checkout: nothing unlocked");
+
+  const sub = subObj("active", now, now + 30 * 86_400, { metadata: { user_id: String(userId), kind: "tier1" } });
+  const subSession = { id: `cs_conf_sub_${userId}`, object: "checkout.session", mode: "subscription", livemode: false, subscription: sub.id, metadata: { user_id: String(userId), kind: "tier1" } } as unknown as Stripe.Checkout.Session;
+  const subDeps = { retrieveSubscription: async () => sub, cancelSubscription: noCancel };
+  ok((await confirmCheckout(subSession, userId, subDeps)) === "subscription active" && (await accessFor(userId)).level === "tier1", "membership checkout: Plans unlocked at once");
+  ok((await handleEvent(event("customer.subscription.created", sub), subDeps)) === "subscription active" && (await rowsOf(userId)).filter((r) => r.stripeRef === sub.id).length === 1, "webhook after: one membership row");
+}
+
 // ---------- HTTP: signature check on the running server (optional) ----------
 const api = process.env["BILLING_CHECK_API"];
 const whsec = process.env["BILLING_CHECK_WHSEC"];
@@ -172,6 +191,9 @@ if (api && whsec) {
   const live = JSON.stringify({ ...JSON.parse(payload), id: evId(), livemode: true });
   const liveRes = (await (await post(live, { "stripe-signature": stripe.webhooks.generateTestHeaderString({ payload: live, secret: whsec }) })).json()) as { outcome?: string };
   ok(liveRes.outcome === "ignored: mode mismatch", "live event on a test server: ignored");
+  // (this check server logs in a dev user automatically, so only input checking is tested here)
+  const conf = await fetch(`${api}/billing/confirm`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ session_id: "not-a-session" }) });
+  ok(conf.status === 400, "confirm refuses anything that isn't a Checkout Session id");
   const config = (await (await fetch(`${api}/config`)).json()) as { payments?: string };
   ok(config.payments === "test", "config says test mode");
 } else {

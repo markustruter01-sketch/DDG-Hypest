@@ -56,7 +56,8 @@ export function checkoutParams(args: {
   const base: Stripe.Checkout.SessionCreateParams = {
     client_reference_id: String(args.userId),
     metadata,
-    success_url: `${args.returnUrl}${sep}checkout=done`,
+    // {CHECKOUT_SESSION_ID} is filled in by Stripe, so the app can confirm this exact session on return.
+    success_url: `${args.returnUrl}${sep}checkout=done&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${args.returnUrl}${sep}checkout=cancelled`,
     line_items: [
       {

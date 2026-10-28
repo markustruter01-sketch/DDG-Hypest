@@ -24,6 +24,8 @@ export * from './changePasswordRequest';
 export * from './chatMessage';
 export * from './chatMessageRole';
 export * from './chatRequest';
+export * from './checkoutConfirmation';
+export * from './checkoutConfirmRequest';
 export * from './checkoutRequest';
 export * from './checkoutRequestKind';
 export * from './clientErrorReport';

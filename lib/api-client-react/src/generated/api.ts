@@ -25,6 +25,8 @@ import type {
   AppConfig,
   ChangePasswordRequest,
   ChatRequest,
+  CheckoutConfirmRequest,
+  CheckoutConfirmation,
   CheckoutRequest,
   ClientErrorReport,
   Coach,
@@ -4426,6 +4428,94 @@ export const useCreateCheckout = <TError = ErrorType<ErrorMessage>,
         TContext
       > => {
       return useMutation(getCreateCheckoutMutationOptions(options));
+    }
+
+export const getConfirmCheckoutUrl = () => {
+
+
+
+
+  return `/api/billing/confirm`
+}
+
+/**
+ * @summary Back from Stripe Checkout. The server reads the session from Stripe and unlocks access at once (the webhook stays the backup).
+ */
+export const confirmCheckout = async (checkoutConfirmRequest: CheckoutConfirmRequest, options?: Parameters<typeof customFetch>[1]): Promise<CheckoutConfirmation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CheckoutConfirmation>(getConfirmCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(checkoutConfirmRequest)
+  }
+);}
+
+
+
+
+
+export const getConfirmCheckoutMutationKey = () => ['confirmCheckout'] as const;
+
+export const getConfirmCheckoutMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmCheckout>>, TError,ConfirmCheckoutMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmCheckout>>, TError,ConfirmCheckoutMutationVariables, TContext> => {
+
+const mutationKey = getConfirmCheckoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmCheckout>>, ConfirmCheckoutMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmCheckout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof confirmCheckout>>>
+    export type ConfirmCheckoutMutationBody = BodyType<CheckoutConfirmRequest>
+    export type ConfirmCheckoutMutationError = ErrorType<ErrorMessage>
+    export type ConfirmCheckoutMutationVariables = {data: BodyType<CheckoutConfirmRequest>}
+
+    /**
+ * @summary Back from Stripe Checkout. The server reads the session from Stripe and unlocks access at once (the webhook stays the backup).
+ */
+export const useConfirmCheckout = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmCheckout>>, TError,ConfirmCheckoutMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmCheckout>>,
+        TError,
+        ConfirmCheckoutMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmCheckoutMutationOptions(options));
     }
 
 export const getCreateBillingPortalUrl = () => {
