@@ -11,4 +11,6 @@ export interface CurrentUser {
   email: string;
   display_name: string;
   handle: string | null;
+  /** The member's IANA time zone (e.g. America/New_York); null until their browser sends one */
+  timezone: string | null;
 }

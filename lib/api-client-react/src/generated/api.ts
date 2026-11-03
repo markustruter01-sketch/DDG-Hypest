@@ -1429,12 +1429,6 @@ export const useReportClientError = <TError = ErrorType<ErrorMessage>,
       return useMutation(getReportClientErrorMutationOptions(options));
     }
 
-
-
-
-
-
-
 export const getGetConfigUrl = () => {
 
 
@@ -1505,6 +1499,12 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
 
 export const getListCoachesUrl = () => {
 
@@ -1578,46 +1578,6 @@ export function useListCoaches<TData = Awaited<ReturnType<typeof listCoaches>>, 
 }
 
 
-
-
-
-
-
-export const getSaveOnboardingDraftUrl = () => {
-
-
-
-
-  return `/api/onboarding/draft`
-}
-
-/**
- * @summary Public. Keep these answers for a day so signup or login (in any tab) saves them as the profile
- */
-export const saveOnboardingDraft = async (trainingAnswers: TrainingAnswers, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<void>(getSaveOnboardingDraftUrl(),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(trainingAnswers)
-  }
-);}
 
 
 
@@ -1709,6 +1669,94 @@ export const usePreviewPlan = <TError = ErrorType<ErrorMessage>,
         TContext
       > => {
       return useMutation(getPreviewPlanMutationOptions(options));
+    }
+
+export const getSaveOnboardingDraftUrl = () => {
+
+
+
+
+  return `/api/onboarding/draft`
+}
+
+/**
+ * @summary Public. Keep these answers for a day so signup or login (in any tab) saves them as the profile
+ */
+export const saveOnboardingDraft = async (trainingAnswers: TrainingAnswers, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getSaveOnboardingDraftUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingAnswers)
+  }
+);}
+
+
+
+
+
+export const getSaveOnboardingDraftMutationKey = () => ['saveOnboardingDraft'] as const;
+
+export const getSaveOnboardingDraftMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveOnboardingDraft>>, TError,SaveOnboardingDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveOnboardingDraft>>, TError,SaveOnboardingDraftMutationVariables, TContext> => {
+
+const mutationKey = getSaveOnboardingDraftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveOnboardingDraft>>, SaveOnboardingDraftMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveOnboardingDraft(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveOnboardingDraftMutationResult = NonNullable<Awaited<ReturnType<typeof saveOnboardingDraft>>>
+    export type SaveOnboardingDraftMutationBody = BodyType<TrainingAnswers>
+    export type SaveOnboardingDraftMutationError = ErrorType<ErrorMessage>
+    export type SaveOnboardingDraftMutationVariables = {data: BodyType<TrainingAnswers>}
+
+    /**
+ * @summary Public. Keep these answers for a day so signup or login (in any tab) saves them as the profile
+ */
+export const useSaveOnboardingDraft = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveOnboardingDraft>>, TError,SaveOnboardingDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveOnboardingDraft>>,
+        TError,
+        SaveOnboardingDraftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveOnboardingDraftMutationOptions(options));
     }
 
 export const getGetTrainingUrl = () => {
@@ -2155,8 +2203,8 @@ return customFetch<PlanView>(getResumePlanUrl(),
 export const getResumePlanMutationKey = () => ['resumePlan'] as const;
 
 export const getResumePlanMutationOptions = <TError = ErrorType<ErrorMessage>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,{data: BodyType<ResumeRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,{data: BodyType<ResumeRequest>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,ResumePlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,ResumePlanMutationVariables, TContext> => {
 
 const mutationKey = getResumePlanMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2168,7 +2216,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumePlan>>, {data: BodyType<ResumeRequest>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumePlan>>, ResumePlanMutationVariables> = (props) => {
           const {data} = props ?? {};
 
           return  resumePlan(data,requestOptions)
@@ -2183,19 +2231,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ResumePlanMutationResult = NonNullable<Awaited<ReturnType<typeof resumePlan>>>
     export type ResumePlanMutationBody = BodyType<ResumeRequest>
-
     export type ResumePlanMutationError = ErrorType<ErrorMessage>
-
+    export type ResumePlanMutationVariables = {data: BodyType<ResumeRequest>}
 
     /**
  * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
  */
 export const useResumePlan = <TError = ErrorType<ErrorMessage>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,{data: BodyType<ResumeRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumePlan>>, TError,ResumePlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof resumePlan>>,
         TError,
-        {data: BodyType<ResumeRequest>},
+        ResumePlanMutationVariables,
         TContext
       > => {
       return useMutation(getResumePlanMutationOptions(options));

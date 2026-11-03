@@ -55,6 +55,7 @@ export * from './progressWeeklyVolumeItem';
 export * from './remindersRequest';
 export * from './remindersState';
 export * from './resetPasswordRequest';
+export * from './resumeRequest';
 export * from './screening';
 export * from './screeningAnswers';
 export * from './setLog';

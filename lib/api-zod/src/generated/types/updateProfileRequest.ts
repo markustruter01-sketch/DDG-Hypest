@@ -14,4 +14,10 @@ export interface UpdateProfileRequest {
   display_name?: string;
   /** @pattern ^[a-z0-9_]{3,30}$ */
   handle?: string;
+  /**
+     * IANA time zone, e.g. America/New_York (400 if unknown)
+     * @minLength 1
+     * @maxLength 64
+     */
+  timezone?: string;
 }

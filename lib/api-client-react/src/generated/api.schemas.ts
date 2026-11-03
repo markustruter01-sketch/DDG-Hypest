@@ -36,10 +36,10 @@ export interface SignupRequest {
   display_name: string;
   adult_confirmed: true;
   /**
-   * The browser's IANA time zone; an unknown name is ignored
-   * @minLength 1
-   * @maxLength 64
-   */
+     * The browser's IANA time zone; an unknown name is ignored
+     * @minLength 1
+     * @maxLength 64
+     */
   timezone?: string;
 }
 
@@ -52,10 +52,10 @@ export interface UpdateProfileRequest {
   /** @pattern ^[a-z0-9_]{3,30}$ */
   handle?: string;
   /**
-   * IANA time zone, e.g. America/New_York (400 if unknown)
-   * @minLength 1
-   * @maxLength 64
-   */
+     * IANA time zone, e.g. America/New_York (400 if unknown)
+     * @minLength 1
+     * @maxLength 64
+     */
   timezone?: string;
 }
 
@@ -96,6 +96,7 @@ export interface TurnOffRemindersRequest {
 
 export type ClientErrorReportKind = typeof ClientErrorReportKind[keyof typeof ClientErrorReportKind];
 
+
 export const ClientErrorReportKind = {
   crash: 'crash',
   unhandled: 'unhandled',
@@ -111,6 +112,7 @@ export interface ClientErrorReport {
 
 export type UnitsRequestUnits = typeof UnitsRequestUnits[keyof typeof UnitsRequestUnits];
 
+
 export const UnitsRequestUnits = {
   kg: 'kg',
   lb: 'lb',
@@ -121,6 +123,7 @@ export interface UnitsRequest {
 }
 
 export type TrainingAnswersGoal = typeof TrainingAnswersGoal[keyof typeof TrainingAnswersGoal];
+
 
 export const TrainingAnswersGoal = {
   strength: 'strength',
@@ -134,6 +137,7 @@ export const TrainingAnswersGoal = {
 
 export type TrainingAnswersExperience = typeof TrainingAnswersExperience[keyof typeof TrainingAnswersExperience];
 
+
 export const TrainingAnswersExperience = {
   beginner: 'beginner',
   intermediate: 'intermediate',
@@ -141,6 +145,7 @@ export const TrainingAnswersExperience = {
 } as const;
 
 export type TrainingAnswersMinutes = typeof TrainingAnswersMinutes[keyof typeof TrainingAnswersMinutes];
+
 
 export const TrainingAnswersMinutes = {
   NUMBER_20: 20,
@@ -150,6 +155,7 @@ export const TrainingAnswersMinutes = {
 } as const;
 
 export type TrainingAnswersEquipmentItem = typeof TrainingAnswersEquipmentItem[keyof typeof TrainingAnswersEquipmentItem];
+
 
 export const TrainingAnswersEquipmentItem = {
   dumbbells: 'dumbbells',
@@ -164,6 +170,7 @@ export const TrainingAnswersEquipmentItem = {
 
 export type TrainingAnswersAvoidAreasItem = typeof TrainingAnswersAvoidAreasItem[keyof typeof TrainingAnswersAvoidAreasItem];
 
+
 export const TrainingAnswersAvoidAreasItem = {
   knee: 'knee',
   lower_back: 'lower_back',
@@ -175,6 +182,7 @@ export const TrainingAnswersAvoidAreasItem = {
 } as const;
 
 export type TrainingAnswersUnits = typeof TrainingAnswersUnits[keyof typeof TrainingAnswersUnits];
+
 
 export const TrainingAnswersUnits = {
   kg: 'kg',
@@ -217,6 +225,7 @@ export interface Screening {
 
 export type AccessLevel = typeof AccessLevel[keyof typeof AccessLevel];
 
+
 export const AccessLevel = {
   none: 'none',
   plan: 'plan',
@@ -257,6 +266,7 @@ export interface SetLogInput {
 
 export type PlanItemViewMeasure = typeof PlanItemViewMeasure[keyof typeof PlanItemViewMeasure];
 
+
 export const PlanItemViewMeasure = {
   reps: 'reps',
   time: 'time',
@@ -293,6 +303,7 @@ export interface PlanSessionView {
 
 export type PlanViewStatus = typeof PlanViewStatus[keyof typeof PlanViewStatus];
 
+
 export const PlanViewStatus = {
   preview: 'preview',
   active: 'active',
@@ -319,7 +330,18 @@ export interface TrainingState {
   plan: PlanView | null;
 }
 
+export interface ResumeRequest {
+  /** The member confirms a doctor or physiotherapist has checked them and said they can train */
+  acknowledged: boolean;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  note: string;
+}
+
 export type PainReportArea = typeof PainReportArea[keyof typeof PainReportArea];
+
 
 export const PainReportArea = {
   knee: 'knee',
@@ -330,16 +352,6 @@ export const PainReportArea = {
   ankle: 'ankle',
   neck: 'neck',
 } as const;
-
-export interface ResumeRequest {
-  /** The member confirms a doctor or physiotherapist has checked them and said they can train */
-  acknowledged: boolean;
-  /**
-   * @minLength 1
-   * @maxLength 500
-   */
-  note: string;
-}
 
 export interface PainReport {
   /**
@@ -367,6 +379,7 @@ export interface ChatRequest {
 
 export type ChatMessageRole = typeof ChatMessageRole[keyof typeof ChatMessageRole];
 
+
 export const ChatMessageRole = {
   member: 'member',
   coach: 'coach',
@@ -387,6 +400,7 @@ export interface CoachChat {
 }
 
 export type AdminSummarySwitchesPayments = typeof AdminSummarySwitchesPayments[keyof typeof AdminSummarySwitchesPayments];
+
 
 export const AdminSummarySwitchesPayments = {
   off: 'off',
@@ -482,6 +496,7 @@ export interface Progress {
 
 export type UnlockRequestKind = typeof UnlockRequestKind[keyof typeof UnlockRequestKind];
 
+
 export const UnlockRequestKind = {
   intro_plan: 'intro_plan',
   plan: 'plan',
@@ -549,6 +564,7 @@ export interface AccountExport {
 
 export type CheckoutRequestKind = typeof CheckoutRequestKind[keyof typeof CheckoutRequestKind];
 
+
 export const CheckoutRequestKind = {
   intro_plan: 'intro_plan',
   plan: 'plan',
@@ -587,6 +603,7 @@ export interface StripeLink {
  * off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money
  */
 export type AppConfigPayments = typeof AppConfigPayments[keyof typeof AppConfigPayments];
+
 
 export const AppConfigPayments = {
   off: 'off',

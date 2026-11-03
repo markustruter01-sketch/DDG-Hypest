@@ -19,4 +19,10 @@ export interface SignupRequest {
      */
   display_name: string;
   adult_confirmed: true;
+  /**
+     * The browser's IANA time zone; an unknown name is ignored
+     * @minLength 1
+     * @maxLength 64
+     */
+  timezone?: string;
 }

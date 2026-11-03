@@ -26,9 +26,8 @@ export const signupBodyPasswordMax = 200;
 
 export const signupBodyDisplayNameMax = 60;
 
-
-
 export const signupBodyTimezoneMax = 64;
+
 
 
 export const SignupBody = zod.object({
@@ -44,7 +43,7 @@ export const SignupResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "handle": zod.string().nullable(),
-  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America/New_York); null until their browser sends one')
 })
 
 
@@ -66,7 +65,7 @@ export const LoginResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "handle": zod.string().nullable(),
-  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America/New_York); null until their browser sends one')
 })
 
 
@@ -85,7 +84,7 @@ export const GetCurrentUserResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "handle": zod.string().nullable(),
-  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America/New_York); null until their browser sends one')
 })
 
 
@@ -96,15 +95,14 @@ export const GetCurrentUserResponse = zod.object({
 export const updateCurrentUserBodyDisplayNameMax = 60;
 
 export const updateCurrentUserBodyHandleRegExp = new RegExp('^[a-z0-9_]{3,30}$');
-
-
 export const updateCurrentUserBodyTimezoneMax = 64;
+
 
 
 export const UpdateCurrentUserBody = zod.object({
   "display_name": zod.string().min(1).max(updateCurrentUserBodyDisplayNameMax).optional(),
   "handle": zod.string().regex(updateCurrentUserBodyHandleRegExp).optional(),
-  "timezone": zod.string().min(1).max(updateCurrentUserBodyTimezoneMax).optional().describe('IANA time zone, e.g. America\/New_York (400 if unknown)')
+  "timezone": zod.string().min(1).max(updateCurrentUserBodyTimezoneMax).optional().describe('IANA time zone, e.g. America/New_York (400 if unknown)')
 })
 
 export const UpdateCurrentUserResponse = zod.object({
@@ -112,7 +110,7 @@ export const UpdateCurrentUserResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "handle": zod.string().nullable(),
-  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America/New_York); null until their browser sends one')
 })
 
 
@@ -186,7 +184,7 @@ export const ResetPasswordResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "handle": zod.string().nullable(),
-  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America/New_York); null until their browser sends one')
 })
 
 
@@ -364,6 +362,35 @@ export const PreviewPlanResponse = zod.object({
 }))
 }))
 })
+
+
+/**
+ * @summary Public. Keep these answers for a day so signup or login (in any tab) saves them as the profile
+ */
+export const saveOnboardingDraftBodyDaysPerWeekMin = 2;
+export const saveOnboardingDraftBodyDaysPerWeekMax = 6;
+
+export const saveOnboardingDraftBodyScreeningAnswersMax = 20;
+
+
+
+export const SaveOnboardingDraftBody = zod.object({
+  "coach_id": zod.string(),
+  "goal": zod.enum(['strength', 'muscle', 'fat_loss', 'fitness', 'mobility', 'endurance', 'performance']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "days_per_week": zod.number().int().min(saveOnboardingDraftBodyDaysPerWeekMin).max(saveOnboardingDraftBodyDaysPerWeekMax),
+  "minutes": zod.union([zod.literal(20),zod.literal(30),zod.literal(45),zod.literal(60)]),
+  "equipment": zod.array(zod.enum(['dumbbells', 'kettlebell', 'barbell', 'machines', 'bands', 'pullup_bar', 'cardio_machine', 'pool'])),
+  "avoid_areas": zod.array(zod.enum(['knee', 'lower_back', 'shoulder', 'wrist', 'hip', 'ankle', 'neck'])),
+  "units": zod.enum(['kg', 'lb']).optional(),
+  "health_accepted": zod.literal(true),
+  "screening": zod.object({
+  "answers": zod.array(zod.boolean()).max(saveOnboardingDraftBodyScreeningAnswersMax),
+  "cleared": zod.boolean().describe('The member confirmed a doctor or health professional cleared them (needed if any answer is yes)')
+}).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
+})
+
+export const SaveOnboardingDraftResponse = zod.void()
 
 
 /**
@@ -703,10 +730,8 @@ export const CreateNextPlanResponse = zod.object({
 /**
  * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
  */
-/**
- * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
- */
 export const resumePlanBodyNoteMax = 500;
+
 
 
 export const ResumePlanBody = zod.object({
