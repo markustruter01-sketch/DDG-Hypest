@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { GetCoachChatResponse, SendCoachMessageBody, SendCoachMessageResponse } from "@workspace/api-zod";
-import { coachMessagesTable, db, planSessionsTable, plansTable, trainingProfilesTable, planItemsTable } from "@workspace/db";
+import { coachMessagesTable, db, painEventsTable, planSessionsTable, plansTable, trainingProfilesTable, planItemsTable } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { accessFor, canLog } from "../coaching/access";
 import { COACH_BY_ID } from "../coaching/library";
@@ -77,10 +77,14 @@ router.post("/me/coach/messages", requireUser, async (req, res) => {
   let reply: { text: string; source: "ai" | "safety" };
   if (screen.kind === "stop") {
     // Same rule as "This hurts": stop, see a professional, plan paused. No AI involved.
-    await db
+    const paused = await db
       .update(plansTable)
       .set({ status: "paused", pausedReason: `Safety stop (chat): "${screen.flag}"` })
-      .where(and(eq(plansTable.userId, user.id), eq(plansTable.status, "active")));
+      .where(and(eq(plansTable.userId, user.id), eq(plansTable.status, "active")))
+      .returning({ id: plansTable.id });
+    await db.insert(painEventsTable).values({
+      userId: user.id, planId: paused.at(0)?.id ?? null, note: text, source: "chat", flag: screen.flag, stopped: true,
+    });
     reply = { text: STOP_MESSAGE, source: "safety" };
     void alert("info", `Safety stop: member #${user.id}`, `Coach chat matched "${screen.flag}". Plan paused; member told to see a doctor or physio.`);
   } else if (screen.kind === "wellbeing") {

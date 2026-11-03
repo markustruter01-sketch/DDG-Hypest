@@ -55,6 +55,21 @@ if (api) {
   ok((await call("POST", "/me/plans")).status === 409, "old profile without the health check: no plan until answered");
   await call("PUT", "/me/training/profile", { ...base, screening: { answers: all(false), cleared: false } });
   ok((await call("POST", "/me/plans")).status === 201, "after answering: plan built");
+
+  // Build plan 1.2: every "this hurts" is kept; a safety pause lifts only with the member's acknowledgement.
+  const { painEventsTable } = await import("@workspace/db");
+  const plan = (await call("GET", "/me/training")).json.plan;
+  const itemId = plan.sessions[0].items[0].id as number;
+  ok((await call("POST", `/me/items/${itemId}/hurts`, { text: "chest press felt great" })).json.stopped === false, "training talk: no pause");
+  ok((await call("POST", `/me/items/${itemId}/hurts`, { text: "chest pain after the set" })).json.stopped === true, "chest pain: paused");
+  ok((await call("POST", "/me/plans/resume")).status === 400, "resume with no body: refused");
+  ok((await call("POST", "/me/plans/resume", { acknowledged: false, note: "fine" })).status === 400, "resume without acknowledgement: refused");
+  ok((await call("POST", "/me/plans/resume", { acknowledged: true, note: "GP checked me, all clear" })).status === 200, "resume with acknowledgement: plan active");
+  const events = await db.select().from(painEventsTable).where(eq(painEventsTable.userId, u!.id));
+  ok(events.length === 2 && events.filter((e) => e.stopped).length === 1, "both reports kept, one marked as a stop");
+  const stop = events.find((e) => e.stopped)!;
+  ok(stop.flag === "chest" && stop.resolvedAt !== null && stop.resolvedNote === "GP checked me, all clear", "the stop is resolved with the member's note");
+  ok((await call("GET", "/me/export")).json.pain_reports?.length === 2, "export includes the pain reports");
 } else {
   console.log("(HTTP part skipped: set ACCOUNT_CHECK_API)");
 }

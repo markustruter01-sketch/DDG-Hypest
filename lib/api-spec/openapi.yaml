@@ -1106,6 +1106,12 @@ paths:
       operationId: resumePlan
       tags: [coaching]
       summary: Resume a plan paused by a safety stop, after the member confirms they were cleared
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeRequest"
       responses:
         "200":
           description: OK
@@ -1113,6 +1119,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlanView"
+        "400":
+          description: The member did not confirm they were cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
         "401":
           description: Not authenticated
           content:
@@ -1960,6 +1972,15 @@ components:
             - $ref: "#/components/schemas/PlanView"
           nullable: true
       required: [profile, access, plan]
+    ResumeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        acknowledged:
+          type: boolean
+          description: The member confirms a doctor or physiotherapist has checked them and said they can train
+        note: {type: string, minLength: 1, maxLength: 500}
+      required: [acknowledged, note]
     PainReport:
       type: object
       additionalProperties: false

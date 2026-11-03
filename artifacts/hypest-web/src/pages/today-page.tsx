@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Bot, CalendarDays, Check, ChevronRight, Dumbbell, ListChecks, Play } from "lucide-react";
@@ -113,7 +113,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
       <div className="today-card today-stop">
         <span className="label">Plan paused for your safety</span>
         <span className="today-mid">See a doctor or physio before training again.</span>
-        <button type="button" className="secondary-button" onClick={() => run(() => resume.mutateAsync())} disabled={resume.isPending}>I've been cleared · resume</button>
+        <ResumeSafely pending={resume.isPending} onResume={(note) => run(() => resume.mutateAsync({ data: { acknowledged: true, note } }))} />
       </div>
     );
   } else if (!upNext) {
@@ -171,5 +171,23 @@ export function TodayPage({ user }: { user: CurrentUser }) {
 
       <p className="today-quote">“{quote.text}” <span>— {quote.by}</span></p>
     </main>
+  );
+}
+
+/** A safety pause lifts only when the member confirms they were checked and says what they were told (build plan 1.2). */
+function ResumeSafely({ pending, onResume }: { pending: boolean; onResume: (note: string) => void }): ReactElement {
+  const [cleared, setCleared] = useState(false);
+  const [note, setNote] = useState("");
+  const ready = cleared && note.trim().length > 0 && !pending;
+  return (
+    <div className="resume-safely">
+      <label className="health-check">
+        <input type="checkbox" checked={cleared} onChange={(e) => setCleared(e.target.checked)} />
+        <span>A doctor or physiotherapist has checked me and said I can train.</span>
+      </label>
+      <textarea className="text-input" rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)}
+        placeholder="What did they say? e.g. Cleared, avoid deep squats for 2 weeks" aria-label="What did they say?" />
+      <button type="button" className="secondary-button" onClick={() => onResume(note.trim())} disabled={!ready}>Resume my plan</button>
+    </div>
   );
 }

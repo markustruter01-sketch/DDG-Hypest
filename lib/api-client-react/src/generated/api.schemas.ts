@@ -363,6 +363,16 @@ export const PainReportArea = {
   neck: 'neck',
 } as const;
 
+export interface ResumeRequest {
+  /** The member confirms a doctor or physiotherapist has checked them and said they can train */
+  acknowledged: boolean;
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  note: string;
+}
+
 export interface PainReport {
   /**
      * @minLength 1

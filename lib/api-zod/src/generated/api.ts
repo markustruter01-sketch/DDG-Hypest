@@ -1129,6 +1129,17 @@ export const CreateNextPlanResponse = zod.object({
 /**
  * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
  */
+/**
+ * @summary Resume a plan paused by a safety stop, after the member confirms they were cleared
+ */
+export const resumePlanBodyNoteMax = 500;
+
+
+export const ResumePlanBody = zod.object({
+  "acknowledged": zod.boolean().describe('The member confirms a doctor or physiotherapist has checked them and said they can train'),
+  "note": zod.string().min(1).max(resumePlanBodyNoteMax)
+})
+
 export const ResumePlanResponse = zod.object({
   "id": zod.number().int().nullable(),
   "coach_id": zod.string(),

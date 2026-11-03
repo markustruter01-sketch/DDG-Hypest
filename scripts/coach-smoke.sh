@@ -29,7 +29,12 @@ r 402 PUT /me/items/$ITEM/sets/1 -d '{"reps":10,"seconds":null,"load_kg":20}'
 r 200 POST /me/items/$ITEM/hurts -d '{"text":"my knee aches a bit"}'
 echo "== safety stop on any tier, then resume"
 r 200 POST /me/items/$ITEM/hurts -d '{"text":"sharp pain in my knee"}'
-r 200 POST /me/plans/resume
+r 400 POST /me/plans/resume -d '{"acknowledged":false,"note":"x"}'
+r 400 POST /me/plans/resume
+r 200 POST /me/plans/resume -d '{"acknowledged":true,"note":"Physio cleared me"}'
+echo "== training talk does not pause (word boundaries, exercise names)"
+r 200 POST /me/items/$ITEM/hurts -d '{"text":"chest press felt great, popular gym"}'
+r 409 POST /me/plans/resume -d '{"acknowledged":true,"note":"not paused"}'
 echo "== tier 2: logging, swap, complete, progress, next block with loads"
 r 200 POST /dev/unlock -d '{"kind":"tier2"}'
 r 200 PUT /me/items/$ITEM/sets/1 -d '{"reps":10,"seconds":null,"load_kg":20}'

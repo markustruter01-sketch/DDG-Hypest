@@ -149,3 +149,28 @@ export const setLogsTable = pgTable(
     check("set_logs_values", sql`(${table.reps} is null or ${table.reps} between 0 and 200) and (${table.loadKg} is null or ${table.loadKg} between 0 and 1000)`),
   ],
 );
+
+/**
+ * Every "this hurts" report and every chat safety stop, kept so the coach (and a physio) can see a
+ * member's history, and so a safety pause is only lifted with the member's own acknowledgement
+ * (build plan 1.2). `stopped` = it paused the plan; `resolvedAt`/`resolvedNote` = the member's resume.
+ */
+export const painEventsTable = pgTable(
+  "pain_events",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => usersTable.id),
+    planId: integer("plan_id").references(() => plansTable.id),
+    itemId: integer("item_id"),
+    exerciseId: text("exercise_id"),
+    area: text("area"),
+    note: text("note").notNull(),
+    source: text("source").notNull(),
+    flag: text("flag"),
+    stopped: boolean("stopped").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedNote: text("resolved_note"),
+  },
+  (table) => [check("pain_events_source", sql`${table.source} in ('hurts', 'chat', 'resume')`)],
+);
