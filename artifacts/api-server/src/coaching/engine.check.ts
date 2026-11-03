@@ -1,7 +1,7 @@
 // Engine checks. Run from repo root: pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/coaching/engine.check.ts
 import assert from "node:assert/strict";
 import { COACHES, EXERCISES, EXERCISE_BY_ID, EXPERIENCE, GOALS, type Area, type Equipment } from "./library";
-import { buildPlan, findSwap, fits, nextLoads, targetLoadFor, WEEKS } from "./engine";
+import { buildPlan, findSwap, fits, nextLoads, targetLoadFor, validatePlan, WEEKS, type Plan } from "./engine";
 import { redFlag } from "./safety";
 
 let n = 0;
@@ -61,6 +61,51 @@ assert.equal(targetLoadFor(EXERCISE_BY_ID.get("goblet_squat")!, { back_squat: 10
 assert.equal(targetLoadFor(EXERCISE_BY_ID.get("leg_extension")!, { leg_press: 80 }), 80, "machine to machine swap carries");
 assert.equal(targetLoadFor(EXERCISE_BY_ID.get("bodyweight_squat")!, { bodyweight_squat: 10 }), null, "unweighted never gets a load");
 n += 3;
+
+// Build plan 1.9: 4- and 6-day weeks and 30-minute sessions, for every coach, goal and level
+for (const c of COACHES) for (const goal of c.goals) for (const experience of EXPERIENCE) for (const [daysPerWeek, minutes] of [[4, 30], [4, 60], [6, 30], [6, 45], [3, 30]] as const) for (const equipment of [kits[0]!, kits[2]!]) {
+  const input = { coachId: c.id, goal, experience, daysPerWeek, minutes, equipment, avoidAreas: [] as Area[], block: 1 };
+  const plan = buildPlan(input);
+  assert.equal(plan.sessions.length, daysPerWeek * WEEKS, `${c.id} ${daysPerWeek} days: session count`);
+  assert.deepEqual(validatePlan(plan, input), [], `${c.id} ${daysPerWeek}d ${minutes}min: valid`);
+  for (let week = 1; week <= WEEKS; week += 1) {
+    const days = plan.sessions.filter((s) => s.week === week).map((s) => s.day);
+    assert.deepEqual(days, Array.from({ length: daysPerWeek }, (_, i) => i + 1), `${c.id} week ${week} has days 1..${daysPerWeek}`);
+  }
+  const longest = Math.max(...plan.sessions.map((s) => s.items.length));
+  const at60 = buildPlan({ ...input, minutes: 60 });
+  assert.ok(longest <= Math.max(...at60.sessions.map((s) => s.items.length)), `${c.id}: ${minutes} min is never longer than 60`);
+  n += 1;
+}
+
+// validatePlan refuses bad plans (every plan, from rules or AI, passes this before a member sees it)
+{
+  const input = { coachId: "rex", goal: COACHES.find((c) => c.id === "rex")!.goals[0]!, experience: "beginner" as const, daysPerWeek: 3, minutes: 45,
+    equipment: ["dumbbells"] as Equipment[], avoidAreas: ["knee"] as Area[], block: 1 };
+  const good = buildPlan(input);
+  assert.deepEqual(validatePlan(good, input), []);
+  const bad = (change: (p: Plan) => void, why: RegExp, msg: string) => {
+    const p: Plan = structuredClone(good);
+    change(p);
+    const problems = validatePlan(p, input);
+    assert.ok(problems.some((x) => why.test(x)), `${msg}: got ${JSON.stringify(problems)}`);
+    n += 1;
+  };
+  bad((p) => { p.sessions.pop(); }, /wrong number of sessions/, "a missing session");
+  bad((p) => { p.sessions[0]!.items = []; }, /is empty/, "an empty day");
+  bad((p) => { p.sessions[0]!.items[0]!.exerciseId = "made_up"; }, /unknown exercise/, "an unknown exercise");
+  const barbellOnly = EXERCISES.find((e) => e.equipment.length > 0 && e.equipment.every((q) => q === "barbell"))!;
+  bad((p) => { p.sessions[0]!.items[0]!.exerciseId = barbellOnly.id; }, /does not fit/, "kit the member doesn't have");
+  const kneeLoader = EXERCISES.find((e) => e.loads.includes("knee") && e.equipment.length === 0)!;
+  bad((p) => { p.sessions[0]!.items[0]!.exerciseId = kneeLoader.id; }, /does not fit/, "an exercise that loads an area to avoid");
+  bad((p) => { p.sessions[0]!.items[0]!.sets = 0; }, /sets out of range/, "zero sets");
+  bad((p) => { p.sessions[0]!.items[0]!.sets = 9; }, /sets out of range/, "nine sets");
+  bad((p) => { const it = p.sessions[0]!.items[0]!; it.reps = null; it.seconds = null; }, /needs reps or time/, "neither reps nor time");
+  bad((p) => { const it = p.sessions[0]!.items[0]!; it.reps = 10; it.seconds = 30; }, /needs reps or time/, "both reps and time");
+  bad((p) => { const it = p.sessions[0]!.items.find((i) => i.reps !== null)!; it.reps = 31; }, /reps out of range/, "31 reps");
+  bad((p) => { const it = p.sessions[0]!.items[0]!; it.reps = null; it.seconds = 5; }, /time out of range/, "5 seconds");
+  bad((p) => { p.sessions[0]!.items[0]!.restSeconds = 301; }, /rest out of range/, "rest over 5 minutes");
+}
 
 // Warning words
 assert.equal(redFlag("sharp pain in my knee"), "sharp");
