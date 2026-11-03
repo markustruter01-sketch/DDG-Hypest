@@ -5,7 +5,6 @@ import { Check, Minus, Plus } from "lucide-react";
 import {
   getGetTrainingQueryKey,
   useCompleteSession,
-  useLogSet,
   useReportPain,
   type PainResult,
   type PlanItemView,
@@ -17,6 +16,8 @@ import { serverErrorText } from "@/lib/server-error";
 import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
 import { useRestTimer, useScreenAwake } from "@/lib/gym";
 import { platesFor, platesText } from "@/lib/plates";
+import { saveSet, useWaitingSets } from "@/lib/offline-sets";
+import { queueKey } from "@/lib/offline-queue";
 
 type SetEntry = { done: boolean; reps: number; load: number; seconds: number };
 
@@ -41,7 +42,7 @@ export function SessionPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const complete = useCompleteSession({ request });
-  const logSet = useLogSet({ request });
+  const waiting = useWaitingSets();
   const session = training.data?.plan?.sessions.find((s) => s.id === sessionId) ?? null;
   const canLog = training.data?.access.level === "tier2";
   const units = useUnits();
@@ -82,15 +83,15 @@ export function SessionPage() {
     if (nowDone) {
       restTimer.start(item!.rest_seconds);
       if (canLog) {
-        try {
-          await logSet.mutateAsync({ itemId, setNumber: i + 1, data: {
-            reps: item!.measure === "reps" ? entry.reps : null,
-            seconds: item!.measure === "time" ? entry.seconds : null,
-            load_kg: item!.weighted ? toKg(entry.load, units) : null,
-          } });
-        } catch {
+        // No signal in the gym: the set is kept on the phone and sent when the signal is back (build plan 1.6).
+        const where = await saveSet(itemId, i + 1, {
+          reps: item!.measure === "reps" ? entry.reps : null,
+          seconds: item!.measure === "time" ? entry.seconds : null,
+          load_kg: item!.weighted ? toKg(entry.load, units) : null,
+        });
+        if (where === "refused") {
           update(i, { done: false });
-          setSaveError(`Set ${i + 1} didn't save (no signal?). Tap it again.`);
+          setSaveError(`Set ${i + 1} wasn't saved (the server refused it). Refresh the app and try again.`);
           return;
         }
         setSaveError(null);
@@ -173,10 +174,14 @@ export function SessionPage() {
             <button type="button" className="set-tick" aria-pressed={e.done} aria-label={`Set ${i + 1} done`} onClick={() => tick(i)}>
               <Check size={20} strokeWidth={3.5} />
             </button>
+            {e.done && canLog && waiting.includes(queueKey(itemId, i + 1)) ? <span className="set-sync label">on phone</span> : null}
           </li>
         ))}
       </ol>
       {!canLog ? <p className="label lock-note">Save your numbers with Coaching</p> : null}
+      {canLog && waiting.length ? (
+        <p className="label lock-note" role="status">{waiting.length} {waiting.length === 1 ? "set" : "sets"} saved on this phone · they sync when you have signal</p>
+      ) : null}
       {saveError ? <p className="error-text error-on-dark" role="alert">{saveError}</p> : null}
 
       {rest > 0 ? (

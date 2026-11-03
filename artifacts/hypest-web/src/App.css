@@ -1232,6 +1232,7 @@ textarea.text-input { resize: vertical; }
 .stepper-input { width: 4.5rem; height: var(--tap, 44px); border: 1px solid var(--color-dark-line); border-radius: 8px; background: transparent; color: var(--color-on-dark); font: 400 1.5rem var(--font-display); text-align: center; }
 .stepper small { font-size: 0.75rem; }
 .plates { color: var(--color-on-dark-muted); }
+.set-sync { color: var(--color-on-dark-muted); font-size: 0.6875rem; white-space: nowrap; }
 .end-link { background: none; border: 0; padding: 0; color: var(--color-on-dark); font: inherit; cursor: pointer; min-height: var(--tap, 44px); }
 .lock-note { color: var(--color-on-dark-muted); text-align: center; }
 .rest-bar {
