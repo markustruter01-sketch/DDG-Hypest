@@ -16,9 +16,9 @@ import { quoteOfTheDay } from "@/lib/quotes";
 const request = { credentials: "include" as const };
 const img = (name: string) => `${import.meta.env.BASE_URL}img/${name}`;
 
-/** Greeting by Brisbane time (UTC+10, no daylight saving). */
+/** Greeting on the member's own clock. */
 function greeting(now = new Date()): string {
-  const hour = (now.getUTCHours() + 10) % 24;
+  const hour = now.getHours();
   return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 }
 

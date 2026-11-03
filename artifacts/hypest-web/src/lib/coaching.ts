@@ -7,6 +7,8 @@ import {
   type TrainingAnswers,
 } from "@workspace/api-client-react";
 
+import { localDayNumber } from "./time";
+
 export const request = { credentials: "include" as const };
 export const img = (name: string) => `${import.meta.env.BASE_URL}img/${name}`;
 
@@ -46,7 +48,7 @@ const COACH_LINES: Record<string, string[]> = {
 };
 export function coachLine(coachId: string | undefined, now = new Date()): string {
   const lines = COACH_LINES[coachId ?? ""] ?? COACH_LINES.rex!;
-  const day = Math.floor((now.getTime() + 10 * 3600_000) / 86_400_000);
+  const day = localDayNumber(now);
   return lines.at(day % lines.length) ?? "";
 }
 

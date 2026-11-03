@@ -16,6 +16,7 @@ import { useAppConfig } from "@/lib/config";
 import { useTraining } from "@/lib/coaching";
 import { UnitsToggle } from "@/components/units-toggle";
 import { RemindersToggle } from "@/components/reminders-toggle";
+import { TimezoneSetting } from "@/components/timezone-setting";
 
 const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
 
@@ -51,6 +52,7 @@ function Membership() {
       {portalError ? <p className="error-text" role="alert">{portalError}</p> : null}
       <UnitsToggle />
       <RemindersToggle />
+      <TimezoneSetting />
       {access.level !== "tier2" ? <Offers access={access} /> : null}
     </section>
   );

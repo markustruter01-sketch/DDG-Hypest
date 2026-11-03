@@ -19,6 +19,8 @@ export interface CurrentUser {
   display_name: string;
   bio: string | null;
   handle: string | null;
+  /** The member's IANA time zone (e.g. America/New_York); null until their browser sends one */
+  timezone: string | null;
 }
 
 export interface SignupRequest {
@@ -34,6 +36,12 @@ export interface SignupRequest {
      */
   display_name: string;
   adult_confirmed: true;
+  /**
+   * The browser's IANA time zone; an unknown name is ignored
+   * @minLength 1
+   * @maxLength 64
+   */
+  timezone?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -46,6 +54,12 @@ export interface UpdateProfileRequest {
   bio?: string | null;
   /** @pattern ^[a-z0-9_]{3,30}$ */
   handle?: string;
+  /**
+   * IANA time zone, e.g. America/New_York (400 if unknown)
+   * @minLength 1
+   * @maxLength 64
+   */
+  timezone?: string;
 }
 
 export interface LoginRequest {

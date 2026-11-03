@@ -26,6 +26,7 @@ import {
   deleteSessionFromRequest,
   type AuthUser,
 } from "../lib/session";
+import { isTimezone } from "../lib/timezone";
 import { authUser, requireUser } from "../middleware/require-user";
 import { sendEmail, siteUrl } from "../lib/email";
 
@@ -44,6 +45,7 @@ function toCurrentUser(user: AuthUser) {
     display_name: user.displayName,
     bio: user.bio,
     handle: user.handle,
+    timezone: user.timezone,
   };
 }
 
@@ -66,6 +68,7 @@ router.post("/auth/signup", async (req, res) => {
         passwordHash,
         displayName: parsed.data.display_name,
         bio: null,
+        timezone: isTimezone(parsed.data.timezone) ? parsed.data.timezone : null,
         adultConfirmedAt: new Date(),
         ...(referral ? { referredByCreatorId: referral.creatorId, referredAt: referral.at } : {}),
       })
@@ -144,7 +147,14 @@ router.patch("/auth/me", requireUser, async (req, res) => {
     return;
   }
 
-  const changes: { displayName?: string; bio?: string | null; handle?: string } = {};
+  const changes: { displayName?: string; bio?: string | null; handle?: string; timezone?: string } = {};
+  if (parsed.data.timezone !== undefined) {
+    if (!isTimezone(parsed.data.timezone)) {
+      res.status(400).json({ message: "unknown time zone" });
+      return;
+    }
+    changes.timezone = parsed.data.timezone;
+  }
   if (parsed.data.display_name !== undefined) {
     changes.displayName = parsed.data.display_name;
   }
