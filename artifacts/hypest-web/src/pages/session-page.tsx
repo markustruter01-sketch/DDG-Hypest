@@ -5,7 +5,6 @@ import { Check, Minus, Plus } from "lucide-react";
 import {
   getGetTrainingQueryKey,
   useCompleteSession,
-  useLogSet,
   useReportPain,
   type PainResult,
   type PlanItemView,
@@ -16,6 +15,9 @@ import { nextSession } from "@/pages/today-page";
 import { serverErrorText } from "@/lib/server-error";
 import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
 import { useRestTimer, useScreenAwake } from "@/lib/gym";
+import { platesFor, platesText } from "@/lib/plates";
+import { saveSet, useWaitingSets } from "@/lib/offline-sets";
+import { queueKey } from "@/lib/offline-queue";
 
 type SetEntry = { done: boolean; reps: number; load: number; seconds: number };
 
@@ -40,7 +42,7 @@ export function SessionPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const complete = useCompleteSession({ request });
-  const logSet = useLogSet({ request });
+  const waiting = useWaitingSets();
   const session = training.data?.plan?.sessions.find((s) => s.id === sessionId) ?? null;
   const canLog = training.data?.access.level === "tier2";
   const units = useUnits();
@@ -50,6 +52,7 @@ export function SessionPage() {
   const rest = restTimer.left;
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hurtOpen, setHurtOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
   const [startedAt] = useState(() => Date.now());
   const [finished, setFinished] = useState<FinishStats | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -80,15 +83,15 @@ export function SessionPage() {
     if (nowDone) {
       restTimer.start(item!.rest_seconds);
       if (canLog) {
-        try {
-          await logSet.mutateAsync({ itemId, setNumber: i + 1, data: {
-            reps: item!.measure === "reps" ? entry.reps : null,
-            seconds: item!.measure === "time" ? entry.seconds : null,
-            load_kg: item!.weighted ? toKg(entry.load, units) : null,
-          } });
-        } catch {
+        // No signal in the gym: the set is kept on the phone and sent when the signal is back (build plan 1.6).
+        const where = await saveSet(itemId, i + 1, {
+          reps: item!.measure === "reps" ? entry.reps : null,
+          seconds: item!.measure === "time" ? entry.seconds : null,
+          load_kg: item!.weighted ? toKg(entry.load, units) : null,
+        });
+        if (where === "refused") {
           update(i, { done: false });
-          setSaveError(`Set ${i + 1} didn't save (no signal?). Tap it again.`);
+          setSaveError(`Set ${i + 1} wasn't saved (the server refused it). Refresh the app and try again.`);
           return;
         }
         setSaveError(null);
@@ -134,11 +137,13 @@ export function SessionPage() {
 
   const total = session.items.length;
   const last = index === total - 1;
+  const anyTicked = Object.values(sets).some((list) => list.some((e) => e.done));
+  const plates = item.barbell && item.weighted ? platesFor(entries.find((e) => !e.done)?.load ?? entries.at(-1)?.load ?? 0, units) : null;
 
   return (
     <main className="player session">
       <div className="page-header">
-        <Link className="text-link" to="/" style={{ color: "var(--color-on-dark)" }}>✕ End</Link>
+        <button type="button" className="text-link end-link" onClick={() => (anyTicked ? setEndOpen(true) : navigate("/"))}>✕ End</button>
         <span className="label" style={{ color: "var(--color-on-dark-muted)" }}>{index + 1} / {total}</span>
       </div>
       <div className="progress" role="img" aria-label={`Exercise ${index + 1} of ${total}`}>
@@ -151,6 +156,7 @@ export function SessionPage() {
         <h1 className="hero-title" style={{ margin: 0, fontSize: "2.6rem" }}>{item.name}</h1>
         <p className="player-body">{item.cue}</p>
         <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${targetLoad(item.target_load_kg, units)} ${units}` : ""}</span>
+        {plates ? <span className="plates label">Bar {plates.bar} {units} · {platesText(plates, units)}</span> : null}
       </div>
 
       <ol className="set-list">
@@ -168,10 +174,14 @@ export function SessionPage() {
             <button type="button" className="set-tick" aria-pressed={e.done} aria-label={`Set ${i + 1} done`} onClick={() => tick(i)}>
               <Check size={20} strokeWidth={3.5} />
             </button>
+            {e.done && canLog && waiting.includes(queueKey(itemId, i + 1)) ? <span className="set-sync label">on phone</span> : null}
           </li>
         ))}
       </ol>
       {!canLog ? <p className="label lock-note">Save your numbers with Coaching</p> : null}
+      {canLog && waiting.length ? (
+        <p className="label lock-note" role="status">{waiting.length} {waiting.length === 1 ? "set" : "sets"} saved on this phone · they sync when you have signal</p>
+      ) : null}
       {saveError ? <p className="error-text error-on-dark" role="alert">{saveError}</p> : null}
 
       {rest > 0 ? (
@@ -193,16 +203,43 @@ export function SessionPage() {
 
       {finishError ? <p className="error-text" role="alert">{finishError}</p> : null}
       {hurtOpen ? <HurtSheet item={item} onClose={() => setHurtOpen(false)} /> : null}
+      {endOpen ? (
+        <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-label="End session?">
+          <div className="sheet">
+            <h2 className="section-title" style={{ margin: 0 }}>End this session?</h2>
+            <p className="screen-copy">
+              {canLog ? "Sets you ticked are saved. The session stays open, so you can finish it later from Today." : "The session stays open, so you can do it later from Today."}
+            </p>
+            <div className="button-row">
+              <button className="secondary-button" type="button" onClick={() => setEndOpen(false)}>Keep going</button>
+              <button className="primary-button" type="button" onClick={() => navigate("/")}>End</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
 
+/** − and + are 44 px (gym-floor taps); tap the number to type it on the phone's keypad (build plan 1.5). */
 function Stepper({ label, value, step, onChange, disabled }: { label: string; value: number; step: number; onChange: (v: number) => void; disabled: boolean }) {
+  const [typing, setTyping] = useState<string | null>(null);
+  const commit = () => {
+    const v = Number((typing ?? "").replace(",", "."));
+    if (typing !== null && Number.isFinite(v) && v >= 0 && v <= 2000) onChange(Math.round(v * 100) / 100);
+    setTyping(null);
+  };
   return (
     <span className={disabled ? "stepper stepper-locked" : "stepper"}>
-      <button type="button" aria-label={`Less ${label}`} disabled={disabled} onClick={() => onChange(Math.max(0, value - step))}><Minus size={16} /></button>
-      <b>{value}</b><small>{label}</small>
-      <button type="button" aria-label={`More ${label}`} disabled={disabled} onClick={() => onChange(value + step)}><Plus size={16} /></button>
+      <button type="button" aria-label={`Less ${label}`} disabled={disabled} onClick={() => onChange(Math.max(0, value - step))}><Minus size={18} /></button>
+      {typing !== null ? (
+        <input className="stepper-input" type="text" inputMode="decimal" autoFocus aria-label={label} value={typing}
+          onChange={(e) => setTyping(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setTyping(null); }} />
+      ) : (
+        <button type="button" className="stepper-value" aria-label={`${value} ${label}: tap to type`} disabled={disabled} onClick={() => setTyping(String(value))}><b>{value}</b></button>
+      )}
+      <small>{label}</small>
+      <button type="button" aria-label={`More ${label}`} disabled={disabled} onClick={() => onChange(value + step)}><Plus size={18} /></button>
     </span>
   );
 }

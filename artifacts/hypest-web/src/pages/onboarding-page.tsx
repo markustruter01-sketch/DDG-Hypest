@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import {
+import { saveOnboardingDraft,
   getGetTrainingQueryKey,
   useCreatePlan,
   usePreviewPlan,
@@ -10,7 +10,7 @@ import {
   type TrainingAnswers,
 } from "@workspace/api-client-react";
 import { Offers } from "@/components/offers";
-import { AREA_LABEL, EQUIPMENT_LABEL, EXPERIENCE_LABEL, GOAL_LABEL, coachById, dose, img, request, savePendingAnswers, useCoaches, useTraining } from "@/lib/coaching";
+import { AREA_LABEL, EQUIPMENT_LABEL, EXPERIENCE_LABEL, GOAL_LABEL, coachById, dose, img, request, useCoaches, useTraining } from "@/lib/coaching";
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 import { useUnits } from "@/lib/units";
 import { useAppConfig } from "@/lib/config";
@@ -114,7 +114,12 @@ export function OnboardingPage() {
   async function savePlan() {
     setError(null);
     if (!loggedIn) {
-      savePendingAnswers(answers);
+      try {
+        await saveOnboardingDraft(answers, request);
+      } catch (err) {
+        setError(serverErrorText(err));
+        return;
+      }
       navigate("/signup?then=plan");
       return;
     }

@@ -16,6 +16,13 @@ import './index.css';
 const queryClient = new QueryClient();
 reportUncaughtErrors();
 
+// Offline shell and install prompt (build plan 1.6). Published site only: a dev server must never be cached.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => undefined);
+  });
+}
+
 // The published site is static files, which can't send a frame-ancestors header, so the app itself refuses to
 // run inside another site's frame (stops click-jacking, e.g. a hidden "Delete account"). Dev previews are framed.
 const framed = import.meta.env.PROD && window.top !== window.self;

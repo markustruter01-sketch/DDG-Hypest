@@ -18,10 +18,6 @@ export interface AppConfig {
   ai: boolean;
   /** off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money */
   payments: AppConfigPayments;
-  /** Hypest's fee on sales through the creator's own link, in basis points (1000 = 10%) */
-  creator_brought_bps: number;
-  /** Hypest's fee on sales Hypest found, in basis points */
-  hypest_found_bps: number;
   prices: Prices;
   screening: Screening;
 }

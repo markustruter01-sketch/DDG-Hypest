@@ -9,6 +9,9 @@ import { alert } from "./lib/alerts";
 
 const app: Express = express();
 app.disable("x-powered-by");
+// The published app sits behind one proxy that adds the caller's address to X-Forwarded-For. Trust that one hop
+// (and no more) so req.ip is the member's address for the per-network limits. TRUST_PROXY_HOPS overrides it.
+app.set("trust proxy", Number(process.env["TRUST_PROXY_HOPS"] ?? 1));
 
 app.use(
   pinoHttp({

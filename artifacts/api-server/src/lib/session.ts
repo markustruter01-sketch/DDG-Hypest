@@ -11,7 +11,6 @@ export type AuthUser = {
   id: number;
   email: string;
   displayName: string;
-  bio: string | null;
   handle: string | null;
   timezone: string | null;
 };
@@ -21,7 +20,6 @@ export const authUserColumns = {
   id: usersTable.id,
   email: usersTable.email,
   displayName: usersTable.displayName,
-  bio: usersTable.bio,
   handle: usersTable.handle,
   timezone: usersTable.timezone,
 };
