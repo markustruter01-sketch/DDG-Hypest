@@ -10,7 +10,8 @@ import { EXERCISES } from "./library";
 
 /** Each entry: the word reported as the match, and its accepted forms. The forms are exactly the words the
  *  old substring list caught (e.g. "tingl" caught "tingling"), minus the false positives ("popular",
- *  "sharpen"). No new symptom words: additions are the physiologist's and Fable's call. */
+ *  "sharpen"), plus the plain-English forms of the same symptoms the old list missed (lightheaded, passed
+ *  out, bleeding, blurred vision: Fable, review of plan 1.2). New symptom categories stay the physiologist's call. */
 const RED_FLAGS: { word: string; forms: string }[] = [
   { word: "sharp", forms: "sharp" },
   { word: "stabbing", forms: "stabbing" },
@@ -19,9 +20,9 @@ const RED_FLAGS: { word: string; forms: string }[] = [
   { word: "pins and needles", forms: "pins and needles" },
   { word: "chest", forms: "chest" },
   { word: "heart", forms: "heart|heartbeat|heartburn" },
-  { word: "faint", forms: "faint|fainted|fainting|faintness" },
-  { word: "dizzy", forms: "dizzy" },
-  { word: "short of breath", forms: "short of breath" },
+  { word: "faint", forms: "faint|fainted|fainting|faintness|passed out|blacked out" },
+  { word: "dizzy", forms: "dizzy|dizziness|lightheaded|light-headed|light headed" },
+  { word: "short of breath", forms: "short of breath|shortness of breath" },
   { word: "can't breathe", forms: "can't breathe" },
   { word: "cannot breathe", forms: "cannot breathe" },
   { word: "swollen", forms: "swollen" },
@@ -29,14 +30,15 @@ const RED_FLAGS: { word: string; forms: string }[] = [
   { word: "pop", forms: "pop|pops|popped|popping" },
   { word: "can't bear weight", forms: "can't bear weight" },
   { word: "cannot bear weight", forms: "cannot bear weight" },
-  { word: "blood", forms: "blood|bloody|bloodied" },
-  { word: "vision", forms: "vision" },
+  { word: "blood", forms: "blood|bloody|bloodied|bleeding|bled" },
+  { word: "vision", forms: "vision|blurred|blurry" },
   { word: "headache", forms: "headache|headaches" },
 ];
 
 /** Gym phrases that contain a warning word but describe training, not a symptom (exercise names from the
  *  library are added automatically). Only multi-word phrases: a bare symptom word is never excused. */
-const GYM_PHRASES = ["chest press", "chest fly", "chest flies", "chest day", "chest workout", "chest stretch", "heart rate"];
+// "heart rate" is deliberately NOT excused: "heart rate wouldn't come down" is a symptom (Fable, review of plan 1.2).
+const GYM_PHRASES = ["chest press", "chest fly", "chest flies", "chest day", "chest workout", "chest stretch"];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const ALLOWED = [...new Set([...EXERCISES.map((e) => e.name.toLowerCase()), ...GYM_PHRASES])]
