@@ -957,6 +957,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /onboarding/draft:
+    put:
+      operationId: saveOnboardingDraft
+      tags: [coaching]
+      summary: Public. Keep these answers for a day so signup or login (in any tab) saves them as the profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingAnswers"
+      responses:
+        "204":
+          description: Saved; the hypest_draft cookie holds the key
+        "400":
+          description: Invalid answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/training:
     get:
       operationId: getTraining

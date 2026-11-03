@@ -64,16 +64,3 @@ export function dose(item: { sets: number; reps: number | null; seconds: number 
 }
 
 /** Onboarding answers kept in the browser until the account exists. */
-const PENDING_KEY = "hypest_pending_answers";
-export function savePendingAnswers(a: TrainingAnswers) {
-  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(a)); } catch { /* storage blocked: answers just aren't carried over */ }
-}
-export function takePendingAnswers(): TrainingAnswers | null {
-  try {
-    const raw = sessionStorage.getItem(PENDING_KEY);
-    sessionStorage.removeItem(PENDING_KEY);
-    return raw ? (JSON.parse(raw) as TrainingAnswers) : null;
-  } catch {
-    return null;
-  }
-}

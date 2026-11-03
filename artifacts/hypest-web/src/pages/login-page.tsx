@@ -1,14 +1,15 @@
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetCurrentUserQueryKey, useLogin } from "@workspace/api-client-react";
 import { serverErrorText } from "@/lib/server-error";
-import { savePendingProfile } from "@/lib/pending";
+import { afterAuth } from "@/lib/pending";
 
 const request = { credentials: "include" as const };
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const login = useLogin({ request });
   const [email, setEmail] = useState("");
@@ -24,7 +25,7 @@ export function LoginPage() {
         data: { email, password },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-      await savePendingProfile();
+      await afterAuth(location.search);
       navigate("/");
     } catch (err) {
       setError(serverErrorText(err));
@@ -68,7 +69,7 @@ export function LoginPage() {
         <button className="primary-button" type="submit" disabled={login.isPending}>
           Log in
         </button>
-        <Link className="text-link" to="/signup">
+        <Link className="text-link" to={`/signup${location.search}`}>
           Sign up
         </Link>
         <Link className="text-link" to="/forgot">

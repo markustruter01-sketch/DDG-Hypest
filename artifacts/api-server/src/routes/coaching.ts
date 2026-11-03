@@ -20,7 +20,6 @@ import {
   ReportPainResponse,
   ResumePlanBody,
   ResumePlanResponse,
-  SaveTrainingProfileBody,
   SetUnitsBody,
 } from "@workspace/api-zod";
 import {
@@ -43,22 +42,10 @@ import { notesPrompt, parseNotes } from "../coaching/ai-notes";
 import { askClaude } from "../lib/ai";
 import { alert } from "../lib/alerts";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
-import { screeningResult, type ScreeningInput } from "../coaching/screening";
+import { answersError, checkAnswers, saveProfile, type Answers } from "../coaching/profile";
+import { saveDraft } from "../coaching/draft";
 
 const router: IRouter = Router();
-
-type Answers = {
-  coach_id: string;
-  goal: Goal;
-  experience: Experience;
-  days_per_week: number;
-  minutes: number;
-  equipment: Equipment[];
-  avoid_areas: Area[];
-  units?: "kg" | "lb";
-  health_accepted: true;
-  screening?: ScreeningInput;
-};
 
 function bad(res: Response, issues: { message: string }[]) {
   res.status(400).json({ message: issues[0]?.message ?? "invalid request" });
@@ -66,14 +53,6 @@ function bad(res: Response, issues: { message: string }[]) {
 
 function coachView(c: Coach) {
   return { id: c.id, name: c.name, discipline: c.discipline, title: c.title, personality: c.personality, good_for: c.goodFor, photo: c.photo, goals: c.goals };
-}
-
-/** A coach must exist and offer the chosen goal. */
-function answersError(a: Answers): string | null {
-  const coach = COACH_BY_ID.get(a.coach_id);
-  if (!coach) return "unknown coach";
-  if (!coach.goals.includes(a.goal)) return "this coach does not offer that goal";
-  return null;
 }
 
 function toInput(a: Answers, block: number, targetLoads?: Record<string, number>): PlanInput {
@@ -225,6 +204,13 @@ router.post("/coaching/preview", (req, res) => {
   }));
 });
 
+// Answers given before signup are kept server-side for a day under an httpOnly cookie (build plan 1.4).
+router.put("/onboarding/draft", async (req, res) => {
+  const saved = await saveDraft(req, res, req.body);
+  if (!saved.ok) return void res.status(400).json({ message: saved.message });
+  res.status(204).end();
+});
+
 // ---------- Member ----------
 
 // Every block except the current one, newest first, with how many sessions were done.
@@ -265,19 +251,9 @@ router.put("/me/training/units", requireUser, async (req, res) => {
 
 router.put("/me/training/profile", requireUser, async (req, res) => {
   const user = authUser(res);
-  const parsed = SaveTrainingProfileBody.strict().safeParse(req.body);
-  if (!parsed.success) return bad(res, parsed.error.issues);
-  const a = parsed.data as Answers;
-  const err = answersError(a);
-  if (err) return void res.status(400).json({ message: err });
-  const check = screeningResult(a.screening);
-  if (!check.ok) return void res.status(400).json({ message: check.message });
-  const values = {
-    coachId: a.coach_id, goal: a.goal, experience: a.experience, daysPerWeek: a.days_per_week, minutes: a.minutes,
-    equipment: [...new Set(a.equipment)], avoidAreas: [...new Set(a.avoid_areas)], units: a.units ?? "kg", healthAcceptedAt: new Date(),
-    screening: check.record, updatedAt: new Date(),
-  };
-  await db.insert(trainingProfilesTable).values({ userId: user.id, ...values }).onConflictDoUpdate({ target: trainingProfilesTable.userId, set: values });
+  const checked = checkAnswers(req.body);
+  if (!checked.ok) return void res.status(400).json({ message: checked.message });
+  await saveProfile(user.id, checked.values);
   res.json(GetTrainingResponse.parse(await trainingState(user.id)));
 });
 
