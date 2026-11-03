@@ -5,7 +5,9 @@
  * The queue logic is pure and storage-agnostic (checked by offline-queue.check.ts); the app uses the
  * IndexedDB store below.
  */
-export type QueuedSet = { key: string; itemId: number; setNumber: number; body: { reps: number | null; seconds: number | null; load_kg: number | null }; queuedAt: number };
+/** userId: whose set this is. Only that member's login sends it (a shared phone never sends A's sets as B). Absent on
+ *  entries queued before build plan 1.11; those go with whoever is logged in. */
+export type QueuedSet = { key: string; userId?: number; itemId: number; setNumber: number; body: { reps: number | null; seconds: number | null; load_kg: number | null }; queuedAt: number };
 
 export interface QueueStore {
   all(): Promise<QueuedSet[]>;
@@ -18,6 +20,8 @@ export type SendOutcome = "sent" | "retry" | "drop";
 
 export const queueKey = (itemId: number, setNumber: number) => `${itemId}:${setNumber}`;
 
+const mine = (e: QueuedSet, owner: number | null) => owner !== null && (e.userId === undefined || e.userId === owner);
+
 export function memoryStore(): QueueStore {
   const map = new Map<string, QueuedSet>();
   return {
@@ -27,24 +31,26 @@ export function memoryStore(): QueueStore {
   };
 }
 
-/** Keeps the latest numbers for a set (re-ticking replaces), sends oldest first, stops at the first "retry". */
-export function createQueue(store: QueueStore, send: (e: QueuedSet) => Promise<SendOutcome>) {
+/** Keeps the latest numbers for a set (re-ticking replaces), sends oldest first, stops at the first "retry".
+ *  owner() is the logged-in member (null: nobody); only their sets are counted or sent. */
+export function createQueue(store: QueueStore, send: (e: QueuedSet) => Promise<SendOutcome>, owner: () => number | null = () => 0) {
   let flushing: Promise<{ sent: number; dropped: number; left: number }> | null = null;
   return {
     add: (itemId: number, setNumber: number, body: QueuedSet["body"], now = Date.now()) =>
-      store.put({ key: queueKey(itemId, setNumber), itemId, setNumber, body, queuedAt: now }),
-    pending: async () => (await store.all()).map((e) => e.key),
+      store.put({ key: queueKey(itemId, setNumber), userId: owner() ?? undefined, itemId, setNumber, body, queuedAt: now }),
+    pending: async () => (await store.all()).filter((e) => mine(e, owner())).map((e) => e.key),
     flush(): Promise<{ sent: number; dropped: number; left: number }> {
       flushing ??= (async () => {
         let sent = 0, dropped = 0;
         try {
-          for (const e of await store.all()) {
+          const who = owner();
+          for (const e of (await store.all()).filter((x) => mine(x, who))) {
             const outcome = await send(e);
             if (outcome === "retry") break;
             await store.remove(e.key);
             if (outcome === "sent") sent += 1; else dropped += 1;
           }
-          return { sent, dropped, left: (await store.all()).length };
+          return { sent, dropped, left: (await store.all()).filter((x) => mine(x, who)).length };
         } finally {
           flushing = null;
         }

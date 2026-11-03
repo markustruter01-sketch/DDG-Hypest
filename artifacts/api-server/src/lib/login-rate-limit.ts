@@ -31,8 +31,9 @@ export async function isLoginRateLimited(email: string, ip: string): Promise<boo
 export async function recordLoginFailure(email: string, ip: string): Promise<void> {
   await db.insert(authFailuresTable).values({ email, ip });
   await db.delete(authFailuresTable).where(lt(authFailuresTable.at, cutoff()));
-  // Exactly at the limit, so one attack sends one alert. The email itself is not sent to the chat.
-  if ((await failures(email)) === MAX_FAILURES_ALL_NETWORKS) {
+  // At or over the limit: failures that arrive together can step past 100 without any of them seeing exactly 100.
+  // alert() sends the same title at most once per 10 minutes, so an attack is one message. No email in the chat.
+  if ((await failures(email)) >= MAX_FAILURES_ALL_NETWORKS) {
     void alert("warning", "Login attack on one account", `${MAX_FAILURES_ALL_NETWORKS} failed logins for one email from many networks in 15 minutes. That email is locked for everyone for 15 minutes.`);
   }
 }

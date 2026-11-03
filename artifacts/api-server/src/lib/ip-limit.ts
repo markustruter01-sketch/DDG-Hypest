@@ -19,12 +19,28 @@ export const IP_LIMITS: Record<IpKind, { max: number; windowMs: number }[]> = {
 };
 const KEEP_MS = 24 * 60 * MIN;
 
-/** The caller's address. app.ts sets "trust proxy" so this is the member's address behind Replit's proxy, not the proxy's. */
+/**
+ * The caller's network. app.ts sets "trust proxy" so this is the member's address behind Replit's proxy, not the proxy's.
+ * IPv6 counts by /64 (one household or phone gets a whole /64, so each address in it is not a separate network).
+ */
 export function clientIp(req: Request): string {
-  return req.ip ?? req.socket.remoteAddress ?? "unknown";
+  return networkOf(req.ip ?? req.socket.remoteAddress ?? "unknown");
 }
 
-const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+/** IPv4 (and IPv4-mapped IPv6) as is; IPv6 → its first four groups, e.g. "2001:db8:1:2::/64". Pure. */
+export function networkOf(ip: string): string {
+  const v4 = /^(?:::ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
+  if (v4) return v4[1]!;
+  if (!ip.includes(":")) return ip;
+  const [head = "", tail = ""] = ip.split("%")[0]!.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = ip.includes("::") ? (tail ? tail.split(":") : []) : [];
+  const groups = ip.includes("::") ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right] : left;
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return ip;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
+
+const LOOPBACK = new Set(["127.0.0.1", "0:0:0:0::/64"]); // ::1 is 0:0:0:0::/64 after networkOf
 
 /** Local checks (dev tools on, so the server only listens on this machine) create hundreds of accounts from 127.0.0.1. */
 function exempt(ip: string): boolean {

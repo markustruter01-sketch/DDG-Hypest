@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { devLoginProblem } from "./dev-login";
+import { networkOf } from "./ip-limit";
 
 let n = 0;
 const ok = (cond: unknown, msg: string) => { assert.ok(cond, msg); n += 1; };
@@ -20,6 +21,15 @@ for (const k of ["REPLIT_DEPLOYMENT", "REPL_ID", "REPLIT_DEV_DOMAIN", "REPLIT_DO
 }
 ok(devLoginProblem({ ...dev, HOST: "0.0.0.0" }) !== null, "dev login bound to every interface: refused");
 ok(devLoginProblem({ ...dev, HOST: "localhost" }) === null, "dev login on HOST=localhost: allowed");
+
+// ---------- networks (build plan 1.11): IPv6 counts by /64 ----------
+ok(networkOf("203.0.113.9") === "203.0.113.9" && networkOf("::ffff:203.0.113.9") === "203.0.113.9", "IPv4, plain or mapped");
+ok(networkOf("2001:db8:1:2:aaaa:bbbb:cccc:dddd") === "2001:db8:1:2::/64", "full IPv6 address → its /64");
+ok(networkOf("2001:db8:1:2::1") === networkOf("2001:0db8:0001:0002:ffff::9"), "two addresses in one /64 are one network");
+ok(networkOf("2001:db8:1:2::1") !== networkOf("2001:db8:1:3::1"), "the next /64 is another network");
+ok(networkOf("2001:db8::1") === "2001:db8:0:0::/64" && networkOf("::1") === "0:0:0:0::/64", ":: expanded");
+ok(networkOf("fe80::1%eth0") === "fe80:0:0:0::/64", "zone id ignored");
+ok(networkOf("unknown") === "unknown" && networkOf("1:2:3") === "1:2:3", "anything else passes through unchanged");
 
 // ---------- the built server really refuses to start ----------
 let root = process.cwd();

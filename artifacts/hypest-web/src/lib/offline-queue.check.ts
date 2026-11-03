@@ -36,6 +36,27 @@ const run = async () => {
   await Promise.all([q3.flush(), q3.flush()]);
   ok(calls === 1, "concurrent flushes don't double-send");
 
+  // Build plan 1.11: a shared phone. A's sets wait for A; B's login never sends (or loses) them.
+  {
+    let who: number | null = 1;
+    const sentBy: string[] = [];
+    const q4 = createQueue(memoryStore(), async (e) => { sentBy.push(`${who}:${e.key}`); return who === e.userId ? "sent" : "drop"; }, () => who);
+    await q4.add(4, 1, body(5), 1); // A, logged in, no signal
+    who = null; // A logs out
+    ok((await q4.pending()).length === 0 && (await q4.flush()).sent === 0 && sentBy.length === 0, "logged out: nothing shown, nothing sent");
+    who = 2; // B logs in on the same phone
+    await q4.add(5, 1, body(6), 2);
+    ok((await q4.pending()).join() === "5:1", "B sees only B's waiting set");
+    const r4 = await q4.flush();
+    ok(r4.sent === 1 && r4.dropped === 0 && sentBy.join() === "2:5:1", "B's flush sends only B's set; A's is never sent as B");
+    who = 1; // A again
+    const r5 = await q4.flush();
+    ok(r5.sent === 1 && sentBy.at(-1) === "1:4:1", "A's set goes up when A logs in again");
+    const legacy = memoryStore();
+    await legacy.put({ key: "6:1", itemId: 6, setNumber: 1, body: body(1), queuedAt: 1 }); // queued before owners existed
+    ok((await createQueue(legacy, async () => "sent", () => 7).flush()).sent === 1, "entries from before 1.11 go with whoever is logged in");
+  }
+
   ok(outcomeOf(null) === "retry" && outcomeOf(503) === "retry" && outcomeOf(429) === "retry", "no signal / server busy: retry");
   ok(outcomeOf(401) === "retry", "logged out while sets wait: kept for the next login, never dropped");
   ok(outcomeOf(200) === "sent" && outcomeOf(402) === "drop" && outcomeOf(404) === "drop", "success sent; refused dropped");

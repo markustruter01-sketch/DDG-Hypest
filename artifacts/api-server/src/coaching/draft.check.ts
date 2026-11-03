@@ -66,8 +66,9 @@ if (api) {
     const ip = `198.19.${Date.now() % 250}.${Math.floor(Math.random() * 250)}`; // 198.18.0.0/15 is for testing
     const other = `198.19.251.${Math.floor(Math.random() * 250)}`;
     for (const x of [ip, other]) await db.delete(authAttemptsTable).where(eq(authAttemptsTable.ip, x));
-    await db.insert(authAttemptsTable).values(Array.from({ length: 60 }, () => ({ ip, kind: "draft" })));
+    await db.insert(authAttemptsTable).values(Array.from({ length: 59 }, () => ({ ip, kind: "draft" })));
     const put = (from: string) => fetch(`${api}/onboarding/draft`, { method: "PUT", headers: { "content-type": "application/json", "x-forwarded-for": from }, body: JSON.stringify(answers) });
+    ok((await put(ip)).status === 204, "60th draft from one network in 15 minutes: allowed");
     const blocked = await put(ip);
     ok(blocked.status === 429 && Number(blocked.headers.get("retry-after")) > 0, "61st draft from one network in 15 minutes: 429");
     ok((await put(other)).status === 204, "another network can still save a draft");

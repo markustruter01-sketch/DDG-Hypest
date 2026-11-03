@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { logSet } from "@workspace/api-client-react";
+import { getGetCurrentUserQueryKey, logSet, useGetCurrentUser } from "@workspace/api-client-react";
 import { request } from "@/lib/coaching";
 import { createQueue, indexedDbStore, memoryStore, outcomeOf, type QueuedSet, type QueueStore } from "@/lib/offline-queue";
 
@@ -16,6 +16,9 @@ const statusOf = (err: unknown): number | null => {
   return typeof s === "number" ? s : null;
 };
 
+/** The logged-in member: only their queued sets are shown or sent (build plan 1.11). */
+let owner: number | null = null;
+
 const queue = createQueue(store, async (e: QueuedSet) => {
   try {
     await logSet(e.itemId, e.setNumber, e.body, request);
@@ -23,7 +26,7 @@ const queue = createQueue(store, async (e: QueuedSet) => {
   } catch (err) {
     return outcomeOf(statusOf(err));
   }
-});
+}, () => owner);
 
 let waiting: string[] = [];
 const listeners = new Set<() => void>();
@@ -38,8 +41,9 @@ export async function flushSets(): Promise<void> {
   await publish();
 }
 
-/** Try to send now; with no signal (or a network error) keep it on the phone. Returns where it ended up. */
-export async function saveSet(itemId: number, setNumber: number, body: QueuedSet["body"]): Promise<"synced" | "on-phone" | "refused"> {
+/** Try to send now; with no signal (or a network error) keep it on the phone. Returns where it ended up:
+ *  "logged-out" is kept on the phone too, and goes up after the member logs in again. */
+export async function saveSet(itemId: number, setNumber: number, body: QueuedSet["body"]): Promise<"synced" | "on-phone" | "logged-out" | "refused"> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     await queue.add(itemId, setNumber, body);
     await publish();
@@ -49,11 +53,11 @@ export async function saveSet(itemId: number, setNumber: number, body: QueuedSet
     await logSet(itemId, setNumber, body, request);
     return "synced";
   } catch (err) {
-    const outcome = outcomeOf(statusOf(err));
-    if (outcome === "drop") return "refused";
+    const status = statusOf(err);
+    if (outcomeOf(status) === "drop") return "refused";
     await queue.add(itemId, setNumber, body);
     await publish();
-    return "on-phone";
+    return status === 401 ? "logged-out" : "on-phone";
   }
 }
 
@@ -62,6 +66,12 @@ export async function saveSet(itemId: number, setNumber: number, body: QueuedSet
 export function useWaitingSets(): string[] {
   const keys = useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => waiting);
   const [, tick] = useState(0);
+  const me = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false }, request });
+  const userId = me.data?.id ?? null;
+  useEffect(() => {
+    owner = userId;
+    void flushSets();
+  }, [userId]);
   useEffect(() => {
     void flushSets().then(() => tick((t) => t + 1));
     const onOnline = () => void flushSets();
