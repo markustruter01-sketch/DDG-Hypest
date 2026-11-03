@@ -88,7 +88,7 @@ router.post("/auth/password/reset", async (req, res) => {
   if (!user) return void res.status(400).json({ message: "This link isn't valid." });
   await db.delete(authFailuresTable).where(eq(authFailuresTable.email, user.email));
   await createSession(res, user.id);
-  res.json(ResetPasswordResponse.parse({ id: user.id, email: user.email, display_name: user.displayName, handle: user.handle }));
+  res.json(ResetPasswordResponse.parse({ id: user.id, email: user.email, display_name: user.displayName, handle: user.handle, timezone: user.timezone }));
 });
 
 export default router;
