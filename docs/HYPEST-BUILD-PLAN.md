@@ -56,7 +56,11 @@ parallel on separate branches unless marked "after".
 - **Who:** Opus. **Spec:** cross-user attempts on `/me/items/*` and `/me/sessions/*` in `*.check.ts`; 4- and 6-day and 30-minute plans in `engine.check`; `validatePlan` rejecting a bad plan; credit consumption on `/me/plans/next`.
 
 ### 1.10 Markus
-- Merge 1.1–1.9 as they pass review; Replit Pull; `pnpm --filter @workspace/db run push` (adds `users.timezone`, `pain_events`, the draft table); publish; confirm the app installs on an Android phone and logs a set with Wi-Fi off.
+- Merge 1.1–1.9 as they pass review (1.1–1.3 merged as #29–#31; 1.4–1.9 are PR #32, reviewed and approved 4 Nov); Replit Pull; `pnpm --filter @workspace/db run push` (adds `users.timezone`, `pain_events`, `onboarding_drafts`, `auth_attempts`, `auth_failures.ip`); publish; confirm the app installs on an Android phone and logs a set with Wi-Fi off.
+
+### 1.11 Hardening left over from Fable's review of #32
+- **Who:** Opus. **Review:** Fable (security). **Spec:** (a) `PUT /onboarding/draft` goes through `allowIp` as a fourth kind, 60 per network per 15 min, with a check in `draft.check.ts`; (b) `outcomeOf(401)` is `retry`, not `drop`, with a case in `offline-queue.check.ts`; (c) a global per-email backstop in `login-rate-limit.ts`: 100 failures in 15 min across all networks → 429 for everyone and one `alert()`; the per-network 10 stays; `ip-limit.check.ts` covers it; (d) delete the dead marketplace CSS from App.css. One branch `phase-1b`, one PR.
+- **Prompt (Opus):** "Do step 1.11 of docs/HYPEST-BUILD-PLAN.md on branch `phase-1b`, tests for each part, one PR. Then stop and tell me it's ready for Fable."
 
 ---
 
