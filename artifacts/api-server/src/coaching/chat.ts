@@ -8,7 +8,7 @@ import { redFlag, STOP_MESSAGE } from "./safety";
  * - wellbeing words (self-harm, not eating) → a fixed message pointing to real help; no AI reply.
  * DRAFT wording and word lists: for the physiologist's and Markus's review before AI is switched on.
  */
-export const DAILY_MESSAGES = 20; // per member per Brisbane day: keeps cost and misuse bounded
+export const DAILY_MESSAGES = 20; // per member per day, in the member's own time zone: keeps cost and misuse bounded
 export const MESSAGE_MAX = 500;
 export const HISTORY = 12; // earlier messages sent with each question
 

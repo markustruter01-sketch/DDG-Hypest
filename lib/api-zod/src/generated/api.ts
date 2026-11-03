@@ -28,11 +28,15 @@ export const signupBodyDisplayNameMax = 60;
 
 
 
+export const signupBodyTimezoneMax = 64;
+
+
 export const SignupBody = zod.object({
   "email": zod.string().email(),
   "password": zod.string().min(signupBodyPasswordMin).max(signupBodyPasswordMax),
   "display_name": zod.string().min(1).max(signupBodyDisplayNameMax),
-  "adult_confirmed": zod.literal(true)
+  "adult_confirmed": zod.literal(true),
+  "timezone": zod.string().min(1).max(signupBodyTimezoneMax).optional().describe('The browser\'s IANA time zone; an unknown name is ignored')
 })
 
 export const SignupResponse = zod.object({
@@ -40,7 +44,8 @@ export const SignupResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "bio": zod.string().nullable(),
-  "handle": zod.string().nullable()
+  "handle": zod.string().nullable(),
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
 
 
@@ -62,7 +67,8 @@ export const LoginResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "bio": zod.string().nullable(),
-  "handle": zod.string().nullable()
+  "handle": zod.string().nullable(),
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
 
 
@@ -81,7 +87,8 @@ export const GetCurrentUserResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "bio": zod.string().nullable(),
-  "handle": zod.string().nullable()
+  "handle": zod.string().nullable(),
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
 
 
@@ -96,10 +103,14 @@ export const updateCurrentUserBodyBioMax = 500;
 export const updateCurrentUserBodyHandleRegExp = new RegExp('^[a-z0-9_]{3,30}$');
 
 
+export const updateCurrentUserBodyTimezoneMax = 64;
+
+
 export const UpdateCurrentUserBody = zod.object({
   "display_name": zod.string().min(1).max(updateCurrentUserBodyDisplayNameMax).optional(),
   "bio": zod.string().max(updateCurrentUserBodyBioMax).nullish(),
-  "handle": zod.string().regex(updateCurrentUserBodyHandleRegExp).optional()
+  "handle": zod.string().regex(updateCurrentUserBodyHandleRegExp).optional(),
+  "timezone": zod.string().min(1).max(updateCurrentUserBodyTimezoneMax).optional().describe('IANA time zone, e.g. America\/New_York (400 if unknown)')
 })
 
 export const UpdateCurrentUserResponse = zod.object({
@@ -107,7 +118,8 @@ export const UpdateCurrentUserResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "bio": zod.string().nullable(),
-  "handle": zod.string().nullable()
+  "handle": zod.string().nullable(),
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
 
 
@@ -181,7 +193,8 @@ export const ResetPasswordResponse = zod.object({
   "email": zod.string(),
   "display_name": zod.string(),
   "bio": zod.string().nullable(),
-  "handle": zod.string().nullable()
+  "handle": zod.string().nullable(),
+  "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
 
 

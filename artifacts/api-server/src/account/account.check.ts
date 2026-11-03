@@ -51,7 +51,11 @@ const answers = { coach_id: "rex", goal: "muscle", experience: "beginner", days_
 }
 
 // ---------- set up a member with a plan and a logged set ----------
-ok((await A("POST", "/auth/signup", { email, password, display_name: "Account Check", adult_confirmed: true })).status === 201, "signup");
+const signed = await A("POST", "/auth/signup", { email, password, display_name: "Account Check", adult_confirmed: true, timezone: "America/New_York" });
+ok(signed.status === 201 && signed.json.timezone === "America/New_York", "signup saves the browser's time zone");
+ok((await A("PATCH", "/auth/me", { timezone: "Mars/Base" })).status === 400, "unknown time zone refused");
+ok((await A("PATCH", "/auth/me", { timezone: "Australia/Perth" })).json.timezone === "Australia/Perth", "time zone changed on Me");
+ok((await A("GET", "/auth/me")).json.timezone === "Australia/Perth", "time zone kept");
 const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
 const userId = user!.id;
 ok((await A("PUT", "/me/training/profile", answers)).status === 200, "profile saved");

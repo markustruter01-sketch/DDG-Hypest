@@ -13,6 +13,7 @@ export type AuthUser = {
   displayName: string;
   bio: string | null;
   handle: string | null;
+  timezone: string | null;
 };
 
 /** Single source for the user fields the API loads for a logged-in user. */
@@ -22,6 +23,7 @@ export const authUserColumns = {
   displayName: usersTable.displayName,
   bio: usersTable.bio,
   handle: usersTable.handle,
+  timezone: usersTable.timezone,
 };
 
 declare global {

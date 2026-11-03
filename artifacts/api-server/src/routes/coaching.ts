@@ -35,6 +35,7 @@ import {
 } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { devToolsOn } from "../lib/dev-login";
+import { localDay, localWeekStart } from "../lib/timezone";
 import { COACH_BY_ID, COACHES, EXERCISE_BY_ID, type Area, type Coach, type Equipment, type Experience, type Goal } from "../coaching/library";
 import { buildPlan, findSwap, nextLoads, WEEKS, type Plan, type PlanInput } from "../coaching/engine";
 import { redFlag, STOP_MESSAGE } from "../coaching/safety";
@@ -463,9 +464,10 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     .from(planSessionsTable)
     .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
     .where(eq(plansTable.userId, user.id));
-  const days = new Set(done.flatMap((d) => (d.completedAt ? [brisbaneDay(d.completedAt)] : [])));
+  const tz = user.timezone;
+  const days = new Set(done.flatMap((d) => (d.completedAt ? [localDay(d.completedAt, tz)] : [])));
   let streak = 0;
-  let day = brisbaneDay(new Date());
+  let day = localDay(new Date(), tz);
   if (!days.has(day)) day -= 1; // today not trained yet still keeps yesterday's streak
   while (days.has(day)) { streak += 1; day -= 1; }
 
@@ -483,7 +485,7 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     if (l.loadKg === null || l.reps === null) continue;
     const b = best.get(l.exerciseId);
     if (!b || l.loadKg > b.load) best.set(l.exerciseId, { load: l.loadKg, reps: l.reps });
-    const wk = weekStart(l.createdAt);
+    const wk = localWeekStart(l.createdAt, tz);
     volume.set(wk, (volume.get(wk) ?? 0) + l.loadKg * l.reps);
   }
   res.json(GetProgressResponse.parse({
@@ -493,17 +495,6 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     weekly_volume: [...volume].map(([week_start, volume_kg]) => ({ week_start, volume_kg: Math.round(volume_kg) })).sort((a, b) => a.week_start.localeCompare(b.week_start)).slice(-8),
   }));
 });
-
-/** Day number in Brisbane time (UTC+10, no daylight saving). */
-function brisbaneDay(d: Date): number {
-  return Math.floor((d.getTime() + 10 * 3600_000) / 86_400_000);
-}
-/** Monday of the Brisbane week, as YYYY-MM-DD. */
-function weekStart(d: Date): string {
-  const day = brisbaneDay(d);
-  const weekday = (day + 3) % 7; // day 0 (1970-01-01) was a Thursday → Monday = 0
-  return new Date((day - weekday) * 86_400_000).toISOString().slice(0, 10);
-}
 
 // ---------- Development only ----------
 

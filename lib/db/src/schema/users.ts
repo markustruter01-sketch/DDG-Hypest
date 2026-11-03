@@ -17,6 +17,8 @@ export const usersTable = pgTable(
     adultConfirmedAt: timestamp("adult_confirmed_at").notNull(),
     // Stripe Customer created by the first checkout; used for the billing portal.
     stripeCustomerId: text("stripe_customer_id"),
+    // The member's IANA time zone (e.g. "America/New_York"), from their browser; null until it is first sent.
+    timezone: text("timezone"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

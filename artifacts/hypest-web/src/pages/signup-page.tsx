@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getGetCurrentUserQueryKey, useSignup } from "@workspace/api-client-react";
 import { serverErrorText } from "@/lib/server-error";
 import { savePendingProfile } from "@/lib/pending";
+import { browserTimezone } from "@/lib/time";
 
 const request = { credentials: "include" as const };
 
@@ -31,6 +32,7 @@ export function SignupPage() {
           password,
           display_name: displayName,
           adult_confirmed: true,
+          timezone: browserTimezone(),
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });

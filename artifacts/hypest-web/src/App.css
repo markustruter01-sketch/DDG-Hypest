@@ -1320,6 +1320,7 @@ textarea.text-input { resize: vertical; }
 /* Me: kg / lb */
 .units-toggle { display: flex; align-items: center; gap: var(--space-2); }
 .units-toggle .label { margin-right: auto; }
+.timezone-setting select { width: auto; max-width: 60%; }
 
 /* Session finish */
 .finish { justify-content: center; }

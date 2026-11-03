@@ -1635,12 +1635,17 @@ components:
         handle:
           type: string
           nullable: true
+        timezone:
+          type: string
+          nullable: true
+          description: The member's IANA time zone (e.g. America/New_York); null until their browser sends one
       required:
         - id
         - email
         - display_name
         - bio
         - handle
+        - timezone
     SignupRequest:
       type: object
       additionalProperties: false
@@ -1659,6 +1664,11 @@ components:
         adult_confirmed:
           type: boolean
           const: true
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: The browser's IANA time zone; an unknown name is ignored
       required:
         - email
         - password
@@ -1679,6 +1689,11 @@ components:
         handle:
           type: string
           pattern: "^[a-z0-9_]{3,30}$"
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: IANA time zone, e.g. America/New_York (400 if unknown)
     LoginRequest:
       type: object
       additionalProperties: false
