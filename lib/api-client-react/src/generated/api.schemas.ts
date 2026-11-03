@@ -322,6 +322,8 @@ export interface PlanItemView {
   target_load_kg: number | null;
   swapped_from: string | null;
   logs: SetLog[];
+  /** A barbell-only lift, so the player can show the plates per side */
+  barbell: boolean;
 }
 
 export interface PlanSessionView {

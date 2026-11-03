@@ -804,7 +804,8 @@ export const PreviewPlanResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 })
@@ -875,7 +876,8 @@ export const GetTrainingResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 }).nullable()
@@ -970,7 +972,8 @@ export const SaveTrainingProfileResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 }).nullable()
@@ -1046,7 +1049,8 @@ export const SetUnitsResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 }).nullable()
@@ -1090,7 +1094,8 @@ export const CreatePlanResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 })
@@ -1133,7 +1138,8 @@ export const CreateNextPlanResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 })
@@ -1187,7 +1193,8 @@ export const ResumePlanResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 })
@@ -1225,7 +1232,8 @@ export const CompleteSessionResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 })
 
@@ -1475,7 +1483,8 @@ export const DevUnlockResponse = zod.object({
   "reps": zod.number().int().nullable(),
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
-}))
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
 }))
 }))
 }).nullable()

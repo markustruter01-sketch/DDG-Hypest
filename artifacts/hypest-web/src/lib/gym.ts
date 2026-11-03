@@ -19,6 +19,7 @@ export function useRestTimer() {
   useEffect(() => {
     if (endsAt && left === 0) {
       navigator.vibrate?.([200, 100, 200]);
+      beep(); // iPhones ignore vibrate: a short tone they can hear (build plan 1.5)
       setEndsAt(null);
     }
   }, [endsAt, left]);
@@ -26,11 +27,47 @@ export function useRestTimer() {
   return {
     left,
     start: (seconds: number) => {
+      unlockAudio(); // the tap that starts rest is the user gesture iOS needs before it plays sound
       setNow(Date.now());
       setEndsAt(seconds > 0 ? Date.now() + seconds * 1000 : null);
     },
     stop: () => setEndsAt(null),
   };
+}
+
+let audio: AudioContext | null = null;
+
+/** Create (or resume) the audio context inside a tap, so the end-of-rest beep may play later. */
+export function unlockAudio(): void {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    audio ??= new Ctx();
+    if (audio.state === "suspended") void audio.resume();
+  } catch {
+    // No audio: the vibration (where supported) and the on-screen timer still work.
+  }
+}
+
+/** Two short tones: rest is over. Silent if audio was never unlocked or the phone is muted. */
+export function beep(): void {
+  if (!audio) return;
+  try {
+    const t = audio.currentTime;
+    for (const [at, freq] of [[0, 880], [0.25, 1175]] as const) {
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t + at);
+      gain.gain.exponentialRampToValueAtTime(0.3, t + at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.18);
+      osc.connect(gain).connect(audio.destination);
+      osc.start(t + at);
+      osc.stop(t + at + 0.2);
+    }
+  } catch {
+    // ignore: sound is a nicety
+  }
 }
 
 /** Keeps the screen on during a session (where the browser allows it); re-asks when the app comes back. */

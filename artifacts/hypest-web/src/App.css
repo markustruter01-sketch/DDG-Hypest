@@ -1221,12 +1221,18 @@ textarea.text-input { resize: vertical; }
 .set-tick[aria-pressed="true"] { border-color: var(--color-volt); background: var(--color-volt); color: var(--color-ink); }
 .stepper { display: inline-flex; align-items: center; gap: 4px; }
 .stepper button {
-  display: grid; place-items: center; width: 2rem; height: 2rem;
+  display: grid; place-items: center; width: var(--tap, 44px); height: var(--tap, 44px);
   border: 1px solid var(--color-dark-line); border-radius: 50%; background: transparent; color: var(--color-on-dark); cursor: pointer;
 }
 .stepper b { min-width: 2.2rem; text-align: center; font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; }
 .stepper small { font-size: 0.625rem; font-weight: 800; color: var(--color-on-dark-muted); text-transform: uppercase; }
 .stepper-locked button { opacity: 0.25; cursor: not-allowed; }
+.stepper .stepper-value { width: auto; min-width: 3rem; height: var(--tap, 44px); border: 0; border-radius: 8px; padding: 0 4px; }
+.stepper .stepper-value b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; }
+.stepper-input { width: 4.5rem; height: var(--tap, 44px); border: 1px solid var(--color-dark-line); border-radius: 8px; background: transparent; color: var(--color-on-dark); font: 400 1.5rem var(--font-display); text-align: center; }
+.stepper small { font-size: 0.75rem; }
+.plates { color: var(--color-on-dark-muted); }
+.end-link { background: none; border: 0; padding: 0; color: var(--color-on-dark); font: inherit; cursor: pointer; min-height: var(--tap, 44px); }
 .lock-note { color: var(--color-on-dark-muted); text-align: center; }
 .rest-bar {
   display: flex; align-items: center; justify-content: space-between;

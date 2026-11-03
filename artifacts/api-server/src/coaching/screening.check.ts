@@ -60,6 +60,7 @@ if (api) {
   const { painEventsTable } = await import("@workspace/db");
   const plan = (await call("GET", "/me/training")).json.plan;
   const itemId = plan.sessions[0].items[0].id as number;
+  ok(plan.sessions.flatMap((x: { items: { barbell: unknown }[] }) => x.items).every((i: { barbell: unknown }) => typeof i.barbell === "boolean"), "items say whether they are barbell lifts (plate maths)");
   ok((await call("POST", `/me/items/${itemId}/hurts`, { text: "chest press felt great" })).json.stopped === false, "training talk: no pause");
   ok((await call("POST", `/me/items/${itemId}/hurts`, { text: "chest pain after the set" })).json.stopped === true, "chest pain: paused");
   ok((await call("POST", "/me/plans/resume")).status === 400, "resume with no body: refused");

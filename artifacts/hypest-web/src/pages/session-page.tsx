@@ -16,6 +16,7 @@ import { nextSession } from "@/pages/today-page";
 import { serverErrorText } from "@/lib/server-error";
 import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
 import { useRestTimer, useScreenAwake } from "@/lib/gym";
+import { platesFor, platesText } from "@/lib/plates";
 
 type SetEntry = { done: boolean; reps: number; load: number; seconds: number };
 
@@ -50,6 +51,7 @@ export function SessionPage() {
   const rest = restTimer.left;
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hurtOpen, setHurtOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
   const [startedAt] = useState(() => Date.now());
   const [finished, setFinished] = useState<FinishStats | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -134,11 +136,13 @@ export function SessionPage() {
 
   const total = session.items.length;
   const last = index === total - 1;
+  const anyTicked = Object.values(sets).some((list) => list.some((e) => e.done));
+  const plates = item.barbell && item.weighted ? platesFor(entries.find((e) => !e.done)?.load ?? entries.at(-1)?.load ?? 0, units) : null;
 
   return (
     <main className="player session">
       <div className="page-header">
-        <Link className="text-link" to="/" style={{ color: "var(--color-on-dark)" }}>✕ End</Link>
+        <button type="button" className="text-link end-link" onClick={() => (anyTicked ? setEndOpen(true) : navigate("/"))}>✕ End</button>
         <span className="label" style={{ color: "var(--color-on-dark-muted)" }}>{index + 1} / {total}</span>
       </div>
       <div className="progress" role="img" aria-label={`Exercise ${index + 1} of ${total}`}>
@@ -151,6 +155,7 @@ export function SessionPage() {
         <h1 className="hero-title" style={{ margin: 0, fontSize: "2.6rem" }}>{item.name}</h1>
         <p className="player-body">{item.cue}</p>
         <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${targetLoad(item.target_load_kg, units)} ${units}` : ""}</span>
+        {plates ? <span className="plates label">Bar {plates.bar} {units} · {platesText(plates, units)}</span> : null}
       </div>
 
       <ol className="set-list">
@@ -193,16 +198,43 @@ export function SessionPage() {
 
       {finishError ? <p className="error-text" role="alert">{finishError}</p> : null}
       {hurtOpen ? <HurtSheet item={item} onClose={() => setHurtOpen(false)} /> : null}
+      {endOpen ? (
+        <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-label="End session?">
+          <div className="sheet">
+            <h2 className="section-title" style={{ margin: 0 }}>End this session?</h2>
+            <p className="screen-copy">
+              {canLog ? "Sets you ticked are saved. The session stays open, so you can finish it later from Today." : "The session stays open, so you can do it later from Today."}
+            </p>
+            <div className="button-row">
+              <button className="secondary-button" type="button" onClick={() => setEndOpen(false)}>Keep going</button>
+              <button className="primary-button" type="button" onClick={() => navigate("/")}>End</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
 
+/** − and + are 44 px (gym-floor taps); tap the number to type it on the phone's keypad (build plan 1.5). */
 function Stepper({ label, value, step, onChange, disabled }: { label: string; value: number; step: number; onChange: (v: number) => void; disabled: boolean }) {
+  const [typing, setTyping] = useState<string | null>(null);
+  const commit = () => {
+    const v = Number((typing ?? "").replace(",", "."));
+    if (typing !== null && Number.isFinite(v) && v >= 0 && v <= 2000) onChange(Math.round(v * 100) / 100);
+    setTyping(null);
+  };
   return (
     <span className={disabled ? "stepper stepper-locked" : "stepper"}>
-      <button type="button" aria-label={`Less ${label}`} disabled={disabled} onClick={() => onChange(Math.max(0, value - step))}><Minus size={16} /></button>
-      <b>{value}</b><small>{label}</small>
-      <button type="button" aria-label={`More ${label}`} disabled={disabled} onClick={() => onChange(value + step)}><Plus size={16} /></button>
+      <button type="button" aria-label={`Less ${label}`} disabled={disabled} onClick={() => onChange(Math.max(0, value - step))}><Minus size={18} /></button>
+      {typing !== null ? (
+        <input className="stepper-input" type="text" inputMode="decimal" autoFocus aria-label={label} value={typing}
+          onChange={(e) => setTyping(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setTyping(null); }} />
+      ) : (
+        <button type="button" className="stepper-value" aria-label={`${value} ${label}: tap to type`} disabled={disabled} onClick={() => setTyping(String(value))}><b>{value}</b></button>
+      )}
+      <small>{label}</small>
+      <button type="button" aria-label={`More ${label}`} disabled={disabled} onClick={() => onChange(value + step)}><Plus size={18} /></button>
     </span>
   );
 }

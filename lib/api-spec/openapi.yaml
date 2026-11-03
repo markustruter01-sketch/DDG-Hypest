@@ -1957,7 +1957,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SetLog"
-      required: [id, exercise_id, name, cue, measure, weighted, sets, reps, seconds, rest_seconds, target_load_kg, swapped_from, logs]
+        barbell:
+          type: boolean
+          description: A barbell-only lift, so the player can show the plates per side
+      required: [id, exercise_id, name, cue, measure, weighted, sets, reps, seconds, rest_seconds, target_load_kg, swapped_from, logs, barbell]
     PlanSessionView:
       type: object
       additionalProperties: false

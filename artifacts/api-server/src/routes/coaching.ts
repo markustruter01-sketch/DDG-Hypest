@@ -84,6 +84,8 @@ function itemView(it: Plan["sessions"][number]["items"][number] & { id?: number 
     id: it.id ?? null, exercise_id: ex.id, name: ex.name, cue: ex.cue, measure: ex.measure, weighted: ex.weighted,
     sets: it.sets, reps: it.reps, seconds: it.seconds, rest_seconds: it.restSeconds, target_load_kg: it.targetLoadKg,
     swapped_from: it.swappedFrom ?? null, logs,
+    // A barbell-only lift: the player shows which plates go on each side (build plan 1.5).
+    barbell: ex.equipment.length === 1 && ex.equipment[0] === "barbell",
   };
 }
 
