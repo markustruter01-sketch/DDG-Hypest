@@ -44,6 +44,7 @@ import { alert } from "../lib/alerts";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
 import { answersError, checkAnswers, saveProfile, type Answers } from "../coaching/profile";
 import { saveDraft } from "../coaching/draft";
+import { allowIp } from "../lib/ip-limit";
 
 const router: IRouter = Router();
 
@@ -208,6 +209,7 @@ router.post("/coaching/preview", (req, res) => {
 
 // Answers given before signup are kept server-side for a day under an httpOnly cookie (build plan 1.4).
 router.put("/onboarding/draft", async (req, res) => {
+  if (!(await allowIp(req, res, "draft"))) return;
   const saved = await saveDraft(req, res, req.body);
   if (!saved.ok) return void res.status(400).json({ message: saved.message });
   res.status(204).end();

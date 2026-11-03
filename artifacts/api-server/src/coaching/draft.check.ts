@@ -59,6 +59,21 @@ if (api) {
   const cookie = d.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   const dTraining = await (await fetch(`${api}/me/training`, { headers: { cookie } })).json() as { profile: unknown };
   ok(d.status === 201 && dTraining.profile === null, "a claimed draft cannot be claimed again");
+  // Build plan 1.11: drafts are unauthenticated writes, so each network gets 60 per 15 minutes.
+  {
+    const { db, authAttemptsTable } = await import("@workspace/db");
+    const { eq } = await import("drizzle-orm");
+    const ip = `198.19.${Date.now() % 250}.${Math.floor(Math.random() * 250)}`; // 198.18.0.0/15 is for testing
+    const other = `198.19.251.${Math.floor(Math.random() * 250)}`;
+    for (const x of [ip, other]) await db.delete(authAttemptsTable).where(eq(authAttemptsTable.ip, x));
+    await db.insert(authAttemptsTable).values(Array.from({ length: 59 }, () => ({ ip, kind: "draft" })));
+    const put = (from: string) => fetch(`${api}/onboarding/draft`, { method: "PUT", headers: { "content-type": "application/json", "x-forwarded-for": from }, body: JSON.stringify(answers) });
+    ok((await put(ip)).status === 204, "60th draft from one network in 15 minutes: allowed");
+    const blocked = await put(ip);
+    ok(blocked.status === 429 && Number(blocked.headers.get("retry-after")) > 0, "61st draft from one network in 15 minutes: 429");
+    ok((await put(other)).status === 204, "another network can still save a draft");
+    for (const x of [ip, other]) await db.delete(authAttemptsTable).where(eq(authAttemptsTable.ip, x));
+  }
 } else {
   console.log("(HTTP part skipped: set ACCOUNT_CHECK_API)");
 }

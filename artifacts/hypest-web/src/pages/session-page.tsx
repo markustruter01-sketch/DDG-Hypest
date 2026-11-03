@@ -89,6 +89,10 @@ export function SessionPage() {
           seconds: item!.measure === "time" ? entry.seconds : null,
           load_kg: item!.weighted ? toKg(entry.load, units) : null,
         });
+        if (where === "logged-out") {
+          setSaveError(`You're logged out. Set ${i + 1} is kept on this phone; log in again and it syncs.`);
+          return;
+        }
         if (where === "refused") {
           update(i, { done: false });
           setSaveError(`Set ${i + 1} wasn't saved (the server refused it). Refresh the app and try again.`);
