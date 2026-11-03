@@ -20,7 +20,6 @@ import {
   ReportPainResponse,
   ResumePlanBody,
   ResumePlanResponse,
-  SaveTrainingProfileBody,
   SetUnitsBody,
 } from "@workspace/api-zod";
 import {
@@ -35,6 +34,7 @@ import {
 } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { devToolsOn } from "../lib/dev-login";
+import { localDay, localWeekStart } from "../lib/timezone";
 import { COACH_BY_ID, COACHES, EXERCISE_BY_ID, type Area, type Coach, type Equipment, type Experience, type Goal } from "../coaching/library";
 import { buildPlan, findSwap, nextLoads, WEEKS, type Plan, type PlanInput } from "../coaching/engine";
 import { redFlag, STOP_MESSAGE } from "../coaching/safety";
@@ -42,22 +42,10 @@ import { notesPrompt, parseNotes } from "../coaching/ai-notes";
 import { askClaude } from "../lib/ai";
 import { alert } from "../lib/alerts";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
-import { screeningResult, type ScreeningInput } from "../coaching/screening";
+import { answersError, checkAnswers, saveProfile, type Answers } from "../coaching/profile";
+import { saveDraft } from "../coaching/draft";
 
 const router: IRouter = Router();
-
-type Answers = {
-  coach_id: string;
-  goal: Goal;
-  experience: Experience;
-  days_per_week: number;
-  minutes: number;
-  equipment: Equipment[];
-  avoid_areas: Area[];
-  units?: "kg" | "lb";
-  health_accepted: true;
-  screening?: ScreeningInput;
-};
 
 function bad(res: Response, issues: { message: string }[]) {
   res.status(400).json({ message: issues[0]?.message ?? "invalid request" });
@@ -65,14 +53,6 @@ function bad(res: Response, issues: { message: string }[]) {
 
 function coachView(c: Coach) {
   return { id: c.id, name: c.name, discipline: c.discipline, title: c.title, personality: c.personality, good_for: c.goodFor, photo: c.photo, goals: c.goals };
-}
-
-/** A coach must exist and offer the chosen goal. */
-function answersError(a: Answers): string | null {
-  const coach = COACH_BY_ID.get(a.coach_id);
-  if (!coach) return "unknown coach";
-  if (!coach.goals.includes(a.goal)) return "this coach does not offer that goal";
-  return null;
 }
 
 function toInput(a: Answers, block: number, targetLoads?: Record<string, number>): PlanInput {
@@ -104,6 +84,8 @@ function itemView(it: Plan["sessions"][number]["items"][number] & { id?: number 
     id: it.id ?? null, exercise_id: ex.id, name: ex.name, cue: ex.cue, measure: ex.measure, weighted: ex.weighted,
     sets: it.sets, reps: it.reps, seconds: it.seconds, rest_seconds: it.restSeconds, target_load_kg: it.targetLoadKg,
     swapped_from: it.swappedFrom ?? null, logs,
+    // A barbell-only lift: the player shows which plates go on each side (build plan 1.5).
+    barbell: ex.equipment.length === 1 && ex.equipment[0] === "barbell",
   };
 }
 
@@ -224,6 +206,13 @@ router.post("/coaching/preview", (req, res) => {
   }));
 });
 
+// Answers given before signup are kept server-side for a day under an httpOnly cookie (build plan 1.4).
+router.put("/onboarding/draft", async (req, res) => {
+  const saved = await saveDraft(req, res, req.body);
+  if (!saved.ok) return void res.status(400).json({ message: saved.message });
+  res.status(204).end();
+});
+
 // ---------- Member ----------
 
 // Every block except the current one, newest first, with how many sessions were done.
@@ -264,19 +253,9 @@ router.put("/me/training/units", requireUser, async (req, res) => {
 
 router.put("/me/training/profile", requireUser, async (req, res) => {
   const user = authUser(res);
-  const parsed = SaveTrainingProfileBody.strict().safeParse(req.body);
-  if (!parsed.success) return bad(res, parsed.error.issues);
-  const a = parsed.data as Answers;
-  const err = answersError(a);
-  if (err) return void res.status(400).json({ message: err });
-  const check = screeningResult(a.screening);
-  if (!check.ok) return void res.status(400).json({ message: check.message });
-  const values = {
-    coachId: a.coach_id, goal: a.goal, experience: a.experience, daysPerWeek: a.days_per_week, minutes: a.minutes,
-    equipment: [...new Set(a.equipment)], avoidAreas: [...new Set(a.avoid_areas)], units: a.units ?? "kg", healthAcceptedAt: new Date(),
-    screening: check.record, updatedAt: new Date(),
-  };
-  await db.insert(trainingProfilesTable).values({ userId: user.id, ...values }).onConflictDoUpdate({ target: trainingProfilesTable.userId, set: values });
+  const checked = checkAnswers(req.body);
+  if (!checked.ok) return void res.status(400).json({ message: checked.message });
+  await saveProfile(user.id, checked.values);
   res.json(GetTrainingResponse.parse(await trainingState(user.id)));
 });
 
@@ -463,9 +442,10 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     .from(planSessionsTable)
     .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
     .where(eq(plansTable.userId, user.id));
-  const days = new Set(done.flatMap((d) => (d.completedAt ? [brisbaneDay(d.completedAt)] : [])));
+  const tz = user.timezone;
+  const days = new Set(done.flatMap((d) => (d.completedAt ? [localDay(d.completedAt, tz)] : [])));
   let streak = 0;
-  let day = brisbaneDay(new Date());
+  let day = localDay(new Date(), tz);
   if (!days.has(day)) day -= 1; // today not trained yet still keeps yesterday's streak
   while (days.has(day)) { streak += 1; day -= 1; }
 
@@ -483,7 +463,7 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     if (l.loadKg === null || l.reps === null) continue;
     const b = best.get(l.exerciseId);
     if (!b || l.loadKg > b.load) best.set(l.exerciseId, { load: l.loadKg, reps: l.reps });
-    const wk = weekStart(l.createdAt);
+    const wk = localWeekStart(l.createdAt, tz);
     volume.set(wk, (volume.get(wk) ?? 0) + l.loadKg * l.reps);
   }
   res.json(GetProgressResponse.parse({
@@ -493,17 +473,6 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     weekly_volume: [...volume].map(([week_start, volume_kg]) => ({ week_start, volume_kg: Math.round(volume_kg) })).sort((a, b) => a.week_start.localeCompare(b.week_start)).slice(-8),
   }));
 });
-
-/** Day number in Brisbane time (UTC+10, no daylight saving). */
-function brisbaneDay(d: Date): number {
-  return Math.floor((d.getTime() + 10 * 3600_000) / 86_400_000);
-}
-/** Monday of the Brisbane week, as YYYY-MM-DD. */
-function weekStart(d: Date): string {
-  const day = brisbaneDay(d);
-  const weekday = (day + 3) % 7; // day 0 (1970-01-01) was a Thursday → Monday = 0
-  return new Date((day - weekday) * 86_400_000).toISOString().slice(0, 10);
-}
 
 // ---------- Development only ----------
 

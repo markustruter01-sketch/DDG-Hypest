@@ -1,14 +1,16 @@
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetCurrentUserQueryKey, useSignup } from "@workspace/api-client-react";
 import { serverErrorText } from "@/lib/server-error";
-import { savePendingProfile } from "@/lib/pending";
+import { afterAuth } from "@/lib/pending";
+import { browserTimezone } from "@/lib/time";
 
 const request = { credentials: "include" as const };
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const signup = useSignup({ request });
   const [email, setEmail] = useState("");
@@ -31,10 +33,11 @@ export function SignupPage() {
           password,
           display_name: displayName,
           adult_confirmed: true,
+          timezone: browserTimezone(),
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-      await savePendingProfile();
+      await afterAuth(location.search);
       navigate("/");
     } catch (err) {
       setError(serverErrorText(err));
@@ -106,7 +109,7 @@ export function SignupPage() {
         <button className="primary-button" type="submit" disabled={signup.isPending}>
           Sign up
         </button>
-        <Link className="text-link" to="/login">
+        <Link className="text-link" to={`/login${location.search}`}>
           Log in
         </Link>
       </form>

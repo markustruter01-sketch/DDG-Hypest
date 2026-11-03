@@ -17,9 +17,9 @@ import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/password-pages';
 import { LegalPage } from '@/pages/legal-page';
 import { AdminPage } from '@/pages/admin-page';
 import { RemindersOffPage } from '@/pages/reminders-off-page';
+import { SaveTimezoneOnce } from '@/components/timezone-setting';
 
-// AI-coach app (pivot, 18 Oct 2026). The creator-marketplace pages (Studio, Create, Explore,
-// Library, creator links) stay in src/pages but are no longer routed.
+// AI-coach app (pivot, 18 Oct 2026). The creator marketplace was removed in plan step 1.8.
 const destinations = [
   { label: 'Today', path: '/', Icon: House, also: [] as string[] },
   { label: 'Plan', path: '/plan', Icon: CalendarDays, also: [] as string[] },
@@ -59,6 +59,7 @@ function AppShell() {
   return (
     <div className={onLanding ? 'app-shell app-shell-wide' : 'app-shell'}>
       <CheckoutReturn />
+      {me.data ? <SaveTimezoneOnce /> : null}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/plan" element={<PlanPage />} />

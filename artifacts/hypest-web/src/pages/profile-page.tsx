@@ -16,6 +16,7 @@ import { useAppConfig } from "@/lib/config";
 import { useTraining } from "@/lib/coaching";
 import { UnitsToggle } from "@/components/units-toggle";
 import { RemindersToggle } from "@/components/reminders-toggle";
+import { TimezoneSetting } from "@/components/timezone-setting";
 
 const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
 
@@ -51,6 +52,7 @@ function Membership() {
       {portalError ? <p className="error-text" role="alert">{portalError}</p> : null}
       <UnitsToggle />
       <RemindersToggle />
+      <TimezoneSetting />
       {access.level !== "tier2" ? <Offers access={access} /> : null}
     </section>
   );
@@ -82,7 +84,6 @@ export function ProfilePage() {
   const updateProfile = useUpdateCurrentUser({ request });
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function onLogout() {
@@ -102,7 +103,6 @@ export function ProfilePage() {
       return;
     }
     setDisplayName(me.data.display_name);
-    setBio(me.data.bio ?? "");
     setError(null);
     setEditing(true);
   }
@@ -114,7 +114,6 @@ export function ProfilePage() {
       await updateProfile.mutateAsync({
         data: {
           display_name: displayName,
-          bio: bio === "" ? null : bio,
         },
       });
       setEditing(false);
@@ -158,7 +157,6 @@ export function ProfilePage() {
               <span className="screen-copy" style={{ fontSize: "var(--size-small)" }}>{user.email}</span>
             </span>
           </div>
-          {user.bio ? <p className="screen-copy">{user.bio}</p> : null}
           <div className="button-row">
             <button className="secondary-button" type="button" onClick={startEditing}>
               Edit profile
@@ -184,17 +182,6 @@ export function ProfilePage() {
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               required
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">Bio</span>
-            <textarea
-              className="text-input"
-              name="bio"
-              maxLength={500}
-              rows={4}
-              value={bio}
-              onChange={(event) => setBio(event.target.value)}
             />
           </label>
           {error ? (

@@ -8,16 +8,11 @@ import { COACH_BY_ID } from "../coaching/library";
 import { chatSystem, DAILY_MESSAGES, HISTORY, screenMessage, STOP_MESSAGE, WELLBEING_MESSAGE, type ChatContext } from "../coaching/chat";
 import { aiOn, askClaude } from "../lib/ai";
 import { alert } from "../lib/alerts";
+import { localDayStart } from "../lib/timezone";
 
 const router: IRouter = Router();
 
-/** Start of today in Brisbane (UTC+10, no daylight saving), as a UTC instant. */
-function brisbaneDayStart(now = new Date()): Date {
-  const shifted = new Date(now.getTime() + 10 * 3_600_000);
-  return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) - 10 * 3_600_000);
-}
-
-async function chatState(userId: number) {
+async function chatState(userId: number, timezone: string | null) {
   const access = await accessFor(userId);
   const rows = await db
     .select()
@@ -25,7 +20,7 @@ async function chatState(userId: number) {
     .where(eq(coachMessagesTable.userId, userId))
     .orderBy(desc(coachMessagesTable.id))
     .limit(50);
-  const sentToday = rows.filter((r) => r.role === "member" && r.createdAt >= brisbaneDayStart()).length;
+  const sentToday = rows.filter((r) => r.role === "member" && r.createdAt >= localDayStart(new Date(), timezone)).length;
   return {
     enabled: aiOn() && canLog(access),
     remaining_today: Math.max(0, DAILY_MESSAGES - sentToday),
@@ -58,7 +53,8 @@ async function contextFor(userId: number): Promise<ChatContext | null> {
 }
 
 router.get("/me/coach/messages", requireUser, async (_req, res) => {
-  res.json(GetCoachChatResponse.parse(await chatState(authUser(res).id)));
+  const user = authUser(res);
+  res.json(GetCoachChatResponse.parse(await chatState(user.id, user.timezone)));
 });
 
 router.post("/me/coach/messages", requireUser, async (req, res) => {
@@ -67,7 +63,7 @@ router.post("/me/coach/messages", requireUser, async (req, res) => {
   if (!body.success) return void res.status(400).json({ message: body.error.issues[0]?.message ?? "invalid request" });
   if (!canLog(await accessFor(user.id))) return void res.status(402).json({ message: "Chat is part of Coaching" });
   if (!aiOn()) return void res.status(503).json({ message: "Chat isn't switched on yet" });
-  const state = await chatState(user.id);
+  const state = await chatState(user.id, user.timezone);
   if (state.remaining_today <= 0) return void res.status(429).json({ message: "That's today's messages. Your coach is back tomorrow." });
   const context = await contextFor(user.id);
   if (!context) return void res.status(409).json({ message: "Pick a coach first" });
@@ -103,7 +99,7 @@ router.post("/me/coach/messages", requireUser, async (req, res) => {
     { userId: user.id, coachId: context.coach.id, role: "member", text },
     { userId: user.id, coachId: context.coach.id, role: "coach", text: reply.text, source: reply.source },
   ]);
-  res.json(SendCoachMessageResponse.parse(await chatState(user.id)));
+  res.json(SendCoachMessageResponse.parse(await chatState(user.id, user.timezone)));
 });
 
 /** The API expects the conversation to start with the member. */

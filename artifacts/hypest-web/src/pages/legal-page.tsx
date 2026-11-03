@@ -45,7 +45,7 @@ function docs(support: string): Record<"terms" | "privacy" | "health", Doc> {
       sections: [
         { h: "Who we are", p: [`${OPERATOR} runs Hypest. Contact for any privacy question: ${support}.`] },
         { h: "What we collect", p: [
-          "Account: your email, display name, an optional bio, and your password stored only as a scrambled (hashed) value.",
+          "Account: your email, display name, and your password stored only as a scrambled (hashed) value.",
           "Training: your answers (goal, experience, days, time, equipment, sore or injured areas, kg or lb), your plans, the sets you log, sessions you finish, and safety stops (the warning word, not your full message).",
           "Health check: whether you answered yes to any question, and whether you confirmed a health professional cleared you. We do not keep your single answers.",
           "Reminder emails (only if you turn them on): that they are on, and when we last sent one.",

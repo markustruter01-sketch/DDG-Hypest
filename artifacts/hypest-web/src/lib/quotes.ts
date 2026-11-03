@@ -1,3 +1,5 @@
+import { localDayNumber } from "./time";
+
 /**
  * Daily motivation on Home. Every line is checked against a published source (17 Oct 2026);
  * add new ones only with a source. Popular quotes are often misattributed online.
@@ -18,8 +20,7 @@ export const QUOTES: Quote[] = [
   { text: "Pressure is a privilege.", by: "Billie Jean King", source: "Title of her book, Pressure Is a Privilege" },
 ];
 
-/** Same quote all day for everyone, changing at midnight Brisbane time. */
+/** Same quote all day, changing at the member's own midnight. */
 export function quoteOfTheDay(now = new Date()): Quote {
-  const brisbaneDay = Math.floor((now.getTime() + 10 * 3600 * 1000) / 86_400_000);
-  return QUOTES.at(brisbaneDay % QUOTES.length) ?? QUOTES[0]!;
+  return QUOTES.at(localDayNumber(now) % QUOTES.length) ?? QUOTES[0]!;
 }

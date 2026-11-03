@@ -4,6 +4,7 @@ import { db, planSessionsTable, plansTable, remindersTable, usersTable } from "@
 import { COACH_BY_ID } from "./library";
 import { emailOn, sendEmail, siteUrl } from "../lib/email";
 import { logger } from "../lib/logger";
+import { localDay } from "../lib/timezone";
 
 /** A member with reminders on, an active plan and no finished session for this many days gets one email. */
 export const REMIND_AFTER_DAYS = 3;
@@ -63,7 +64,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ due: number;
   const rows = await db
     .select({
       userId: remindersTable.userId, token: remindersTable.token, lastSentAt: remindersTable.lastSentAt,
-      email: usersTable.email, name: usersTable.displayName, planId: plansTable.id, coachId: plansTable.coachId,
+      email: usersTable.email, name: usersTable.displayName, timezone: usersTable.timezone, planId: plansTable.id, coachId: plansTable.coachId,
       lastActive: sql<Date>`coalesce(${lastDone.at}, ${plansTable.createdAt})`.mapWith((v) => new Date(v)),
     })
     .from(remindersTable)
@@ -82,7 +83,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ due: number;
       .limit(1);
     if (!next) continue; // block finished: nothing waiting
     due += 1;
-    const days = Math.floor((now.getTime() - r.lastActive.getTime()) / 86_400_000);
+    const days = localDay(now, r.timezone) - localDay(r.lastActive, r.timezone); // calendar days where the member lives
     const mail = reminderEmail({
       name: r.name, coachName: COACH_BY_ID.get(r.coachId)?.name ?? "Your coach", days, week: next.week, day: next.day, title: next.title,
       sessionUrl: `${site}/session/${next.id}`, offUrl: `${site}/reminders/off?token=${r.token}`,

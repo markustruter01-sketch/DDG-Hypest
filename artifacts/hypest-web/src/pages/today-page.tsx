@@ -15,12 +15,9 @@ import { Offers } from "@/components/offers";
 import { coachById, coachLine, img, money, request, useCoaches, useTraining } from "@/lib/coaching";
 import { useAppConfig } from "@/lib/config";
 import { quoteOfTheDay } from "@/lib/quotes";
+import { greeting } from "@/lib/time";
 import { serverErrorText } from "@/lib/server-error";
 
-function greeting(now = new Date()): string {
-  const hour = (now.getUTCHours() + 10) % 24;
-  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-}
 
 export function nextSession(plan: PlanView) {
   return plan.sessions.find((s) => !s.completed_at) ?? null;

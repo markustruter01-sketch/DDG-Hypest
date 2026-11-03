@@ -7,6 +7,8 @@ import {
   type TrainingAnswers,
 } from "@workspace/api-client-react";
 
+import { localDayNumber } from "./time";
+
 export const request = { credentials: "include" as const };
 export const img = (name: string) => `${import.meta.env.BASE_URL}img/${name}`;
 
@@ -46,7 +48,7 @@ const COACH_LINES: Record<string, string[]> = {
 };
 export function coachLine(coachId: string | undefined, now = new Date()): string {
   const lines = COACH_LINES[coachId ?? ""] ?? COACH_LINES.rex!;
-  const day = Math.floor((now.getTime() + 10 * 3600_000) / 86_400_000);
+  const day = localDayNumber(now);
   return lines.at(day % lines.length) ?? "";
 }
 
@@ -62,16 +64,3 @@ export function dose(item: { sets: number; reps: number | null; seconds: number 
 }
 
 /** Onboarding answers kept in the browser until the account exists. */
-const PENDING_KEY = "hypest_pending_answers";
-export function savePendingAnswers(a: TrainingAnswers) {
-  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(a)); } catch { /* storage blocked: answers just aren't carried over */ }
-}
-export function takePendingAnswers(): TrainingAnswers | null {
-  try {
-    const raw = sessionStorage.getItem(PENDING_KEY);
-    sessionStorage.removeItem(PENDING_KEY);
-    return raw ? (JSON.parse(raw) as TrainingAnswers) : null;
-  } catch {
-    return null;
-  }
-}
