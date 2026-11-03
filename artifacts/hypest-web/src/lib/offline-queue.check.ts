@@ -37,6 +37,7 @@ const run = async () => {
   ok(calls === 1, "concurrent flushes don't double-send");
 
   ok(outcomeOf(null) === "retry" && outcomeOf(503) === "retry" && outcomeOf(429) === "retry", "no signal / server busy: retry");
+  ok(outcomeOf(401) === "retry", "logged out while sets wait: kept for the next login, never dropped");
   ok(outcomeOf(200) === "sent" && outcomeOf(402) === "drop" && outcomeOf(404) === "drop", "success sent; refused dropped");
   console.log(`offline queue: ${n} checks passed`);
 };

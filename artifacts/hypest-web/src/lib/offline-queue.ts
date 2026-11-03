@@ -54,9 +54,10 @@ export function createQueue(store: QueueStore, send: (e: QueuedSet) => Promise<S
   };
 }
 
-/** HTTP status → outcome. No status (network error) or 5xx/408/429: retry. Any other 4xx: the server refused it. */
+/** HTTP status → outcome. No status (network error), 401 (logged out: the sets wait for the next login), 5xx/408/429: retry.
+ *  Any other 4xx: the server refused it. */
 export function outcomeOf(status: number | null): SendOutcome {
-  if (status === null || status >= 500 || status === 408 || status === 429) return "retry";
+  if (status === null || status >= 500 || status === 401 || status === 408 || status === 429) return "retry";
   if (status >= 200 && status < 300) return "sent";
   return "drop";
 }

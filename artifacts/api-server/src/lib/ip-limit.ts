@@ -7,13 +7,15 @@ import { devToolsOn } from "./dev-login";
  * Per-network limits on the account doors. Counted in the database so they hold across restarts and servers.
  * A blocked request is not counted, so waiting out the window always works.
  */
-export type IpKind = "login" | "signup" | "reset";
+export type IpKind = "login" | "signup" | "reset" | "draft";
 
 const MIN = 60 * 1000;
 export const IP_LIMITS: Record<IpKind, { max: number; windowMs: number }[]> = {
   login: [{ max: 30, windowMs: 15 * MIN }],
   signup: [{ max: 30, windowMs: 15 * MIN }, { max: 20, windowMs: 24 * 60 * MIN }],
   reset: [{ max: 30, windowMs: 15 * MIN }],
+  // Onboarding answers before signup: unauthenticated writes, one small row each (build plan 1.11).
+  draft: [{ max: 60, windowMs: 15 * MIN }],
 };
 const KEEP_MS = 24 * 60 * MIN;
 

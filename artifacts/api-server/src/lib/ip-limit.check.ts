@@ -95,6 +95,19 @@ for (let i = 0; i < 15; i++) await call(G, "POST", "/auth/password/reset", { tok
 ok((await call(G, "POST", "/auth/password/forgot", { email })).status === 429, "31st reset request from one network: 429");
 ok((await call(A, "POST", "/auth/password/forgot", { email })).status !== 429, "another network can still ask for a link");
 
+// Backstop (build plan 1.11): 100 failures for one email across many networks locks it for everyone, briefly.
+{
+  const { MAX_FAILURES_ALL_NETWORKS } = await import("./login-rate-limit");
+  await db.delete(authFailuresTable).where(eq(authFailuresTable.email, email));
+  await db.insert(authFailuresTable).values(Array.from({ length: MAX_FAILURES_ALL_NETWORKS - 1 }, (_, i) => ({ email, ip: `198.18.200.${i % 250}` })));
+  ok((await call(D, "POST", "/auth/login", { email, password })).status === 200, "99 failures spread over many networks: the member still logs in");
+  // (that success cleared the failures, as a real login does; the attack starts again)
+  await db.insert(authFailuresTable).values(Array.from({ length: MAX_FAILURES_ALL_NETWORKS }, (_, i) => ({ email, ip: `198.18.201.${i % 250}` })));
+  ok((await call(D, "POST", "/auth/login", { email, password })).status === 429, "100 failures: locked for every network, even with the right password");
+  await db.delete(authFailuresTable).where(eq(authFailuresTable.email, email));
+  ok((await call(D, "POST", "/auth/login", { email, password })).status === 200, "after the window: login works again");
+}
+
 // Local checks (127.0.0.1, dev tools on) are never limited.
 const local = await fetch(`${api}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
 ok(local.status === 200, "127.0.0.1 with dev tools on is exempt");
