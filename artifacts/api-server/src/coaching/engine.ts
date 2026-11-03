@@ -109,6 +109,10 @@ function pick(coach: Coach, pattern: Pattern, input: PlanInput, offset: number, 
   for (const p of [pattern, ...(FALLBACK[pattern] ?? [])]) {
     const options = EXERCISES.filter((e) => e.pattern === p && e.disciplines.includes(coach.discipline) && fits(e, input) && !used.has(e.id));
     if (options.length === 0) continue;
+    // Keep what the member has logged: an exercise with a target load from the last block wins
+    // its slot, so the progression the member earned is actually used (Hypest build plan 1.1).
+    const logged = options.filter((e) => e.weighted && input.targetLoads?.[e.id] != null);
+    if (logged.length > 0) return logged.at(offset % logged.length) ?? null;
     // Prefer the coach's own signature moves when there are at least two (keeps variety), then
     // moves that use the member's own equipment; bodyweight only when nothing else fits.
     const signature = options.filter((e) => e.disciplines[0] === coach.discipline);
@@ -127,6 +131,25 @@ export function findSwap(ex: Exercise, input: Pick<PlanInput, "equipment" | "avo
     if (s && fits(s, input)) return s;
   }
   return EXERCISES.find((e) => e.id !== ex.id && e.pattern === ex.pattern && e.disciplines.includes(coach.discipline) && fits(e, input)) ?? null;
+}
+
+/** Same lift, same kit: a logged load can carry from one to the other without a guess. */
+function loadCompatible(a: Exercise, b: Exercise): boolean {
+  const related = a.swaps.includes(b.id) || b.swaps.includes(a.id);
+  const sharedKit = a.equipment.some((e) => b.equipment.includes(e));
+  return related && a.pattern === b.pattern && a.weighted && b.weighted && sharedKit;
+}
+
+/** Target load for an exercise: its own logged load, else a load-compatible swap's, else none. */
+export function targetLoadFor(ex: Exercise, targetLoads: Record<string, number> | undefined): number | null {
+  if (!ex.weighted || !targetLoads) return null;
+  const own = targetLoads[ex.id];
+  if (own != null) return own;
+  for (const [id, load] of Object.entries(targetLoads)) {
+    const other = EXERCISE_BY_ID.get(id);
+    if (other && loadCompatible(ex, other)) return load;
+  }
+  return null;
 }
 
 const DAY_NAMES = ["Day A", "Day B", "Day C"];
@@ -149,10 +172,10 @@ export function buildPlan(input: PlanInput): Plan {
       used.add(ex.id);
       if (ex.measure === "reps") {
         const d = repDose(input.goal, input.experience, ex);
-        items.push({ exerciseId: ex.id, sets: d.sets, reps: d.reps, seconds: null, restSeconds: d.rest, targetLoadKg: ex.weighted ? input.targetLoads?.[ex.id] ?? null : null });
+        items.push({ exerciseId: ex.id, sets: d.sets, reps: d.reps, seconds: null, restSeconds: d.rest, targetLoadKg: targetLoadFor(ex, input.targetLoads) });
       } else {
         const d = timeDose(input.experience, ex, input.minutes, coach);
-        items.push({ exerciseId: ex.id, sets: d.sets, reps: null, seconds: d.seconds, restSeconds: d.rest, targetLoadKg: ex.weighted ? input.targetLoads?.[ex.id] ?? null : null });
+        items.push({ exerciseId: ex.id, sets: d.sets, reps: null, seconds: d.seconds, restSeconds: d.rest, targetLoadKg: targetLoadFor(ex, input.targetLoads) });
       }
     });
     templateWeek.push({ title: `${DAY_NAMES.at(t) ?? `Day ${day}`} · ${coach.title}`, items });
