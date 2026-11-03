@@ -1,7 +1,7 @@
 // Engine checks. Run from repo root: pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/coaching/engine.check.ts
 import assert from "node:assert/strict";
 import { COACHES, EXERCISES, EXERCISE_BY_ID, EXPERIENCE, GOALS, type Area, type Equipment } from "./library";
-import { buildPlan, findSwap, fits, nextLoads, WEEKS } from "./engine";
+import { buildPlan, findSwap, fits, nextLoads, targetLoadFor, WEEKS } from "./engine";
 import { redFlag } from "./safety";
 
 let n = 0;
@@ -37,6 +37,30 @@ n += 2;
 assert.deepEqual(nextLoads([{ exerciseId: "goblet_squat", targetReps: 10, reps: 10, loadKg: 20 }]), { goblet_squat: 21 });
 assert.deepEqual(nextLoads([{ exerciseId: "goblet_squat", targetReps: 10, reps: 8, loadKg: 20 }]), { goblet_squat: 20 });
 n += 2;
+
+// Build plan 1.1: loads logged in block 1 reach block 2 (exercise choice rotates between blocks)
+for (const c of COACHES.filter((x) => ["rex", "jade", "ace"].includes(x.id))) {
+  const base = { coachId: c.id, goal: c.goals[0], experience: "intermediate" as const, daysPerWeek: 3, minutes: 45,
+    equipment: ["dumbbells", "barbell", "machines", "kettlebell"] as Equipment[], avoidAreas: [] as Area[] };
+  const b1 = buildPlan({ ...base, block: 1 });
+  const weighted = [...new Set(b1.sessions.flatMap((s) => s.items).map((i) => i.exerciseId))]
+    .filter((id) => EXERCISE_BY_ID.get(id)!.weighted).slice(0, 3);
+  if (weighted.length === 0) continue;
+  const loads = Object.fromEntries(weighted.map((id, i) => [id, 20 + 10 * i]));
+  const b2 = buildPlan({ ...base, block: 2, targetLoads: loads });
+  const b2Items = b2.sessions.flatMap((s) => s.items);
+  for (const id of weighted) {
+    const it = b2Items.find((i) => i.exerciseId === id);
+    assert.ok(it, `${c.id}: ${id} logged in block 1 is missing from block 2`);
+    assert.equal(it!.targetLoadKg, loads[id], `${c.id}: ${id} target load not carried`);
+  }
+  n += 1;
+}
+// A rotated-in exercise inherits a load only from a load-compatible swap (same pattern, same kit)
+assert.equal(targetLoadFor(EXERCISE_BY_ID.get("goblet_squat")!, { back_squat: 100 }), null, "barbell load must not reach a goblet squat");
+assert.equal(targetLoadFor(EXERCISE_BY_ID.get("leg_extension")!, { leg_press: 80 }), 80, "machine to machine swap carries");
+assert.equal(targetLoadFor(EXERCISE_BY_ID.get("bodyweight_squat")!, { bodyweight_squat: 10 }), null, "unweighted never gets a load");
+n += 3;
 
 // Warning words
 assert.equal(redFlag("sharp pain in my knee"), "sharp");
