@@ -83,6 +83,24 @@ if (api && hookPort && admin) {
   ok(s.json.paused_plans.some((p: { member_id: number }) => p.member_id === signed.json.id), "paused plan listed");
   ok(s.json.memberships.find((m: { kind: string }) => m.kind === "intro_plan").test >= 1, "test memberships counted separately");
   ok(!JSON.stringify(s.json).includes(memberEmail), "no member emails in the summary");
+
+  // Build plan 1.11: a login attack on one account from many networks sends ONE alert, even when the
+  // failures that cross the limit arrive at the same moment (they race past the exact count).
+  {
+    const { db, authFailuresTable } = await import("@workspace/db");
+    const { eq } = await import("drizzle-orm");
+    const { MAX_FAILURES_ALL_NETWORKS } = await import("./login-rate-limit");
+    await db.insert(authFailuresTable).values(Array.from({ length: MAX_FAILURES_ALL_NETWORKS - 2 }, (_, i) => ({ email: memberEmail, ip: `198.18.210.${i % 250}` })));
+    const guess = (i: number) => fetch(`${api}/auth/login`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `198.18.211.${i}` }, body: JSON.stringify({ email: memberEmail, password: `wrong-guess-${i}` }) });
+    const first = await Promise.all([1, 2, 3, 4].map(guess)); // crosses 100 together
+    await guess(5); await guess(6); // keeps going: still locked, still one alert
+    await settle();
+    const attacks = posts.filter((p) => p.includes("Login attack on one account"));
+    ok(first.every((r) => r.status === 401 || r.status === 429), "the racing guesses are refused");
+    ok(attacks.length === 1, `one alert for the attack (got ${attacks.length})`);
+    ok(attacks[0]!.startsWith("**[Hypest] WARNING**") && !attacks[0]!.includes(memberEmail), "alert labelled, no email");
+    await db.delete(authFailuresTable).where(eq(authFailuresTable.email, memberEmail));
+  }
   hook.close();
 } else {
   console.log("(HTTP part skipped: set OPS_CHECK_API, OPS_CHECK_HOOK_PORT and OPS_CHECK_ADMIN)");

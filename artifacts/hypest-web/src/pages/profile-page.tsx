@@ -17,6 +17,7 @@ import { useTraining } from "@/lib/coaching";
 import { UnitsToggle } from "@/components/units-toggle";
 import { RemindersToggle } from "@/components/reminders-toggle";
 import { TimezoneSetting } from "@/components/timezone-setting";
+import { flushSets } from "@/lib/offline-sets";
 
 const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
 
@@ -89,6 +90,7 @@ export function ProfilePage() {
   async function onLogout() {
     setError(null);
     try {
+      await flushSets(); // send anything still on the phone while this member is logged in
       await logout.mutateAsync();
       setEditing(false);
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });

@@ -103,7 +103,8 @@ router.post("/auth/login", async (req, res) => {
   const email = parsed.data.email.toLowerCase();
   const ip = clientIp(req);
   if (await isLoginRateLimited(email, ip)) {
-    res.status(429).json({ message: "too many attempts" });
+    res.setHeader("Retry-After", String(15 * 60));
+    res.status(429).json({ message: "Too many tries for this account. Wait 15 minutes, or reset your password." });
     return;
   }
 
