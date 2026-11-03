@@ -1046,6 +1046,7 @@ textarea.text-input { resize: vertical; }
 .onboard-body { flex: 1; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-3) var(--space-5) var(--space-6); }
 .onboard-next { margin-top: auto; }
 .health-check { display: flex; gap: var(--space-3); align-items: flex-start; font-size: var(--size-small); color: var(--color-muted); }
+.resume-safely { display: grid; gap: var(--space-3); margin-top: var(--space-2); }
 .health-check input { width: 1.25rem; height: 1.25rem; margin-top: 2px; flex: none; accent-color: var(--color-ink); }
 /* Health check (onboarding step 3). */
 .screen-question legend { margin: 0 0 var(--space-2); color: var(--color-ink); }

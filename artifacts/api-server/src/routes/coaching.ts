@@ -18,6 +18,7 @@ import {
   ReportPainBody,
   ReportPainParams,
   ReportPainResponse,
+  ResumePlanBody,
   ResumePlanResponse,
   SaveTrainingProfileBody,
   SetUnitsBody,
@@ -25,6 +26,7 @@ import {
 import {
   db,
   membershipsTable,
+  painEventsTable,
   planItemsTable,
   planSessionsTable,
   plansTable,
@@ -331,11 +333,31 @@ router.post("/me/plans/next", requireUser, async (_req, res) => {
   res.status(201).json(CreateNextPlanResponse.parse(await planView(planId, canLog(access))));
 });
 
-router.post("/me/plans/resume", requireUser, async (_req, res) => {
+router.post("/me/plans/resume", requireUser, async (req, res) => {
   const user = authUser(res);
+  // A safety pause lifts only with the member's own confirmation that they were checked (build plan 1.2).
+  const body = ResumePlanBody.strict().safeParse(req.body);
+  if (!body.success) return bad(res, body.error.issues);
+  if (body.data.acknowledged !== true) {
+    return void res.status(400).json({ message: "Tick that a doctor or physiotherapist has checked you before you resume." });
+  }
   const current = await currentPlanRow(user.id);
   if (!current || current.status !== "paused") return void res.status(409).json({ message: "nothing to resume" });
-  await db.update(plansTable).set({ status: "active", pausedReason: null }).where(eq(plansTable.id, current.id));
+  await db.transaction(async (tx) => {
+    const resolved = await tx
+      .update(painEventsTable)
+      .set({ resolvedAt: new Date(), resolvedNote: body.data.note })
+      .where(and(eq(painEventsTable.userId, user.id), eq(painEventsTable.stopped, true), isNull(painEventsTable.resolvedAt)))
+      .returning({ id: painEventsTable.id });
+    if (resolved.length === 0) {
+      // Paused before pain_events existed: record the resume itself.
+      await tx.insert(painEventsTable).values({
+        userId: user.id, planId: current.id, note: current.pausedReason ?? "safety pause", source: "resume",
+        flag: null, stopped: true, resolvedAt: new Date(), resolvedNote: body.data.note,
+      });
+    }
+    await tx.update(plansTable).set({ status: "active", pausedReason: null }).where(eq(plansTable.id, current.id));
+  });
   res.json(ResumePlanResponse.parse(await planView(current.id, canLog(await accessFor(user.id)))));
 });
 
@@ -381,8 +403,12 @@ router.post("/me/items/:itemId/hurts", requireUser, async (req, res) => {
   const owned = await ownedItem(user.id, params.data.itemId);
   if (!owned) return void res.status(404).json({ message: "not found" });
 
-  // Safety first, on every tier.
+  // Safety first, on every tier. Every report is kept (pain_events), stop or not.
   const flag = redFlag(body.data.text);
+  await db.insert(painEventsTable).values({
+    userId: user.id, planId: owned.plan.id, itemId: owned.item.id, exerciseId: owned.item.exerciseId,
+    area: body.data.area ?? null, note: body.data.text, source: "hurts", flag, stopped: flag !== null,
+  });
   if (flag) {
     await db.update(plansTable).set({ status: "paused", pausedReason: `Safety stop: "${flag}"` }).where(eq(plansTable.id, owned.plan.id));
     void alert("info", `Safety stop: member #${user.id}`, `"This hurts" matched "${flag}". Plan paused; member told to see a doctor or physio.`);

@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { coachMessagesTable, db, membershipsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -19,6 +19,7 @@ export async function exportAccount(userId: number) {
     ? await db.select().from(setLogsTable).where(inArray(setLogsTable.itemId, items.map((i) => i.id))).orderBy(asc(setLogsTable.setNumber))
     : [];
   const memberships = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId)).orderBy(asc(membershipsTable.createdAt));
+  const pain = await db.select().from(painEventsTable).where(eq(painEventsTable.userId, userId)).orderBy(asc(painEventsTable.id));
   const chat = await db.select().from(coachMessagesTable).where(eq(coachMessagesTable.userId, userId)).orderBy(asc(coachMessagesTable.id));
   const [reminders] = await db.select({ lastSentAt: remindersTable.lastSentAt, createdAt: remindersTable.createdAt }).from(remindersTable).where(eq(remindersTable.userId, userId));
 
@@ -45,6 +46,10 @@ export async function exportAccount(userId: number) {
       })),
     })),
     memberships: memberships.map((m) => ({ kind: m.kind, status: m.status, test: m.test, starts_at: m.startsAt, ends_at: m.endsAt, used_at: m.usedAt })),
+    pain_reports: pain.map((p) => ({
+      source: p.source, exercise_id: p.exerciseId, area: p.area, note: p.note, warning_word: p.flag, paused_plan: p.stopped,
+      at: p.createdAt, resolved_at: p.resolvedAt, resolved_note: p.resolvedNote,
+    })),
     coach_chat: chat.map((c) => ({ coach_id: c.coachId, role: c.role, text: c.text, at: c.createdAt })),
   };
 }

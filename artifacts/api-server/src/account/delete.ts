@@ -6,6 +6,7 @@ import {
   passwordResetsTable,
   remindersTable,
   membershipsTable,
+  painEventsTable,
   planItemsTable,
   planSessionsTable,
   plansTable,
@@ -31,7 +32,7 @@ export async function activeSubscriptionIds(userId: number): Promise<string[]> {
 /**
  * Deletes a member's account. Order matters: subscriptions are cancelled at Stripe FIRST, so nobody is
  * charged for an account that no longer exists; if that fails, nothing is deleted.
- * Deleted: training answers, plans, sessions, set logs, coach chat, logins, reset links, reminder settings, failed-login records, test purchases.
+ * Deleted: training answers, plans, sessions, set logs, pain reports, coach chat, logins, reset links, reminder settings, failed-login records, test purchases.
  * Kept, with no personal details: membership and payment records (kind, dates, Stripe ids), because
  * payments must stay traceable. The account row stays as "Deleted member" so those records still point somewhere.
  */
@@ -41,6 +42,7 @@ export async function deleteAccount(userId: number, cancel: CancelSubscription |
   for (const id of subscriptions) await cancel!(id);
 
   await db.transaction(async (tx) => {
+    await tx.delete(painEventsTable).where(eq(painEventsTable.userId, userId));
     const plans = await tx.select({ id: plansTable.id }).from(plansTable).where(eq(plansTable.userId, userId));
     const planIds = plans.map((p) => p.id);
     if (planIds.length) {

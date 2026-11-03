@@ -4,7 +4,7 @@ export { commissionRatesTable } from "./commission-rates";
 export { programsTable } from "./programs";
 export { lessonsTable } from "./lessons";
 export { purchasesTable } from "./purchases";
-export { trainingProfilesTable, membershipsTable, plansTable, planSessionsTable, planItemsTable, setLogsTable } from "./training";
+export { trainingProfilesTable, membershipsTable, plansTable, planSessionsTable, planItemsTable, setLogsTable, painEventsTable } from "./training";
 export { aiUsageTable, coachMessagesTable } from "./ai";
 export { passwordResetsTable } from "./password-resets";
 export { billingEventsTable } from "./billing";

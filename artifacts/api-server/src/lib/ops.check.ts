@@ -45,7 +45,7 @@ if (api && hookPort && admin) {
   const plan = await M("POST", "/me/plans");
   const itemId = plan.json.sessions[0].items[0].id as number;
   ok((await M("POST", `/me/items/${itemId}/hurts`, { text: "sharp pain" })).json.stopped === true, "safety stop");
-  await M("POST", "/me/plans/resume");
+  await M("POST", "/me/plans/resume", { acknowledged: true, note: "physio cleared me" });
   await M("POST", `/me/items/${itemId}/hurts`, { text: "sharp pain again" });
   await settle();
   const stops = posts.filter((p) => p.includes(`Safety stop: member #${signed.json.id}`));
