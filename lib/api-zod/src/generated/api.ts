@@ -43,7 +43,6 @@ export const SignupResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable(),
   "handle": zod.string().nullable(),
   "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
@@ -66,7 +65,6 @@ export const LoginResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable(),
   "handle": zod.string().nullable(),
   "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
@@ -86,19 +84,16 @@ export const GetCurrentUserResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable(),
   "handle": zod.string().nullable(),
   "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
 
 
 /**
- * Updates display_name, bio and handle. Omitted fields stay unchanged. handle can only be set once (409 if already set or taken).
+ * Updates display_name, handle and timezone. Omitted fields stay unchanged. handle can only be set once (409 if already set or taken).
  * @summary Update the current user
  */
 export const updateCurrentUserBodyDisplayNameMax = 60;
-
-export const updateCurrentUserBodyBioMax = 500;
 
 export const updateCurrentUserBodyHandleRegExp = new RegExp('^[a-z0-9_]{3,30}$');
 
@@ -108,7 +103,6 @@ export const updateCurrentUserBodyTimezoneMax = 64;
 
 export const UpdateCurrentUserBody = zod.object({
   "display_name": zod.string().min(1).max(updateCurrentUserBodyDisplayNameMax).optional(),
-  "bio": zod.string().max(updateCurrentUserBodyBioMax).nullish(),
   "handle": zod.string().regex(updateCurrentUserBodyHandleRegExp).optional(),
   "timezone": zod.string().min(1).max(updateCurrentUserBodyTimezoneMax).optional().describe('IANA time zone, e.g. America\/New_York (400 if unknown)')
 })
@@ -117,7 +111,6 @@ export const UpdateCurrentUserResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable(),
   "handle": zod.string().nullable(),
   "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
@@ -192,7 +185,6 @@ export const ResetPasswordResponse = zod.object({
   "id": zod.number().int(),
   "email": zod.string(),
   "display_name": zod.string(),
-  "bio": zod.string().nullable(),
   "handle": zod.string().nullable(),
   "timezone": zod.string().nullable().describe('The member\'s IANA time zone (e.g. America\/New_York); null until their browser sends one')
 })
@@ -268,382 +260,6 @@ export const ReportClientErrorResponse = zod.void()
 
 
 /**
- * Public. Published programs only, with no lesson content. Optional creator filters to one creator's link name.
- * @summary List published programs
- */
-export const ListPublishedProgramsQueryParams = zod.object({
-  "creator": zod.coerce.string().optional()
-})
-
-export const ListPublishedProgramsResponseItem = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "creator_display_name": zod.string(),
-  "creator_handle": zod.string().nullable(),
-  "lesson_count": zod.number().int()
-})
-export const ListPublishedProgramsResponse = zod.array(ListPublishedProgramsResponseItem)
-
-
-/**
- * @summary Create a draft program
- */
-export const createProgramBodyTitleMax = 120;
-
-export const createProgramBodyDescriptionMax = 2000;
-
-export const createProgramBodyPriceCentsMin = 500;
-
-
-
-export const CreateProgramBody = zod.object({
-  "title": zod.string().min(1).max(createProgramBodyTitleMax),
-  "description": zod.string().max(createProgramBodyDescriptionMax).nullish(),
-  "price_cents": zod.number().int().min(createProgramBodyPriceCentsMin)
-})
-
-export const CreateProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "status": zod.enum(['draft', 'published']),
-  "lessons": zod.array(zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-}))
-})
-
-
-/**
- * @summary List the current user's programs
- */
-export const ListMyProgramsResponseItem = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "status": zod.enum(['draft', 'published']),
-  "lesson_count": zod.number().int()
-})
-export const ListMyProgramsResponse = zod.array(ListMyProgramsResponseItem)
-
-
-/**
- * @summary Get one of the current user's programs, including lessons
- */
-export const GetMyProgramParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const GetMyProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "status": zod.enum(['draft', 'published']),
-  "lessons": zod.array(zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-}))
-})
-
-
-/**
- * @summary Update one of the current user's programs
- */
-export const UpdateMyProgramParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const updateMyProgramBodyTitleMax = 120;
-
-export const updateMyProgramBodyDescriptionMax = 2000;
-
-export const updateMyProgramBodyPriceCentsMin = 500;
-
-
-
-export const UpdateMyProgramBody = zod.object({
-  "title": zod.string().min(1).max(updateMyProgramBodyTitleMax).optional(),
-  "description": zod.string().max(updateMyProgramBodyDescriptionMax).nullish(),
-  "price_cents": zod.number().int().min(updateMyProgramBodyPriceCentsMin).optional()
-})
-
-export const UpdateMyProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "status": zod.enum(['draft', 'published']),
-  "lessons": zod.array(zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-}))
-})
-
-
-/**
- * @summary Add a lesson to one of the current user's programs
- */
-export const CreateLessonParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const createLessonBodyTitleMax = 120;
-
-export const createLessonBodyBodyMax = 5000;
-
-export const createLessonBodySetsMin = 0;
-
-export const createLessonBodyRepsMin = 0;
-
-export const createLessonBodyDurationSecondsMin = 0;
-
-
-
-export const CreateLessonBody = zod.object({
-  "title": zod.string().min(1).max(createLessonBodyTitleMax),
-  "body": zod.string().max(createLessonBodyBodyMax).nullish(),
-  "sets": zod.number().int().min(createLessonBodySetsMin).nullish(),
-  "reps": zod.number().int().min(createLessonBodyRepsMin).nullish(),
-  "duration_seconds": zod.number().int().min(createLessonBodyDurationSecondsMin).nullish(),
-  "media_source": zod.enum(['youtube']).nullish(),
-  "media_ref": zod.string().nullish()
-})
-
-export const CreateLessonResponse = zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-})
-
-
-/**
- * @summary Reorder lessons in one of the current user's programs
- */
-export const ReorderLessonsParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const ReorderLessonsBody = zod.object({
-  "lesson_ids": zod.array(zod.number().int())
-})
-
-export const ReorderLessonsResponseItem = zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-})
-export const ReorderLessonsResponse = zod.array(ReorderLessonsResponseItem)
-
-
-/**
- * @summary Update a lesson in one of the current user's programs
- */
-export const UpdateLessonParams = zod.object({
-  "id": zod.coerce.number().int(),
-  "lessonId": zod.coerce.number().int()
-})
-
-export const updateLessonBodyTitleMax = 120;
-
-export const updateLessonBodyBodyMax = 5000;
-
-export const updateLessonBodySetsMin = 0;
-
-export const updateLessonBodyRepsMin = 0;
-
-export const updateLessonBodyDurationSecondsMin = 0;
-
-
-
-export const UpdateLessonBody = zod.object({
-  "title": zod.string().min(1).max(updateLessonBodyTitleMax).optional(),
-  "body": zod.string().max(updateLessonBodyBodyMax).nullish(),
-  "sets": zod.number().int().min(updateLessonBodySetsMin).nullish(),
-  "reps": zod.number().int().min(updateLessonBodyRepsMin).nullish(),
-  "duration_seconds": zod.number().int().min(updateLessonBodyDurationSecondsMin).nullish(),
-  "media_source": zod.enum(['youtube']).nullish(),
-  "media_ref": zod.string().nullish()
-})
-
-export const UpdateLessonResponse = zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-})
-
-
-/**
- * @summary Delete a lesson from one of the current user's programs
- */
-export const DeleteLessonParams = zod.object({
-  "id": zod.coerce.number().int(),
-  "lessonId": zod.coerce.number().int()
-})
-
-export const DeleteLessonResponse = zod.void()
-
-
-/**
- * @summary Publish one of the current user's programs
- */
-export const PublishProgramParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const PublishProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "status": zod.enum(['draft', 'published']),
-  "lessons": zod.array(zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-}))
-})
-
-
-/**
- * @summary Unpublish one of the current user's programs
- */
-export const UnpublishProgramParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const UnpublishProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "status": zod.enum(['draft', 'published']),
-  "lessons": zod.array(zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-}))
-})
-
-
-/**
- * Public. Published programs only, with no lesson content.
- * @summary Get one published program
- */
-export const GetPublishedProgramParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const GetPublishedProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "creator_display_name": zod.string(),
-  "creator_handle": zod.string().nullable(),
-  "lesson_count": zod.number().int()
-})
-
-
-/**
- * @summary Public creator profile
- */
-export const GetCreatorParams = zod.object({
-  "handle": zod.coerce.string()
-})
-
-export const GetCreatorResponse = zod.object({
-  "handle": zod.string(),
-  "display_name": zod.string(),
-  "bio": zod.string().nullable()
-})
-
-
-/**
- * Sets a 30-day referral cookie; if logged in, also saves it on the account. Last link wins. Ignored for the creator's own visits.
- * @summary Record that a visitor arrived through this creator's link
- */
-export const RecordCreatorVisitParams = zod.object({
-  "handle": zod.coerce.string()
-})
-
-export const RecordCreatorVisitResponse = zod.void()
-
-
-/**
- * Real data only. paid_out_cents is null until real (non-test) money has been paid. ranking is "sales" once any real sale exists, otherwise "new".
- * @summary Public showcase numbers for the Home page
- */
-export const GetHomeResponse = zod.object({
-  "creators": zod.number().int(),
-  "live_programs": zod.number().int(),
-  "paid_out_cents": zod.number().int().nullable(),
-  "ranking": zod.enum(['sales', 'new']),
-  "top_creators": zod.array(zod.object({
-  "handle": zod.string(),
-  "display_name": zod.string(),
-  "live_programs": zod.number().int(),
-  "sales": zod.number().int()
-}))
-})
-
-
-/**
  * @summary Public app settings the web app needs
  */
 export const GetConfigResponse = zod.object({
@@ -652,8 +268,6 @@ export const GetConfigResponse = zod.object({
   "email": zod.boolean().describe('Emails can be sent (password reset works)'),
   "ai": zod.boolean().describe('AI layer on (coach notes on plans, coach chat for Coaching members)'),
   "payments": zod.enum(['off', 'test', 'live']).describe('off = no Stripe keys (dev unlock only); test = Stripe test mode, no real charge; live = real money'),
-  "creator_brought_bps": zod.number().int().describe('Hypest\'s fee on sales through the creator\'s own link, in basis points (1000 = 10%)'),
-  "hypest_found_bps": zod.number().int().describe('Hypest\'s fee on sales Hypest found, in basis points'),
   "prices": zod.object({
   "intro_plan_cents": zod.number().int(),
   "plan_cents": zod.number().int(),
@@ -666,65 +280,6 @@ export const GetConfigResponse = zod.object({
   "yes_advice": zod.string(),
   "cleared_label": zod.string()
 })
-})
-
-
-/**
- * @summary Programs the current user has bought, newest first
- */
-export const ListLibraryResponseItem = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "price_cents": zod.number().int(),
-  "creator_display_name": zod.string(),
-  "creator_handle": zod.string().nullable(),
-  "lesson_count": zod.number().int()
-})
-export const ListLibraryResponse = zod.array(ListLibraryResponseItem)
-
-
-/**
- * @summary A program with its lessons, for a buyer who owns it or its creator
- */
-export const GetLibraryProgramParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const GetLibraryProgramResponse = zod.object({
-  "id": zod.number().int(),
-  "title": zod.string(),
-  "description": zod.string().nullable(),
-  "creator_display_name": zod.string(),
-  "creator_handle": zod.string().nullable(),
-  "is_creator": zod.boolean(),
-  "lessons": zod.array(zod.object({
-  "id": zod.number().int(),
-  "position": zod.number().int(),
-  "title": zod.string(),
-  "body": zod.string().nullable(),
-  "sets": zod.number().int().nullable(),
-  "reps": zod.number().int().nullable(),
-  "duration_seconds": zod.number().int().nullable(),
-  "media_source": zod.enum(['youtube']).nullable(),
-  "media_ref": zod.string().nullable()
-}))
-})
-
-
-/**
- * @summary DEVELOPMENT ONLY. Grant access as if bought, with no payment. 404 outside development.
- */
-export const TestPurchaseParams = zod.object({
-  "id": zod.coerce.number().int()
-})
-
-export const TestPurchaseResponse = zod.object({
-  "program_id": zod.number().int(),
-  "price_cents": zod.number().int(),
-  "commission_source": zod.enum(['creator_brought', 'hypest_found']),
-  "commission_bps": zod.number().int(),
-  "status": zod.enum(['paid', 'test'])
 })
 
 

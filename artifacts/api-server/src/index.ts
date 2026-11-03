@@ -1,6 +1,5 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedCommissionRatesIfEmpty } from "./lib/seed-commission-rates";
 import { tidyExpired } from "./lib/tidy";
 import { devLoginProblem, listenHost } from "./lib/dev-login";
 
@@ -22,13 +21,6 @@ const devProblem = devLoginProblem();
 if (devProblem) {
   logger.error(devProblem);
   throw new Error(`Refusing to start: ${devProblem}`);
-}
-
-try {
-  await seedCommissionRatesIfEmpty();
-} catch (err) {
-  logger.error({ err }, "Failed to seed commission rates");
-  process.exit(1);
 }
 
 const onListen = (err?: Error) => {

@@ -17,7 +17,6 @@ import {
 } from "../lib/login-rate-limit";
 import { allowIp, clientIp } from "../lib/ip-limit";
 import { hashPassword, verifyPassword } from "../lib/passwords";
-import { isLive, readReferralCookie } from "../lib/referral";
 import { isReservedHandle } from "../lib/handles";
 import { isUniqueViolation } from "../lib/db-errors";
 import {
@@ -45,7 +44,6 @@ function toCurrentUser(user: AuthUser) {
     id: user.id,
     email: user.email,
     display_name: user.displayName,
-    bio: user.bio,
     handle: user.handle,
     timezone: user.timezone,
   };
@@ -61,8 +59,6 @@ router.post("/auth/signup", async (req, res) => {
   if (!(await allowIp(req, res, "signup"))) return;
 
   const email = parsed.data.email.toLowerCase();
-  const cookieClick = readReferralCookie(req);
-  const referral = cookieClick && isLive(cookieClick, new Date()) ? cookieClick : null;
   try {
     const passwordHash = await hashPassword(parsed.data.password);
     const [user] = await db
@@ -71,10 +67,8 @@ router.post("/auth/signup", async (req, res) => {
         email,
         passwordHash,
         displayName: parsed.data.display_name,
-        bio: null,
         timezone: isTimezone(parsed.data.timezone) ? parsed.data.timezone : null,
         adultConfirmedAt: new Date(),
-        ...(referral ? { referredByCreatorId: referral.creatorId, referredAt: referral.at } : {}),
       })
       .returning(authUserColumns);
 
@@ -156,7 +150,7 @@ router.patch("/auth/me", requireUser, async (req, res) => {
     return;
   }
 
-  const changes: { displayName?: string; bio?: string | null; handle?: string; timezone?: string } = {};
+  const changes: { displayName?: string; handle?: string; timezone?: string } = {};
   if (parsed.data.timezone !== undefined) {
     if (!isTimezone(parsed.data.timezone)) {
       res.status(400).json({ message: "unknown time zone" });
@@ -166,9 +160,6 @@ router.patch("/auth/me", requireUser, async (req, res) => {
   }
   if (parsed.data.display_name !== undefined) {
     changes.displayName = parsed.data.display_name;
-  }
-  if (parsed.data.bio !== undefined) {
-    changes.bio = parsed.data.bio;
   }
   if (parsed.data.handle !== undefined && parsed.data.handle !== user.handle) {
     // Set once: changing it would break links creators have already shared.
