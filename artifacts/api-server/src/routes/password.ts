@@ -7,6 +7,7 @@ import { authUser, requireUser } from "../middleware/require-user";
 import { hashPassword, verifyPassword } from "../lib/passwords";
 import { authUserColumns, createSession } from "../lib/session";
 import { emailOn, sendEmail, siteUrl, SUPPORT_EMAIL } from "../lib/email";
+import { allowIp } from "../lib/ip-limit";
 
 const router: IRouter = Router();
 
@@ -34,6 +35,7 @@ router.put("/auth/password", requireUser, async (req, res) => {
 router.post("/auth/password/forgot", async (req, res) => {
   const body = ForgotPasswordBody.strict().safeParse(req.body);
   if (!body.success) return void res.status(400).json(bad(body.error.issues));
+  if (!(await allowIp(req, res, "reset"))) return;
   const site = siteUrl();
   if (!emailOn() || !site) return void res.status(503).json({ message: `Password reset by email isn't set up yet. Email ${SUPPORT_EMAIL} and we'll help.` });
 
@@ -62,6 +64,7 @@ router.post("/auth/password/forgot", async (req, res) => {
 router.post("/auth/password/reset", async (req, res) => {
   const body = ResetPasswordBody.strict().safeParse(req.body);
   if (!body.success) return void res.status(400).json(bad(body.error.issues));
+  if (!(await allowIp(req, res, "reset"))) return;
   if (!/^[A-Za-z0-9_-]{43}$/.test(body.data.token)) return void res.status(400).json({ message: "This link isn't valid." });
   const tokenHash = sha256(Buffer.from(body.data.token, "base64url"));
   const [link] = await db.select().from(passwordResetsTable).where(eq(passwordResetsTable.tokenHash, tokenHash));

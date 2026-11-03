@@ -8,6 +8,6 @@ export { trainingProfilesTable, membershipsTable, plansTable, planSessionsTable,
 export { aiUsageTable, coachMessagesTable } from "./ai";
 export { passwordResetsTable } from "./password-resets";
 export { billingEventsTable } from "./billing";
-export { authFailuresTable } from "./auth-failures";
+export { authFailuresTable, authAttemptsTable } from "./auth-failures";
 export { remindersTable } from "./reminders";
 export { onboardingDraftsTable } from "./onboarding-drafts";

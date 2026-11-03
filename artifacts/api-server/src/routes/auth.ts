@@ -15,6 +15,7 @@ import {
   isLoginRateLimited,
   recordLoginFailure,
 } from "../lib/login-rate-limit";
+import { allowIp, clientIp } from "../lib/ip-limit";
 import { hashPassword, verifyPassword } from "../lib/passwords";
 import { isLive, readReferralCookie } from "../lib/referral";
 import { isReservedHandle } from "../lib/handles";
@@ -56,6 +57,8 @@ router.post("/auth/signup", async (req, res) => {
     res.status(400).json({ message: invalidBodyMessage(parsed.error.issues) });
     return;
   }
+
+  if (!(await allowIp(req, res, "signup"))) return;
 
   const email = parsed.data.email.toLowerCase();
   const cookieClick = readReferralCookie(req);
@@ -101,8 +104,11 @@ router.post("/auth/login", async (req, res) => {
     return;
   }
 
+  if (!(await allowIp(req, res, "login"))) return;
+
   const email = parsed.data.email.toLowerCase();
-  if (await isLoginRateLimited(email)) {
+  const ip = clientIp(req);
+  if (await isLoginRateLimited(email, ip)) {
     res.status(429).json({ message: "too many attempts" });
     return;
   }
@@ -119,7 +125,7 @@ router.post("/auth/login", async (req, res) => {
   );
 
   if (!user || !passwordOk) {
-    await recordLoginFailure(email);
+    await recordLoginFailure(email, ip);
     res.status(401).json({ message: "invalid email or password" });
     return;
   }
