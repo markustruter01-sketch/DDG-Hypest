@@ -313,6 +313,19 @@ export const PlanViewStatus = {
   done: 'done',
 } as const;
 
+/**
+ * pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes)
+ */
+export type PlanViewNotesStatus = typeof PlanViewNotesStatus[keyof typeof PlanViewNotesStatus];
+
+
+export const PlanViewNotesStatus = {
+  none: 'none',
+  pending: 'pending',
+  done: 'done',
+  failed: 'failed',
+} as const;
+
 export interface PlanView {
   id: number | null;
   coach_id: string;
@@ -389,6 +402,16 @@ export const ChatMessageRole = {
   coach: 'coach',
 } as const;
 
+/**
+ * A one-tap offer from the coach, still open (build_block = start a new block)
+ */
+export type ChatMessageAction = typeof ChatMessageAction[keyof typeof ChatMessageAction] | null;
+
+
+export const ChatMessageAction = {
+  build_block: 'build_block',
+} as const;
+
 export interface ChatMessage {
   id: number;
   role: ChatMessageRole;
@@ -405,6 +428,66 @@ export interface CoachChat {
   /** Messages a day for this member's tier */
   per_day: number;
   messages: ChatMessage[];
+}
+
+export type CoachUpdateSource = typeof CoachUpdateSource[keyof typeof CoachUpdateSource];
+
+
+export const CoachUpdateSource = {
+  checkin: 'checkin',
+  weekly_review: 'weekly_review',
+} as const;
+
+export interface CoachUpdate {
+  id: number;
+  text: string;
+  source: CoachUpdateSource;
+  created_at: string;
+}
+
+export interface DailyNote {
+  /** Today's note; null when the member's tier has none */
+  note: string | null;
+  updates: CoachUpdate[];
+}
+
+export type MemoryItemKind = typeof MemoryItemKind[keyof typeof MemoryItemKind];
+
+
+export const MemoryItemKind = {
+  preference: 'preference',
+  schedule: 'schedule',
+  equipment: 'equipment',
+  goal_detail: 'goal_detail',
+  motivation: 'motivation',
+} as const;
+
+export type MemoryItemSource = typeof MemoryItemSource[keyof typeof MemoryItemSource];
+
+
+export const MemoryItemSource = {
+  agent: 'agent',
+  member: 'member',
+} as const;
+
+export interface MemoryItem {
+  id: number;
+  kind: MemoryItemKind;
+  text: string;
+  source: MemoryItemSource;
+  updated_at: string;
+}
+
+export interface CoachMemory {
+  items: MemoryItem[];
+}
+
+export interface MemoryEdit {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  text: string;
 }
 
 export type AdminSummarySwitchesPayments = typeof AdminSummarySwitchesPayments[keyof typeof AdminSummarySwitchesPayments];
@@ -632,79 +715,3 @@ export interface AppConfig {
   screening: Screening;
 }
 
-export type PlanViewNotesStatus = typeof PlanViewNotesStatus[keyof typeof PlanViewNotesStatus];
-
-
-export const PlanViewNotesStatus = {
-  none: 'none',
-  pending: 'pending',
-  done: 'done',
-  failed: 'failed',
-} as const;
-
-export type ChatMessageAction = typeof ChatMessageAction[keyof typeof ChatMessageAction] | null;
-
-
-export const ChatMessageAction = {
-  build_block: 'build_block',
-} as const;
-
-export type CoachUpdateSource = typeof CoachUpdateSource[keyof typeof CoachUpdateSource];
-
-
-export const CoachUpdateSource = {
-  checkin: 'checkin',
-  weekly_review: 'weekly_review',
-} as const;
-
-export interface CoachUpdate {
-  id: number;
-  text: string;
-  source: CoachUpdateSource;
-  created_at: string;
-}
-
-export interface DailyNote {
-  /** Today's note; null when the member's tier has none */
-  note: string | null;
-  updates: CoachUpdate[];
-}
-
-export type MemoryItemKind = typeof MemoryItemKind[keyof typeof MemoryItemKind];
-
-
-export const MemoryItemKind = {
-  preference: 'preference',
-  schedule: 'schedule',
-  equipment: 'equipment',
-  goal_detail: 'goal_detail',
-  motivation: 'motivation',
-} as const;
-
-export type MemoryItemSource = typeof MemoryItemSource[keyof typeof MemoryItemSource];
-
-
-export const MemoryItemSource = {
-  agent: 'agent',
-  member: 'member',
-} as const;
-
-export interface MemoryItem {
-  id: number;
-  kind: MemoryItemKind;
-  text: string;
-  source: MemoryItemSource;
-  updated_at: string;
-}
-
-export interface CoachMemory {
-  items: MemoryItem[];
-}
-
-export interface MemoryEdit {
-  /**
-   * @minLength 1
-   * @maxLength 200
-   */
-  text: string;
-}

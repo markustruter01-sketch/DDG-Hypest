@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes)
+ */
 export type PlanViewNotesStatus = typeof PlanViewNotesStatus[keyof typeof PlanViewNotesStatus];
 
 

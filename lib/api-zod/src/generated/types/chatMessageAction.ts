@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * A one-tap offer from the coach, still open (build_block = start a new block)
+ */
 export type ChatMessageAction = typeof ChatMessageAction[keyof typeof ChatMessageAction] | null;
 
 

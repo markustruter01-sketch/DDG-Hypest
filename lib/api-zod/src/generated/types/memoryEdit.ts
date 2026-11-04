@@ -8,8 +8,8 @@
 
 export interface MemoryEdit {
   /**
-   * @minLength 1
-   * @maxLength 200
-   */
+     * @minLength 1
+     * @maxLength 200
+     */
   text: string;
 }
