@@ -56,7 +56,7 @@ parallel on separate branches unless marked "after".
 - **Who:** Opus. **Spec:** cross-user attempts on `/me/items/*` and `/me/sessions/*` in `*.check.ts`; 4- and 6-day and 30-minute plans in `engine.check`; `validatePlan` rejecting a bad plan; credit consumption on `/me/plans/next`.
 
 ### 1.10 Markus
-- Merge 1.1–1.9 as they pass review (1.1–1.3 merged as #29–#31; 1.4–1.9 are PR #32, reviewed and approved 4 Nov); Replit Pull; `pnpm --filter @workspace/db run push` (adds `users.timezone`, `pain_events`, `onboarding_drafts`, `auth_attempts`, `auth_failures.ip`); publish; confirm the app installs on an Android phone and logs a set with Wi-Fi off.
+- Merge 1.1–1.9 as they pass review (1.1–1.3 merged as #29–#31; 1.4–1.9 are PR #32, reviewed and approved 4 Nov); Replit Pull; `pnpm --filter @workspace/db run push` (adds `users.timezone`, `pain_events`, `onboarding_drafts`, `auth_attempts`, `auth_failures.ip`); publish. Done 4 Nov (1.11 merged as #33). The phone test moved to the end-of-development checklist below (Markus, 4 Nov).
 
 ### 1.11 Hardening left over from Fable's review of #32
 - **Who:** Opus. **Review:** Fable (security). **Spec:** (a) `PUT /onboarding/draft` goes through `allowIp` as a fourth kind, 60 per network per 15 min, with a check in `draft.check.ts`; (b) `outcomeOf(401)` is `retry`, not `drop`, with a case in `offline-queue.check.ts`; (c) a global per-email backstop in `login-rate-limit.ts`: 100 failures in 15 min across all networks → 429 for everyone and one `alert()`; the per-network 10 stays; `ip-limit.check.ts` covers it; (d) delete the dead marketplace CSS from App.css. One branch `phase-1b`, one PR.
@@ -67,6 +67,7 @@ parallel on separate branches unless marked "after".
 ## Phase 2: The coach (target: 6 weeks) — gate: chat on, AI cost under US$1 per active member per month, allowances enforced
 
 ### 2.1 Spec: the coach agent, memory and allowances
+- **Status (4 Nov):** written by Opus while Fable was out of usage, checked by an independent reviewer agent; Fable re-reads it before Phase 2 is called done. Markus approves §5 and §9.
 - **Who:** Fable. Writes `docs/COACH-AGENT-SPEC.md`: the agent loop (one call per member action, tools, max 3 tool steps), the standing context and what is cached, `coach_memory` table and its lifecycle, the allowance table per tier, the per-member ledger and what happens at the limit (coach says so in voice; plan actions still work), the safety order (rules before model, output filter after), prompt files per coach, the eval set (30 scripted member situations with expected tool calls), and the cost model. Markus approves the allowances and prices.
 - **Prompt (Fable):** "Read docs/HYPEST-BUILD-PLAN.md phase 2 and the audit. Write docs/COACH-AGENT-SPEC.md as step 2.1 describes, with every value fixed. Commit it to main."
 
@@ -98,6 +99,9 @@ parallel on separate branches unless marked "after".
 ### 3.3 Nutrition-lite
 - **Who:** Opus. **Review:** Fable (prompts, safety: no diets for screened conditions, no numbers below declared floors). Tables `nutrition_targets`, `meal_plans`, `meal_logs`.
 
+### 3.3b Milestones and the long journey (Markus, 5 Nov 2026)
+- **Who:** Opus. **Review:** Fable. **Spec:** a Journey view on Progress, built from the permanent records (set logs, plans, sessions; nothing is ever summarised away): first session and first weights, personal bests per lift (with dates), blocks finished, session counts (10, 50, 100, 250…), longest streak, and before/now per main lift. Derived on read, with a `milestones` cache table only if it gets slow. The coach's context keeps its fixed-size lifetime line (`coaching/block.ts` lifetimeSummary: started, best, recent best) so long-term members cost the same per message.
+
 ### 3.4 Body metrics and check-ins
 - **Who:** Opus. Tables `body_metrics`, `checkins`; the agent reads them; readiness rule declared in the spec (poor sleep + high soreness lowers the day's dose, with the why).
 
@@ -121,6 +125,14 @@ parallel on separate branches unless marked "after".
 - **Who:** Opus. **Spec:** the readiness rule from 3.4 extended with HR and sleep from devices; the Monday message mentions it.
 
 ---
+
+## End-of-development checklist (Markus, on real devices, before launch)
+Run these once Phases 2 and 3 are built. Each is a few minutes. Nothing is "launched" until all pass on the published app.
+1. **Offline logging (from 1.10):** install the app on an Android phone (Chrome → "Install app"), and on an iPhone (Safari → Share → "Add to Home Screen"). Start a session, turn Wi-Fi and mobile data off, tick a set: it says "on phone". Turn data back on: within 30 s the label goes and the set is on the Progress page.
+2. **Shared phone (from 1.11):** log a set offline as member A, log out, log in as member B: B doesn't see A's set. Log back in as A: it syncs.
+3. **Network limits (from 1.7):** log in from your phone on mobile data and on home Wi-Fi: no "Too many tries" message. (If there is, set `TRUST_PROXY_HOPS=2`.)
+4. **Rest beep (from 1.5):** on an iPhone with the ringer on, finish a set: the beep plays when rest ends.
+5. Phase 2 and 3 items are added here as they are built.
 
 ## Standing rules for every step
 1. Opus builds on a branch, with tests, and opens a PR that ends with what it checked and what it could not.

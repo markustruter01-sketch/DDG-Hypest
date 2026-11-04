@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { tidyExpired } from "./lib/tidy";
 import { devLoginProblem, listenHost } from "./lib/dev-login";
+import { seedAllowances } from "./coaching/allowance";
 
 const rawPort = process.env["PORT"];
 
@@ -21,6 +22,13 @@ const devProblem = devLoginProblem();
 if (devProblem) {
   logger.error(devProblem);
   throw new Error(`Refusing to start: ${devProblem}`);
+}
+
+try {
+  await seedAllowances(); // docs/COACH-AGENT-SPEC.md §5: fills missing rows only; never overwrites Markus's edits
+} catch (err) {
+  logger.error({ err }, "Failed to seed AI allowances");
+  process.exit(1);
 }
 
 const onListen = (err?: Error) => {

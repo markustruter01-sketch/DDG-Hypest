@@ -3,6 +3,7 @@ import type { Coach } from "./library";
 import { EXERCISE_BY_ID } from "./library";
 import type { Plan, PlanInput } from "./engine";
 import { redFlag } from "./safety";
+import { filterReply } from "./output-filter";
 
 /**
  * The AI personal layer for a plan. The rules engine has already chosen every exercise, set, rep and load;
@@ -41,6 +42,7 @@ const Reply = z.object({
 function clean(text: string, max: number): string | null {
   const t = text.replace(/\s+/g, " ").trim();
   if (!t || t.length > max || /\d/.test(t) || /https?:|www\./i.test(t) || redFlag(t)) return null;
+  if (filterReply(t, null, max) !== null) return null; // the same output filter as chat (spec §1.2)
   return t;
 }
 

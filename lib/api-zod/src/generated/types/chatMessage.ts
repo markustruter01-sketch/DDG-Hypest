@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ChatMessageAction } from './chatMessageAction';
 import type { ChatMessageRole } from './chatMessageRole';
 
 export interface ChatMessage {
@@ -12,4 +13,6 @@ export interface ChatMessage {
   role: ChatMessageRole;
   text: string;
   created_at: Date;
+  /** A one-tap offer from the coach, still open (build_block = start a new block) */
+  action: ChatMessageAction;
 }

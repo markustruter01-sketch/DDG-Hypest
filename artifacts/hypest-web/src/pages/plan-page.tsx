@@ -58,7 +58,12 @@ export function PlanPage() {
           </div>
           {s.note ? <p className="session-note">{s.note}</p> : null}
           <ul>
-            {s.items.map((it) => <li key={it.id ?? it.exercise_id}><span>{it.name}</span><b>{dose(it)}</b></li>)}
+            {s.items.map((it) => (
+              <li key={it.id ?? it.exercise_id}>
+                <span>{it.name}{it.change_note ? <span className="change-note label">Why: {it.change_note}</span> : null}</span>
+                <b>{dose(it)}</b>
+              </li>
+            ))}
           </ul>
         </Link>
       ))}

@@ -5,6 +5,8 @@ import {
   CompleteSessionResponse,
   CreateNextPlanResponse,
   CreatePlanResponse,
+  AddPlanNotesParams,
+  AddPlanNotesResponse,
   DevUnlockBody,
   GetProgressResponse,
   GetTrainingResponse,
@@ -39,7 +41,8 @@ import { COACH_BY_ID, COACHES, EXERCISE_BY_ID, type Area, type Coach, type Equip
 import { buildPlan, findSwap, nextLoads, WEEKS, type Plan, type PlanInput } from "../coaching/engine";
 import { redFlag, STOP_MESSAGE } from "../coaching/safety";
 import { notesPrompt, parseNotes } from "../coaching/ai-notes";
-import { askClaude } from "../lib/ai";
+import { aiOn, callModel, costMicroUsd, globalBudgetAllows, type TextBlock } from "../lib/ai";
+import { reserveTurn, settleTurn } from "../coaching/allowance";
 import { alert } from "../lib/alerts";
 import { accessFor, canAutoNext, canLog } from "../coaching/access";
 import { answersError, checkAnswers, saveProfile, type Answers } from "../coaching/profile";
@@ -78,13 +81,15 @@ async function screened(userId: number): Promise<boolean> {
   return Boolean(p?.s);
 }
 
-function itemView(it: Plan["sessions"][number]["items"][number] & { id?: number | null; swappedFrom?: string | null }, logs: { set_number: number; reps: number | null; seconds: number | null; load_kg: number | null }[] = []) {
+function itemView(it: Plan["sessions"][number]["items"][number] & { id?: number | null; swappedFrom?: string | null; changeNote?: string | null }, logs: { set_number: number; reps: number | null; seconds: number | null; load_kg: number | null }[] = []) {
   const ex = EXERCISE_BY_ID.get(it.exerciseId);
   if (!ex) throw new Error(`unknown exercise ${it.exerciseId}`);
   return {
     id: it.id ?? null, exercise_id: ex.id, name: ex.name, cue: ex.cue, measure: ex.measure, weighted: ex.weighted,
     sets: it.sets, reps: it.reps, seconds: it.seconds, rest_seconds: it.restSeconds, target_load_kg: it.targetLoadKg,
     swapped_from: it.swappedFrom ?? null, logs,
+    // Why the coach changed this item (step 2.4 "why" line); null when it is as the rules built it.
+    change_note: it.changeNote ?? null,
     // A barbell-only lift: the player shows which plates go on each side (build plan 1.5).
     barbell: ex.equipment.length === 1 && ex.equipment[0] === "barbell",
   };
@@ -110,6 +115,8 @@ async function planView(planId: number, withLogs: boolean) {
   return {
     id: plan.id, coach_id: plan.coachId, block: plan.block, weeks: plan.weeks, days_per_week: daysPerWeek,
     status: plan.status as "active" | "paused" | "done", paused_reason: plan.pausedReason, intro: plan.intro,
+    // Spec §12: "pending" = the app should ask for the coach's notes (POST /me/plans/{id}/notes).
+    notes_status: (plan.notesStatus === "working" ? "pending" : plan.notesStatus) as "none" | "pending" | "done" | "failed",
     sessions: sessions.map((s) => ({
       id: s.id, week: s.week, day: s.day, title: s.title, note: s.note, completed_at: s.completedAt?.toISOString() ?? null,
       items: items.filter((i) => i.sessionId === s.id).map((i) =>
@@ -119,15 +126,24 @@ async function planView(planId: number, withLogs: boolean) {
 }
 
 /**
- * AI personal layer: the coach's welcome and one line per session, added after the plan is saved.
- * Off, over budget or failed → the plan stays exactly as the rules built it. Never throws.
+ * AI personal layer: the coach's welcome and one line per session, added after the plan is saved (spec §12: the app
+ * asks for them right after the plan shows, so a build never waits on the model). Counted against the member's
+ * plan_notes allowance and the global budget. Off, over budget or failed → the plan stays exactly as the rules built
+ * it. Never throws. Returns whether notes were written.
  */
-async function addAiNotes(planId: number, userId: number, plan: Plan, input: PlanInput): Promise<void> {
+async function addAiNotes(planId: number, userId: number, timezone: string | null, plan: Plan, input: PlanInput): Promise<boolean> {
   const coach = COACH_BY_ID.get(plan.coachId);
-  if (!coach) return;
+  if (!coach || !aiOn()) return false;
   const prompt = notesPrompt(coach, input, plan);
-  const raw = await askClaude({ tier: "plan", purpose: "plan_notes", system: prompt.system, messages: [{ role: "user", content: prompt.user }], maxTokens: 2000, userId });
-  if (!raw) return;
+  const MAX = 2000;
+  const est = 2 * costMicroUsd("plan", Math.ceil((prompt.system.length + prompt.user.length) / 2), MAX);
+  if (!(await globalBudgetAllows(est))) return false;
+  const reservation = await reserveTurn(userId, (await accessFor(userId)).level, "plan_notes", est, timezone);
+  if (!reservation.ok) return false;
+  const reply = await callModel({ tier: "plan", kind: "plan_notes", system: prompt.system, messages: [{ role: "user", content: prompt.user }], maxTokens: MAX, userId });
+  await settleTurn(userId, reservation, reply.ok ? reply.costMicro : 0).catch(() => undefined);
+  const raw = reply.ok ? reply.content.filter((c): c is TextBlock => c.type === "text").map((c) => c.text).join("").trim() : "";
+  if (!raw) return false;
   const notes = parseNotes(raw, plan);
   try {
     const [row] = await db.select({ record: plansTable.record }).from(plansTable).where(eq(plansTable.id, planId));
@@ -139,8 +155,10 @@ async function addAiNotes(planId: number, userId: number, plan: Plan, input: Pla
         await tx.update(planSessionsTable).set({ note }).where(and(eq(planSessionsTable.planId, planId), eq(planSessionsTable.week, week!), eq(planSessionsTable.day, day!)));
       }
     });
+    return notes !== null;
   } catch {
     // The plan is already saved; notes are optional.
+    return false;
   }
 }
 
@@ -148,7 +166,7 @@ async function savePlan(userId: number, plan: Plan, input: PlanInput, block: num
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(plansTable)
-      .values({ userId, coachId: plan.coachId, block, weeks: plan.weeks, status: "active", engine: "rules", record: { input, plan } })
+      .values({ userId, coachId: plan.coachId, block, weeks: plan.weeks, status: "active", engine: "rules", record: { input, plan }, notesStatus: aiOn() ? "pending" : "none" })
       .returning({ id: plansTable.id });
     if (!row) throw new Error("plan insert failed");
     for (const s of plan.sessions) {
@@ -202,7 +220,7 @@ router.post("/coaching/preview", (req, res) => {
   if (err) return void res.status(400).json({ message: err });
   const plan = buildPlan(toInput(a, 1));
   res.json(PreviewPlanResponse.parse({
-    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null,
+    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null, notes_status: "none",
     sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, items: s.items.map((it) => itemView(it)) })),
   }));
 });
@@ -276,7 +294,6 @@ router.post("/me/plans", requireUser, async (_req, res) => {
   const input = toInput(profile, block);
   const built = buildPlan(input);
   const planId = await savePlan(user.id, built, input, block);
-  await addAiNotes(planId, user.id, built, input);
   if (access.creditId !== null) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }
@@ -307,11 +324,33 @@ router.post("/me/plans/next", requireUser, async (_req, res) => {
   const plan = buildPlan(input);
   await db.update(plansTable).set({ status: "done" }).where(eq(plansTable.id, current.id));
   const planId = await savePlan(user.id, plan, input, block);
-  await addAiNotes(planId, user.id, plan, input);
   if (!canAutoNext(access) && access.creditId !== null) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }
   res.status(201).json(CreateNextPlanResponse.parse(await planView(planId, canLog(access))));
+});
+
+/**
+ * Spec §12: the coach's notes for a block, asked for by the app right after the plan shows. The request that claims
+ * the block does the work (the published app only has CPU while a request is open); a second tab gets the plan as it
+ * stands. A claim left "working" for 2 minutes (a crashed request) can be taken again.
+ */
+router.post("/me/plans/:planId/notes", requireUser, async (req, res) => {
+  const user = authUser(res);
+  const params = AddPlanNotesParams.safeParse(req.params);
+  if (!params.success) return bad(res, params.error.issues);
+  const [own] = await db.select({ id: plansTable.id }).from(plansTable).where(and(eq(plansTable.id, params.data.planId), eq(plansTable.userId, user.id)));
+  if (!own) return void res.status(404).json({ message: "not found" });
+  const stale = new Date(Date.now() - 2 * 60_000);
+  const [claimed] = await db.update(plansTable).set({ notesStatus: "working", notesClaimedAt: new Date() })
+    .where(and(eq(plansTable.id, own.id), sql`(${plansTable.notesStatus} = 'pending' or (${plansTable.notesStatus} = 'working' and ${plansTable.notesClaimedAt} < ${stale}))`))
+    .returning({ record: plansTable.record });
+  if (claimed) {
+    const { input, plan } = claimed.record as { input: PlanInput; plan: Plan };
+    const done = await addAiNotes(own.id, user.id, user.timezone, plan, input);
+    await db.update(plansTable).set({ notesStatus: done ? "done" : "failed" }).where(eq(plansTable.id, own.id));
+  }
+  res.json(AddPlanNotesResponse.parse(await planView(own.id, canLog(await accessFor(user.id)))));
 });
 
 router.post("/me/plans/resume", requireUser, async (req, res) => {

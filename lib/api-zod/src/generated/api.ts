@@ -332,6 +332,7 @@ export const PreviewPlanResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -358,7 +359,8 @@ export const PreviewPlanResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 })
@@ -433,6 +435,7 @@ export const GetTrainingResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -459,7 +462,8 @@ export const GetTrainingResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 }).nullable()
@@ -529,6 +533,7 @@ export const SaveTrainingProfileResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -555,7 +560,8 @@ export const SaveTrainingProfileResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 }).nullable()
@@ -606,6 +612,7 @@ export const SetUnitsResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -632,7 +639,8 @@ export const SetUnitsResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 }).nullable()
@@ -651,6 +659,7 @@ export const CreatePlanResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -677,7 +686,8 @@ export const CreatePlanResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 })
@@ -695,6 +705,7 @@ export const CreateNextPlanResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -721,7 +732,8 @@ export const CreateNextPlanResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 })
@@ -748,6 +760,7 @@ export const ResumePlanResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -774,7 +787,8 @@ export const ResumePlanResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 })
@@ -813,7 +827,8 @@ export const CompleteSessionResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 })
 
@@ -891,16 +906,18 @@ export const ListPastPlansResponse = zod.array(ListPastPlansResponseItem)
 
 
 /**
- * @summary Chat with your coach (Coaching members, when AI is on)
+ * @summary Chat with your coach (Plans and Coaching members, when AI is on)
  */
 export const GetCoachChatResponse = zod.object({
-  "enabled": zod.boolean().describe('Chat can be used now (Coaching member and AI on)'),
+  "enabled": zod.boolean().describe('Chat can be used now (Plans or Coaching member, and AI on)'),
   "remaining_today": zod.number().int(),
+  "per_day": zod.number().int().describe('Messages a day for this member\'s tier'),
   "messages": zod.array(zod.object({
   "id": zod.number().int(),
   "role": zod.enum(['member', 'coach']),
   "text": zod.string(),
-  "created_at": zod.coerce.date()
+  "created_at": zod.coerce.date(),
+  "action": zod.enum(['build_block']).nullable().describe('A one-tap offer from the coach, still open (build_block = start a new block)')
 }))
 })
 
@@ -917,13 +934,15 @@ export const SendCoachMessageBody = zod.object({
 })
 
 export const SendCoachMessageResponse = zod.object({
-  "enabled": zod.boolean().describe('Chat can be used now (Coaching member and AI on)'),
+  "enabled": zod.boolean().describe('Chat can be used now (Plans or Coaching member, and AI on)'),
   "remaining_today": zod.number().int(),
+  "per_day": zod.number().int().describe('Messages a day for this member\'s tier'),
   "messages": zod.array(zod.object({
   "id": zod.number().int(),
   "role": zod.enum(['member', 'coach']),
   "text": zod.string(),
-  "created_at": zod.coerce.date()
+  "created_at": zod.coerce.date(),
+  "action": zod.enum(['build_block']).nullable().describe('A one-tap offer from the coach, still open (build_block = start a new block)')
 }))
 })
 
@@ -1038,6 +1057,7 @@ export const DevUnlockResponse = zod.object({
   "status": zod.enum(['preview', 'active', 'paused', 'done']),
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -1064,7 +1084,8 @@ export const DevUnlockResponse = zod.object({
   "seconds": zod.number().int().nullable(),
   "load_kg": zod.number().nullable()
 })),
-  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side')
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
 }))
 }))
 }).nullable()
@@ -1119,3 +1140,113 @@ export const CreateBillingPortalResponse = zod.object({
 })
 
 
+/**
+ * @summary Ask for the coach's notes on a block right after it shows (AI layer, docs/COACH-AGENT-SPEC.md §12). Returns the plan as it stands.
+ */
+export const AddPlanNotesParams = zod.object({
+  "planId": zod.coerce.number().int()
+})
+
+export const AddPlanNotesResponse = zod.object({
+  "id": zod.number().int().nullable(),
+  "coach_id": zod.string(),
+  "block": zod.number().int(),
+  "weeks": zod.number().int(),
+  "days_per_week": zod.number().int(),
+  "status": zod.enum(['preview', 'active', 'paused', 'done']),
+  "paused_reason": zod.string().nullable(),
+  "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
+  "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST \/me\/plans\/{planId}\/notes)'),
+  "sessions": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "week": zod.number().int(),
+  "day": zod.number().int(),
+  "title": zod.string(),
+  "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
+  "completed_at": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int().nullable(),
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "cue": zod.string(),
+  "measure": zod.enum(['reps', 'time']),
+  "weighted": zod.boolean(),
+  "sets": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "rest_seconds": zod.number().int(),
+  "target_load_kg": zod.number().nullable(),
+  "swapped_from": zod.string().nullable(),
+  "logs": zod.array(zod.object({
+  "set_number": zod.number().int(),
+  "reps": zod.number().int().nullable(),
+  "seconds": zod.number().int().nullable(),
+  "load_kg": zod.number().nullable()
+})),
+  "barbell": zod.boolean().describe('A barbell-only lift, so the player can show the plates per side'),
+  "change_note": zod.string().nullable().describe('Why the coach changed this item (a swap or a new target); null when it is as the rules built it')
+}))
+}))
+})
+
+
+/**
+ * @summary Today's note from the coach (written once per local day), with recent check-ins and weekly reviews
+ */
+export const GetDailyNoteResponse = zod.object({
+  "note": zod.string().nullable().describe('Today\'s note; null when the member\'s tier has none'),
+  "updates": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "source": zod.enum(['checkin', 'weekly_review']),
+  "created_at": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary What your coach remembers about you
+ */
+export const GetCoachMemoryResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "kind": zod.enum(['preference', 'schedule', 'equipment', 'goal_detail', 'motivation']),
+  "text": zod.string(),
+  "source": zod.enum(['agent', 'member']),
+  "updated_at": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Edit one thing your coach remembers
+ */
+export const UpdateCoachMemoryParams = zod.object({
+  "memoryId": zod.coerce.number().int()
+})
+
+export const updateCoachMemoryBodyTextMax = 200;
+
+
+
+export const UpdateCoachMemoryBody = zod.object({
+  "text": zod.string().min(1).max(updateCoachMemoryBodyTextMax)
+})
+
+export const UpdateCoachMemoryResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "kind": zod.enum(['preference', 'schedule', 'equipment', 'goal_detail', 'motivation']),
+  "text": zod.string(),
+  "source": zod.enum(['agent', 'member']),
+  "updated_at": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Delete one thing your coach remembers (deleted at once)
+ */
+export const DeleteCoachMemoryParams = zod.object({
+  "memoryId": zod.coerce.number().int()
+})

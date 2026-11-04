@@ -86,10 +86,14 @@ export const plansTable = pgTable(
     record: jsonb("record").notNull(),
     // The coach's short welcome for this block, written by the AI layer; null when AI is off or failed.
     intro: text("intro"),
+    // AI notes for this block (spec §12): none (AI off), pending (the app asks for them next), working, done, failed.
+    notesStatus: text("notes_status").notNull().default("none"),
+    notesClaimedAt: timestamp("notes_claimed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     check("plans_status", sql`${table.status} in ('active', 'paused', 'done')`),
+    check("plans_notes_status", sql`${table.notesStatus} in ('none', 'pending', 'working', 'done', 'failed')`),
     check("plans_engine", sql`${table.engine} in ('rules', 'ai')`),
   ],
 );
@@ -122,6 +126,8 @@ export const planItemsTable = pgTable(
     restSeconds: integer("rest_seconds").notNull(),
     targetLoadKg: real("target_load_kg"),
     swappedFrom: text("swapped_from"),
+    // Why the coach changed this item (a swap or a new target load), shown under it. Passed the output filter.
+    changeNote: text("change_note"),
   },
   (table) => [
     uniqueIndex("plan_items_position_unique").on(table.sessionId, table.position),
