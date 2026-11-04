@@ -161,6 +161,7 @@ export function SessionPage() {
         <p className="player-body">{item.cue}</p>
         <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${targetLoad(item.target_load_kg, units)} ${units}` : ""}</span>
         {plates ? <span className="plates label">Bar {plates.bar} {units} · {platesText(plates, units)}</span> : null}
+        {item.change_note ? <span className="change-note label">Why: {item.change_note}</span> : null}
       </div>
 
       <ol className="set-list">

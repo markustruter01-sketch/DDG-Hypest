@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { Wordmark } from "@/components/wordmark";
 import { Offers } from "@/components/offers";
+import { CoachNote } from "@/components/coach-note";
 import { coachById, coachLine, img, money, request, useCoaches, useTraining } from "@/lib/coaching";
 import { useAppConfig } from "@/lib/config";
 import { quoteOfTheDay } from "@/lib/quotes";
@@ -68,6 +69,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
   const create = useCreatePlan({ request });
   const next = useCreateNextPlan({ request });
   const resume = useResumePlan({ request });
+  const config = useAppConfig();
   const state = training.data;
   const coach = coachById(coaches.data, state?.plan?.coach_id ?? state?.profile?.coach_id);
   const firstName = user.display_name.trim().split(/\s+/)[0] ?? "";
@@ -162,6 +164,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
             <span className="week-strip-meta label">{done}/{total} done</span>
           </div>
         ) : null}
+        {coach && config?.ai && (state?.access.level === "tier1" || state?.access.level === "tier2") ? <CoachNote coachName={coach.name} /> : null}
         {state && !state.profile ? <GettingStarted /> : null}
         {create.isError || next.isError ? <p className="error-text" role="alert">{serverErrorText(create.error ?? next.error)}</p> : null}
       </section>
