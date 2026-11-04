@@ -18,6 +18,7 @@ import { LegalPage } from '@/pages/legal-page';
 import { AdminPage } from '@/pages/admin-page';
 import { RemindersOffPage } from '@/pages/reminders-off-page';
 import { SaveTimezoneOnce } from '@/components/timezone-setting';
+import { PlanNotesWhenPending } from '@/components/plan-notes';
 
 // AI-coach app (pivot, 18 Oct 2026). The creator marketplace was removed in plan step 1.8.
 const destinations = [
@@ -60,6 +61,7 @@ function AppShell() {
     <div className={onLanding ? 'app-shell app-shell-wide' : 'app-shell'}>
       <CheckoutReturn />
       {me.data ? <SaveTimezoneOnce /> : null}
+      {me.data ? <PlanNotesWhenPending /> : null}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/plan" element={<PlanPage />} />

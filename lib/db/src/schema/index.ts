@@ -11,3 +11,4 @@ export { billingEventsTable } from "./billing";
 export { authFailuresTable, authAttemptsTable } from "./auth-failures";
 export { remindersTable } from "./reminders";
 export { onboardingDraftsTable } from "./onboarding-drafts";
+export { allowancesTable, aiLedgerMonthlyTable, aiLedgerDailyTable, coachMemoryTable, agentActionsTable, checkinsTable, weeklyReviewsTable } from "./agent";

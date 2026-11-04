@@ -5,7 +5,7 @@ import { coachById, coachLine, img, useCoaches, useTraining } from "@/lib/coachi
 import { useAppConfig } from "@/lib/config";
 import { CoachChat } from "@/components/coach-chat";
 
-/** Your coach: who they are, what they can do for you, change coach. Chat arrives with the AI layer. */
+/** Your coach: a full-screen chat for Plans and Coaching members (AI on); otherwise who they are and the offers. */
 export function CoachTabPage() {
   const training = useTraining();
   const coaches = useCoaches();
@@ -23,6 +23,21 @@ export function CoachTabPage() {
   }
   if (!coach || !state) return <main className="screen-scroll" aria-busy="true" />;
   const tier2 = state.access.level === "tier2";
+  const hasChat = state.access.level === "tier1" || tier2;
+
+  // Build plan 2.4: with chat (Plans or Coaching, AI on) the Coach tab is a full-screen chat.
+  if (hasChat && config?.ai) {
+    return (
+      <main className="coach-page coach-page-chat">
+        <header className="chat-head">
+          <img className="avatar" src={img(coach.photo)} alt="" aria-hidden="true" />
+          <span><b>{coach.name}</b><br /><span className="label">AI coach · {coach.personality}</span></span>
+          <Link className="text-link" to="/coaches">Change</Link>
+        </header>
+        <CoachChat coach={coach} />
+      </main>
+    );
+  }
 
   return (
     <main className="coach-page">
@@ -35,12 +50,10 @@ export function CoachTabPage() {
           <div><span className="label">Style</span><b>{coach.personality}</b></div>
           <div><span className="label">Your plan</span><b>{state.plan ? `Block ${state.plan.block}` : "Not started"}</b></div>
         </div>
-        {tier2 && config?.ai ? <CoachChat coach={coach} /> : (
-        <div className={tier2 ? "card chat-soon" : "card chat-soon locked"}>
+        <div className={hasChat ? "card chat-soon" : "card chat-soon locked"}>
           <MessageCircle size={22} aria-hidden="true" />
-          <span><b>Chat with {coach.name}</b><br /><span className="label">{tier2 ? "Coming soon" : "Part of Coaching"}</span></span>
+          <span><b>Chat with {coach.name}</b><br /><span className="label">{hasChat ? "Coming soon" : "Part of Plans and Coaching"}</span></span>
         </div>
-        )}
         {!tier2 ? <Offers access={state.access} /> : null}
         <Link className="secondary-button" to="/coaches">Change coach</Link>
       </section>

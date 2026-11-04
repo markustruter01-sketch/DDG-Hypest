@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { agentActionsTable, aiLedgerDailyTable, aiLedgerMonthlyTable, weeklyReviewsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -21,6 +21,12 @@ export async function exportAccount(userId: number) {
   const memberships = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId)).orderBy(asc(membershipsTable.createdAt));
   const pain = await db.select().from(painEventsTable).where(eq(painEventsTable.userId, userId)).orderBy(asc(painEventsTable.id));
   const chat = await db.select().from(coachMessagesTable).where(eq(coachMessagesTable.userId, userId)).orderBy(asc(coachMessagesTable.id));
+  const memory = await db.select().from(coachMemoryTable).where(eq(coachMemoryTable.userId, userId)).orderBy(asc(coachMemoryTable.id));
+  const actions = await db.select().from(agentActionsTable).where(eq(agentActionsTable.userId, userId)).orderBy(asc(agentActionsTable.id));
+  const checkins = await db.select().from(checkinsTable).where(eq(checkinsTable.userId, userId)).orderBy(asc(checkinsTable.id));
+  const daily = await db.select().from(aiLedgerDailyTable).where(eq(aiLedgerDailyTable.userId, userId)).orderBy(asc(aiLedgerDailyTable.day));
+  const reviews = await db.select().from(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, userId)).orderBy(asc(weeklyReviewsTable.weekOf));
+  const ledger = await db.select().from(aiLedgerMonthlyTable).where(eq(aiLedgerMonthlyTable.userId, userId)).orderBy(asc(aiLedgerMonthlyTable.month));
   const [reminders] = await db.select({ lastSentAt: remindersTable.lastSentAt, createdAt: remindersTable.createdAt }).from(remindersTable).where(eq(remindersTable.userId, userId));
 
   return {
@@ -51,5 +57,11 @@ export async function exportAccount(userId: number) {
       at: p.createdAt, resolved_at: p.resolvedAt, resolved_note: p.resolvedNote,
     })),
     coach_chat: chat.map((c) => ({ coach_id: c.coachId, role: c.role, text: c.text, at: c.createdAt })),
+    coach_memory: memory.map((m) => ({ kind: m.kind, text: m.text, source: m.source, created_at: m.createdAt, updated_at: m.updatedAt })),
+    coach_actions: actions.map((a) => ({ tool: a.tool, touched: a.touched, result: a.result, at: a.at })),
+    coach_checkins: checkins.map((c) => ({ due_at: c.dueAt, topic: c.topic, status: c.status })),
+    ai_use: ledger.map((l) => ({ month: l.month, chats: l.callsChat, daily_notes: l.callsDailyNote, plan_notes: l.callsPlanNotes, weekly_reviews: l.callsWeeklyReview, checkins: l.callsCheckin })),
+    ai_use_daily: daily.map((d) => ({ day: d.day, kind: d.kind, calls: d.calls })),
+    weekly_reviews: reviews.map((r) => ({ week_of: r.weekOf, status: r.status, at: r.createdAt })),
   };
 }

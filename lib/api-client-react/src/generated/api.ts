@@ -31,12 +31,15 @@ import type {
   ClientErrorReport,
   Coach,
   CoachChat,
+  CoachMemory,
   CurrentUser,
+  DailyNote,
   DeleteAccountRequest,
   ErrorMessage,
   ForgotPasswordRequest,
   HealthStatus,
   LoginRequest,
+  MemoryEdit,
   PainReport,
   PainResult,
   PastPlan,
@@ -2588,7 +2591,7 @@ export const getGetCoachChatUrl = () => {
 }
 
 /**
- * @summary Chat with your coach (Coaching members, when AI is on)
+ * @summary Chat with your coach (Plans and Coaching members, when AI is on)
  */
 export const getCoachChat = async ( options?: Parameters<typeof customFetch>[1]): Promise<CoachChat> => {
 
@@ -2635,7 +2638,7 @@ export type GetCoachChatQueryError = ErrorType<ErrorMessage>
 
 
 /**
- * @summary Chat with your coach (Coaching members, when AI is on)
+ * @summary Chat with your coach (Plans and Coaching members, when AI is on)
  */
 
 export function useGetCoachChat<TData = Awaited<ReturnType<typeof getCoachChat>>, TError = ErrorType<ErrorMessage>>(
@@ -3249,4 +3252,393 @@ export const useCreateBillingPortal = <TError = ErrorType<ErrorMessage>,
       > => {
       return useMutation(getCreateBillingPortalMutationOptions(options));
     }
+
+
+export const getAddPlanNotesUrl = (planId: number,) => {
+
+
+
+
+  return `/api/me/plans/${planId}/notes`
+}
+
+/**
+ * @summary Ask for the coach's notes on a block right after it shows (AI layer, docs/COACH-AGENT-SPEC.md §12). Returns the plan as it stands.
+ */
+export const addPlanNotes = async (planId: number, options?: Parameters<typeof customFetch>[1]): Promise<PlanView> => {
+
+  return customFetch<PlanView>(getAddPlanNotesUrl(planId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAddPlanNotesMutationKey = () => ['addPlanNotes'] as const;
+
+export const getAddPlanNotesMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addPlanNotes>>, TError,AddPlanNotesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addPlanNotes>>, TError,AddPlanNotesMutationVariables, TContext> => {
+
+const mutationKey = getAddPlanNotesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addPlanNotes>>, AddPlanNotesMutationVariables> = (props) => {
+          const {planId} = props ?? {};
+
+          return  addPlanNotes(planId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddPlanNotesMutationResult = NonNullable<Awaited<ReturnType<typeof addPlanNotes>>>
+
+    export type AddPlanNotesMutationError = ErrorType<ErrorMessage>
+    export type AddPlanNotesMutationVariables = {planId: number}
+
+    /**
+ * @summary Ask for the coach's notes on a block right after it shows (AI layer, docs/COACH-AGENT-SPEC.md §12). Returns the plan as it stands.
+ */
+export const useAddPlanNotes = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addPlanNotes>>, TError,AddPlanNotesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addPlanNotes>>,
+        TError,
+        AddPlanNotesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddPlanNotesMutationOptions(options));
+    }
+
+export const getDeleteCoachMemoryUrl = (memoryId: number,) => {
+
+
+
+
+  return `/api/me/coach/memory/${memoryId}`
+}
+
+/**
+ * @summary Delete one thing your coach remembers (deleted at once)
+ */
+export const deleteCoachMemory = async (memoryId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteCoachMemoryUrl(memoryId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCoachMemoryMutationKey = () => ['deleteCoachMemory'] as const;
+
+export const getDeleteCoachMemoryMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCoachMemory>>, TError,DeleteCoachMemoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCoachMemory>>, TError,DeleteCoachMemoryMutationVariables, TContext> => {
+
+const mutationKey = getDeleteCoachMemoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCoachMemory>>, DeleteCoachMemoryMutationVariables> = (props) => {
+          const {memoryId} = props ?? {};
+
+          return  deleteCoachMemory(memoryId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCoachMemoryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCoachMemory>>>
+
+    export type DeleteCoachMemoryMutationError = ErrorType<ErrorMessage>
+    export type DeleteCoachMemoryMutationVariables = {memoryId: number}
+
+    /**
+ * @summary Delete one thing your coach remembers (deleted at once)
+ */
+export const useDeleteCoachMemory = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCoachMemory>>, TError,DeleteCoachMemoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCoachMemory>>,
+        TError,
+        DeleteCoachMemoryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteCoachMemoryMutationOptions(options));
+    }
+
+export const getGetDailyNoteUrl = () => {
+
+
+
+
+  return `/api/me/coach/daily-note`
+}
+
+/**
+ * @summary Today's note from the coach (written once per local day), with recent check-ins and weekly reviews
+ */
+export const getDailyNote = async ( options?: Parameters<typeof customFetch>[1]): Promise<DailyNote> => {
+
+  return customFetch<DailyNote>(getGetDailyNoteUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDailyNoteMutationKey = () => ['getDailyNote'] as const;
+
+export const getGetDailyNoteMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getDailyNote>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getDailyNote>>, TError,void, TContext> => {
+
+const mutationKey = getGetDailyNoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getDailyNote>>, void> = () => {
+
+
+          return  getDailyNote(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetDailyNoteMutationResult = NonNullable<Awaited<ReturnType<typeof getDailyNote>>>
+
+    export type GetDailyNoteMutationError = ErrorType<ErrorMessage>
+
+
+    /**
+ * @summary Today's note from the coach (written once per local day), with recent check-ins and weekly reviews
+ */
+export const useGetDailyNote = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getDailyNote>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getDailyNote>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGetDailyNoteMutationOptions(options));
+    }
+
+export const getUpdateCoachMemoryUrl = (memoryId: number,) => {
+
+
+
+
+  return `/api/me/coach/memory/${memoryId}`
+}
+
+/**
+ * @summary Edit one thing your coach remembers
+ */
+export const updateCoachMemory = async (memoryId: number,
+    memoryEdit: MemoryEdit, options?: Parameters<typeof customFetch>[1]): Promise<CoachMemory> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CoachMemory>(getUpdateCoachMemoryUrl(memoryId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(memoryEdit)
+  }
+);}
+
+
+
+
+
+export const getUpdateCoachMemoryMutationKey = () => ['updateCoachMemory'] as const;
+
+export const getUpdateCoachMemoryMutationOptions = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCoachMemory>>, TError,UpdateCoachMemoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCoachMemory>>, TError,UpdateCoachMemoryMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCoachMemoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCoachMemory>>, UpdateCoachMemoryMutationVariables> = (props) => {
+          const {memoryId,data} = props ?? {};
+
+          return  updateCoachMemory(memoryId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCoachMemoryMutationResult = NonNullable<Awaited<ReturnType<typeof updateCoachMemory>>>
+    export type UpdateCoachMemoryMutationBody = BodyType<MemoryEdit>
+    export type UpdateCoachMemoryMutationError = ErrorType<ErrorMessage>
+    export type UpdateCoachMemoryMutationVariables = {memoryId: number;data: BodyType<MemoryEdit>}
+
+    /**
+ * @summary Edit one thing your coach remembers
+ */
+export const useUpdateCoachMemory = <TError = ErrorType<ErrorMessage>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCoachMemory>>, TError,UpdateCoachMemoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCoachMemory>>,
+        TError,
+        UpdateCoachMemoryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCoachMemoryMutationOptions(options));
+    }
+
+export const getGetCoachMemoryUrl = () => {
+
+
+
+
+  return `/api/me/coach/memory`
+}
+
+/**
+ * @summary What your coach remembers about you
+ */
+export const getCoachMemory = async ( options?: Parameters<typeof customFetch>[1]): Promise<CoachMemory> => {
+
+  return customFetch<CoachMemory>(getGetCoachMemoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCoachMemoryQueryKey = () => {
+    return [
+    `/api/me/coach/memory`
+    ] as const;
+    }
+
+
+export const getGetCoachMemoryQueryOptions = <TData = Awaited<ReturnType<typeof getCoachMemory>>, TError = ErrorType<ErrorMessage>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCoachMemory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCoachMemoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoachMemory>>> = ({ signal }) => getCoachMemory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCoachMemory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCoachMemoryQueryResult = NonNullable<Awaited<ReturnType<typeof getCoachMemory>>>
+export type GetCoachMemoryQueryError = ErrorType<ErrorMessage>
+
+
+/**
+ * @summary What your coach remembers about you
+ */
+
+export function useGetCoachMemory<TData = Awaited<ReturnType<typeof getCoachMemory>>, TError = ErrorType<ErrorMessage>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCoachMemory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCoachMemoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

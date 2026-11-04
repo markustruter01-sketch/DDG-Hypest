@@ -17,6 +17,7 @@ import { useTraining } from "@/lib/coaching";
 import { UnitsToggle } from "@/components/units-toggle";
 import { RemindersToggle } from "@/components/reminders-toggle";
 import { TimezoneSetting } from "@/components/timezone-setting";
+import { CoachMemoryList } from "@/components/coach-memory";
 import { flushSets } from "@/lib/offline-sets";
 
 const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
@@ -170,6 +171,7 @@ export function ProfilePage() {
         </div>
       ) : null}
       {user && !editing ? <Membership /> : null}
+      {user && !editing ? <CoachMemoryList /> : null}
       {user && !editing ? <AccountActions /> : null}
       {user && editing ? (
         <form className="account-form" onSubmit={onSave}>

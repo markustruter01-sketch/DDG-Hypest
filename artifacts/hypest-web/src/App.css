@@ -1054,3 +1054,20 @@ textarea.text-input { resize: vertical; }
 .admin-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-3); align-items: baseline; }
 .admin-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; padding-bottom: var(--space-2); border-bottom: var(--hairline) solid var(--color-line-soft); }
 
+
+/* Coach agent (build plan 2.4): full-screen chat, today's note, memory list, the "why" line. */
+.coach-page-chat { display: flex; flex-direction: column; height: 100dvh; padding-bottom: var(--nav-height); }
+.chat-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-2); border-bottom: var(--hairline) solid var(--color-line-soft); }
+.chat-head .avatar { width: 2.75rem; height: 2.75rem; object-fit: cover; }
+.chat-head .text-link { margin-left: auto; }
+.coach-chat-full { flex: 1; min-height: 0; }
+.coach-chat-full .chat-log { flex: 1; max-height: none; min-height: 0; }
+.bubble p { margin: 0; }
+.bubble .primary-button { margin-top: var(--space-2); }
+.coach-note { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+.coach-note p { margin: 0; }
+.memory-list ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); }
+.memory-item, .memory-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.memory-item > span:first-child { flex: 1 1 12rem; }
+.memory-edit .text-input { flex: 1 1 12rem; }
+.change-note { display: block; margin-top: var(--space-1); text-transform: none; }

@@ -99,6 +99,9 @@ parallel on separate branches unless marked "after".
 ### 3.3 Nutrition-lite
 - **Who:** Opus. **Review:** Fable (prompts, safety: no diets for screened conditions, no numbers below declared floors). Tables `nutrition_targets`, `meal_plans`, `meal_logs`.
 
+### 3.3b Milestones and the long journey (Markus, 5 Nov 2026)
+- **Who:** Opus. **Review:** Fable. **Spec:** a Journey view on Progress, built from the permanent records (set logs, plans, sessions; nothing is ever summarised away): first session and first weights, personal bests per lift (with dates), blocks finished, session counts (10, 50, 100, 250…), longest streak, and before/now per main lift. Derived on read, with a `milestones` cache table only if it gets slow. The coach's context keeps its fixed-size lifetime line (`coaching/block.ts` lifetimeSummary: started, best, recent best) so long-term members cost the same per message.
+
 ### 3.4 Body metrics and check-ins
 - **Who:** Opus. Tables `body_metrics`, `checkins`; the agent reads them; readiness rule declared in the spec (poor sleep + high soreness lowers the day's dose, with the why).
 

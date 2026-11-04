@@ -6,6 +6,7 @@ import { remindersOn, sendDueReminders, setReminders, turnOffByToken } from "../
 import { emailOn, siteUrl } from "../lib/email";
 import { tidyExpired } from "../lib/tidy";
 import { alert } from "../lib/alerts";
+import { runCoachJobs } from "../coaching/coach-jobs";
 
 const router: IRouter = Router();
 
@@ -45,6 +46,13 @@ router.post("/jobs/daily", async (req, res) => {
   const reminders = await sendDueReminders();
   if (reminders.due > reminders.sent) void alert("warning", "Some reminder emails were not sent", `${reminders.sent} of ${reminders.due} sent`);
   res.json({ reminders });
+});
+
+/** Hourly coach job (build plan 2.5), called by .github/workflows/coach.yml: due check-ins and Sunday reviews,
+ *  a small batch per call; `more` = call again. */
+router.post("/jobs/coach", async (req, res) => {
+  if (!jobAllowed(req)) return void res.status(404).json({ message: "Not found" });
+  res.json(await runCoachJobs());
 });
 
 export default router;
