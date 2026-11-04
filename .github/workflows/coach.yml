@@ -19,7 +19,7 @@ jobs:
         run: |
           if [ -z "$HYPEST_URL" ] || [ -z "$JOBS_TOKEN" ]; then echo "HYPEST_URL or JOBS_TOKEN not set: skipped"; exit 0; fi
           for i in $(seq 1 30); do
-            out=$(curl -fsS --max-time 300 -X POST -H "Authorization: Bearer $JOBS_TOKEN" "$HYPEST_URL/api/jobs/coach")
+            out=$(curl -fsS --max-time 150 -X POST -H "Authorization: Bearer $JOBS_TOKEN" "$HYPEST_URL/api/jobs/coach") || { echo "call failed: the next hourly run picks up what is left"; break; }
             echo "$out"
             echo "$out" | grep -q '"more":true' || break
           done

@@ -17,7 +17,7 @@ const DIAGNOSIS_RE = wordsRe(DIAGNOSIS_WORDS);
 const PAIN_RE = wordsRe(OUTPUT_ONLY_FLAGS);
 const CUES_RE = new RegExp(wordsRe(OUTPUT_CUES).source, "gi");
 const DOSE_RE = /\d[\d,.]*\s*(?:k?cals?\b|calories\b|kilojoules\b|kj\b|mg\b|mcg\b|µg\b|ml\b|iu\b|g of\b|grams? of\b)/i;
-const LINK_RE = /https?:|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|au|co|app)\b/i;
+const LINK_RE = /https?:|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|au|co|app|uk|nz|ca|us|eu|dev|ai|me|info|biz|ly|gg|tv|xyz|site|online|shop|store|link|club|fit|health|fitness)\b/i;
 
 const near = (a: number, b: number) => Math.abs(a - b) < 0.26;
 const LB_PER_KG = 2.2046226218;
@@ -48,8 +48,8 @@ export function trainingNumbersMatch(t: string, plan: PlanNumbers | null): boole
   }
   if (new RegExp(`${num}\\s*(?:%|percent)`, "i").test(t)) return false;
   const checks: [RegExp, (n: number) => boolean][] = [
-    [new RegExp(`${num}\\s*(?:kg|kgs|kilos?)\\b`, "gi"), (n) => inList(n, p.loadsKg)],
-    [new RegExp(`${num}\\s*(?:lb|lbs|pounds?)\\b`, "gi"), (n) => p.loadsKg.some((kg) => Math.abs(kg * LB_PER_KG - n) <= 2.5)],
+    [new RegExp(`${num}\\s*-?\\s*(?:kg|kgs|kilos?|kilograms?)\\b`, "gi"), (n) => inList(n, p.loadsKg)],
+    [new RegExp(`${num}\\s*-?\\s*(?:lb|lbs|pounds?)\\b`, "gi"), (n) => p.loadsKg.some((kg) => Math.abs(kg * LB_PER_KG - n) <= 2.5)],
     [new RegExp(`${num}\\s*(?:reps?|repetitions?)\\b`, "gi"), (n) => inList(n, p.reps)],
     [new RegExp(`${num}\\s*sets?\\b`, "gi"), (n) => inList(n, p.sets)],
     [new RegExp(`${num}\\s*(?:s|sec|secs|seconds?)\\b`, "gi"), (n) => inList(n, p.seconds)],

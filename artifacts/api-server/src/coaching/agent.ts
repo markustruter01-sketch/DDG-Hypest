@@ -3,7 +3,7 @@ import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { agentActionsTable, db, painEventsTable, trainingProfilesTable } from "@workspace/db";
 import { callModel, costMicroUsd, globalBudgetAllows, aiOn, type ApiMessage, type ContentBlock, type Kind, type Message, type TextBlock, type Tier, type ToolUseBlock } from "../lib/ai";
 import { COACH_BY_ID, EXERCISE_BY_ID, type Coach } from "./library";
-import { currentBlock, currentWeek, memberLogs, planNumbers, type Block } from "./block";
+import { currentBlock, currentWeek, lifetimeSummary, memberLogs, planNumbers, type Block } from "./block";
 import { filterReply, REPLY_MAX } from "./output-filter";
 import { memoryOf, runTool, TOOL_DEFS, type Change, type ToolName } from "./agent-tools";
 import { reserveTurn, settleTurn } from "./allowance";
@@ -47,7 +47,8 @@ export type TurnOutcome = {
 /** Pure: the worst-case cost of one turn, reserved up front (spec §7): every call retried once, every output token used. */
 export function turnEstimateMicro(tier: Tier, promptChars: number, maxTokens: number): number {
   const inputTokens = Math.ceil(promptChars / 3) + 2_000; // tool schemas and tool results on top of the prompt
-  return MAX_MODEL_CALLS * 2 * costMicroUsd(tier, inputTokens, maxTokens);
+  // Priced as cache writes (1.25×), the dearest case, so settling the real cost never lands above the reservation.
+  return MAX_MODEL_CALLS * 2 * costMicroUsd(tier, 0, maxTokens, inputTokens, 0);
 }
 
 type Ctx = { coach: Coach; prompt: CoachPrompt; block: Block | null; system: TextBlock[] };
@@ -70,6 +71,9 @@ export async function buildContext(userId: number, timezone: string | null, leve
     .where(and(eq(painEventsTable.userId, userId), or(and(eq(painEventsTable.stopped, true), isNull(painEventsTable.resolvedAt)), gt(painEventsTable.createdAt, new Date(now.getTime() - 14 * 86_400_000)))))
     .orderBy(desc(painEventsTable.createdAt)).limit(10);
   const block = await currentBlock(userId);
+  const lifetime = await lifetimeSummary(userId, now);
+  const blocksDone = block ? block.block - 1 : 0;
+  const months = (d: Date | string | null) => (d ? Math.max(0, Math.round((now.getTime() - new Date(d).getTime()) / (30 * 86_400_000))) : 0);
 
   const can = tools.length ? `Tools you may use for this member: ${tools.join(", ")}.` : "You have no tools for this member.";
   const cannot = level === "tier1" ? " This member is on Plans: swapping exercises and changing loads are part of Coaching; say so if they ask." : "";
@@ -80,6 +84,9 @@ export async function buildContext(userId: number, timezone: string | null, leve
     can + cannot,
     `Member: goal ${profile.goal}, experience ${profile.experience}, ${profile.daysPerWeek} days a week, ${profile.minutes} minutes a session, equipment: ${profile.equipment.join(", ") || "none"}, areas to keep load off: ${profile.avoidAreas.join(", ") || "none"}. Weights shown in ${profile.units}. Membership: ${level}.`,
     memory.length ? `What you remember (newest first, id: text):\n${memory.map((m) => `${m.id} [${m.kind}]: ${m.text}`).join("\n")}` : "You don't remember anything about this member yet.",
+    lifetime.length
+      ? `Training history (all time, one line per main exercise; ${blocksDone} blocks finished): ${lifetime.map((l) => `${EXERCISE_BY_ID.get(l.exerciseId)?.name ?? l.exerciseId}: ${l.sets} sets over ${months(l.first)} months${l.firstKg !== null ? `, started ${l.firstKg} kg` : ""}${l.bestKg !== null ? `, best ${l.bestKg} kg` : ""}${l.bestRecentKg !== null && l.bestRecentKg !== l.bestKg ? `, best in the last 3 months ${l.bestRecentKg} kg` : ""}`).join("; ")}.`
+      : `Training history: nothing logged yet; ${blocksDone} blocks finished.`,
     pain.length ? `Pain reports: ${pain.map((p) => `${p.stopped ? "SAFETY STOP" : "this hurts"}${p.area ? ` (${p.area})` : ""}${p.exerciseId ? ` on ${EXERCISE_BY_ID.get(p.exerciseId)?.name ?? p.exerciseId}` : ""}`).join("; ")}.` : "No recent pain reports.",
   ].join("\n\n");
 

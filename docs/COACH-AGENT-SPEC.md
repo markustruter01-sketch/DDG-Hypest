@@ -193,6 +193,10 @@ The system prompt is built in this order:
 2. The member: profile, units, time zone, local date, tier, and what they can do. About 150 tokens.
 3. Memory, up to 40 items. Up to about 1,600 tokens.
 4. Open pain reports, and a paused plan with its reason. About 100 tokens.
+4b. **Lifetime summary** (added 5 Nov 2026, Markus): one line per main exercise, at most 12: sets logged, months trained,
+   first weight, best weight, best in the last 3 months, and blocks finished. Worked out by the database from the
+   permanent logs on every turn, so a member in year 5 costs the same per message as one in week 1, and nothing from
+   the journey is lost. About 300 tokens at most.
 5. **Cache breakpoint 1** (`cache_control: ephemeral`) goes after part 4. That is about 3,500 tokens, which is above
    the minimum cacheable length. The cache is reused across the member's turns within 5 minutes.
 6. The current block's week: sessions, items with ids, targets, and whether each is done. About 600 tokens.

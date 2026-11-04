@@ -10,7 +10,7 @@ import { mentionsHealth } from "./health-words";
 import { DEFAULT_ALLOWANCES, CHAT_TOOLS, MEMBER_CAP_MICRO_USD } from "./allowance";
 import { retryWaitMs, costMicroUsd } from "../lib/ai";
 import { checkinTime } from "./agent-tools";
-import { isLocalSunday } from "./coach-jobs";
+import { isLocalSunday, isReviewTime } from "./coach-jobs";
 import { screenMessage } from "./chat";
 import { COACH_PROMPTS } from "./prompts";
 import { COACHES } from "./library";
@@ -48,6 +48,7 @@ ok(!CHAT_TOOLS.tier1.includes("swap_exercise") && !CHAT_TOOLS.tier1.includes("se
 ok(COACHES.every((c) => COACH_PROMPTS[c.id]?.lines.limit && COACH_PROMPTS[c.id]?.lines.fallback), "every coach has a prompt file with fixed lines");
 ok(checkinTime(new Date("2026-11-05T02:00:00Z"), 3, "Australia/Brisbane").toISOString() === "2026-11-07T23:00:00.000Z", "check-in at 9:00 local, 3 days out");
 ok(isLocalSunday(new Date("2026-11-08T03:00:00Z"), "UTC") && !isLocalSunday(new Date("2026-11-08T15:00:00Z"), "Australia/Brisbane"), "Sunday where the member lives");
+ok(!isReviewTime(new Date("2026-11-08T10:00:00Z"), "UTC") && isReviewTime(new Date("2026-11-08T19:00:00Z"), "UTC") && isReviewTime(new Date("2026-11-08T08:30:00Z"), "Australia/Brisbane"), "the review goes out Sunday evening, local time");
 
 // ---------- with the scripted fake model ----------
 const api = process.env["AI_CHECK_API"];
@@ -147,9 +148,10 @@ const settle = () => new Promise((r) => setTimeout(r, 50));
   const [d] = await db.select().from(aiLedgerDailyTable).where(eq(aiLedgerDailyTable.userId, m.id));
   ok(!d || d.calls === 0, "case 1: not counted");
   // Case 30: paused plan → every tool except write_memory refuses.
-  queue.push(tools(["swap_exercise", { item_id: items(m.plan!)[0]!.id, reason: "x" }], ["write_memory", { kind: "preference", text: "Likes early sessions" }]), say("Your plan is paused. Resume it from the plan screen when you've been checked."));
+  queue.push(tools(["swap_exercise", { item_id: items(m.plan!)[0]!.id, reason: "x" }], ["write_memory", { kind: "preference", text: "Likes early sessions" }], ["schedule_checkin", { in_days: 2, topic: "Squat form" }]), say("Your plan is paused. Resume it from the plan screen when you've been checked."));
   await chat(m.call, "can you change today's session?");
   const acts = await actions(m.id);
+  ok((acts.find((a) => a.tool === "schedule_checkin")!.result as { ok: boolean }).ok === false, "case 30: no check-ins while paused");
   ok(acts.find((a) => a.tool === "swap_exercise")?.result && (acts.find((a) => a.tool === "swap_exercise")!.result as { ok: boolean }).ok === false, "case 30: swap refused while paused");
   ok((acts.find((a) => a.tool === "write_memory")!.result as { ok: boolean }).ok === true, "case 30: memory still works while paused");
 }
@@ -200,6 +202,8 @@ const settle = () => new Promise((r) => setTimeout(r, 50));
   const lift = weighted[0]!;
   const logged = m.plan!.sessions[0]!.items.find((i) => i.exercise_id === lift.exercise_id) ?? lift;
   for (let s = 1; s <= logged.sets; s += 1) assert.equal((await m.call("PUT", `/me/items/${logged.id}/sets/${s}`, { reps: logged.reps, seconds: null, load_kg: 60 })).status, 200);
+  const ctx5 = await buildContext(m.id, null, "tier2", CHAT_TOOLS.tier2);
+  ok(ctx5?.system[0]!.text.includes(`${EXERCISE_BY_ID.get(lift.exercise_id)!.name}: ${logged.sets} sets over 0 months, started 60 kg, best 60 kg`), "the lifetime summary: one fixed line per exercise, no old logs");
   // nextLoads: every target rep hit at 60 → 63; cap = min(63, 60) × 1.1 = 66; floor = 31.5.
   queue.push(tool("set_target_load", { exercise_id: lift.exercise_id, load: 80, units: "kg", reason: "Heavier." }), say("That jump is too big."));
   await chat(m.call, "Make it 20 kg heavier");
@@ -304,7 +308,7 @@ const settle = () => new Promise((r) => setTimeout(r, 50));
   // Due check-ins are sent by the job (step 2.5).
   await db.update(checkinsTable).set({ dueAt: new Date(Date.now() - 60_000) }).where(eq(checkinsTable.id, c!.id));
   queue.push(say("How did the new squat feel this week?"));
-  for (let i = 0; i < 20 && (await runDueCheckins()).more; i += 1) { /* drain */ }
+  await runDueCheckins(new Date(), { userIds: [m.id] });
   const [sent] = await db.select().from(checkinsTable).where(eq(checkinsTable.id, c!.id));
   const [msg] = await db.select().from(coachMessagesTable).where(and(eq(coachMessagesTable.userId, m.id), eq(coachMessagesTable.source, "checkin")));
   ok(sent?.status === "sent" && msg?.text.startsWith("How did") && sent.messageId === msg.id, "due check-in sent once, into the chat");
@@ -334,9 +338,12 @@ const settle = () => new Promise((r) => setTimeout(r, 50));
   ok((await m.call("PUT", `/me/items/${item.id}/sets/1`, { reps: 5, seconds: null, load_kg: null })).status === 200, "case 25: logging still works");
   await db.update(aiLedgerMonthlyTable).set({ costMicroUsd: 0 }).where(eq(aiLedgerMonthlyTable.userId, m.id));
   const [spent] = await db.insert(aiUsageTable).values({ purpose: "chat", model: "check", inputTokens: 0, outputTokens: 0, costMicroUsd: 1_000_000, ok: true }).returning({ id: aiUsageTable.id });
-  before = seen.length;
-  ok((await chat(m.call, "hi")).status === 503 && seen.length === before, "case 26: global budget spent: chat off, no model call");
-  await db.delete(aiUsageTable).where(eq(aiUsageTable.id, spent!.id));
+  try {
+    before = seen.length;
+    ok((await chat(m.call, "hi")).status === 503 && seen.length === before, "case 26: global budget spent: chat off, no model call");
+  } finally {
+    await db.delete(aiUsageTable).where(eq(aiUsageTable.id, spent!.id)); // never leave the budget spent for later checks
+  }
   const [daily] = await db.select().from(aiLedgerDailyTable).where(and(eq(aiLedgerDailyTable.userId, m.id), eq(aiLedgerDailyTable.day, day)));
   ok(daily?.calls === 0, "refused turns are not counted");
 }
@@ -387,21 +394,25 @@ const settle = () => new Promise((r) => setTimeout(r, 50));
   const m = await member();
   const sunday = new Date();
   sunday.setUTCDate(sunday.getUTCDate() + ((7 - sunday.getUTCDay()) % 7));
-  sunday.setUTCHours(10, 0, 0, 0);
-  for (let i = 0; i < 40; i += 1) {
-    queue.push(say("Missed you this week. This week, just start with day one."));
-    if (!(await runWeeklyReviews(sunday)).more) break;
-  }
+  sunday.setUTCHours(19, 0, 0, 0); // Sunday evening for a UTC member
+  const lift = items(m.plan!).find((i) => i.weighted)!;
+  const targetsBefore = await db.select({ t: planItemsTable.targetLoadKg }).from(planItemsTable).where(eq(planItemsTable.exerciseId, lift.exercise_id));
+  // The model tries to raise a load anyway: with no sets this week the tool is not even offered.
+  queue.push(tool("set_target_load", { exercise_id: lift.exercise_id, load: 100, units: "kg", reason: "Go heavier." }), say("Missed you this week. This week, just start with day one."));
+  await runWeeklyReviews(sunday, { userIds: [m.id] });
   queue.length = 0;
   const [rev] = await db.select().from(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, m.id));
   const [msg] = await db.select().from(coachMessagesTable).where(and(eq(coachMessagesTable.userId, m.id), eq(coachMessagesTable.source, "weekly_review")));
-  ok(rev?.status === "done" && msg && msg.id === rev.messageId, "weekly review written on Sunday, into the chat");
-  ok(!(await actions(m.id)).some((a) => a.tool === "set_target_load"), "no logs: no load changes");
+  ok(rev?.status === "done" && msg?.text.startsWith("Missed you") && msg.id === rev.messageId, "weekly review written on Sunday evening, into the chat");
+  const reviewTools = (seen.at(-2)!.tools ?? []).map((t) => t.name);
+  ok(!reviewTools.includes("set_target_load"), "no sets this week: the load tool isn't offered");
+  const targetsAfter = await db.select({ t: planItemsTable.targetLoadKg }).from(planItemsTable).where(eq(planItemsTable.exerciseId, lift.exercise_id));
+  ok(JSON.stringify(targetsAfter) === JSON.stringify(targetsBefore) && !(await actions(m.id)).some((a) => a.tool === "set_target_load"), "no logs: no load changes");
   const before = seen.length;
-  await runWeeklyReviews(sunday);
+  await runWeeklyReviews(sunday, { userIds: [m.id] });
   ok(seen.length === before && (await db.select().from(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, m.id))).length === 1, "once per week");
   const tier1 = await member({ tier: "tier1" });
-  await runWeeklyReviews(sunday);
+  await runWeeklyReviews(sunday, { userIds: [tier1.id] });
   ok((await db.select().from(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, tier1.id))).length === 0, "Plans members get no weekly review");
   const today = (await m.call("POST", "/me/coach/daily-note")).json;
   ok(today.updates.some((u: { source: string }) => u.source === "weekly_review"), "the review shows on Today");

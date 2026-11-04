@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { and, count, desc, eq, gt, inArray, sql } from "drizzle-orm";
-import { agentActionsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, planItemsTable } from "@workspace/db";
+import { agentActionsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, planItemsTable, plansTable } from "@workspace/db";
 import type { ToolDef } from "../lib/ai";
 import { COACH_BY_ID, EXERCISE_BY_ID, type Area, type Equipment } from "./library";
 import { findSwap, nextLoads, validatePlan } from "./engine";
@@ -113,21 +113,41 @@ export async function runTool(name: string, rawInput: unknown, ctx: ToolContext,
   const parsed = Inputs[name as ToolName].safeParse(rawInput);
   let result: ToolResult;
   let touched: Record<string, unknown> = {};
+  let logged = false;
   if (!parsed.success) {
-    result = refuse(`bad input: ${parsed.error.issues[0]?.message ?? "invalid"}`);
+    // Path and code only: zod's own messages can quote the model's text, which is never stored (spec §3).
+    const issue = parsed.error.issues[0];
+    result = refuse(`bad input: ${issue ? `${issue.path.join(".") || "input"} ${issue.code}` : "invalid"}`);
   } else {
     const out = await TOOLS[name as ToolName](parsed.data as never, ctx, changes);
     result = out.result;
     touched = out.touched;
+    logged = out.logged === true;
   }
-  await db.insert(agentActionsTable).values({
-    userId: ctx.userId, turnId: ctx.turnId, tool: name, touched,
-    result: result.ok ? { ok: true } : { ok: false, reason: result.reason }, promptVersion: PROMPT_VERSION,
-  });
+  if (!logged) await db.insert(agentActionsTable).values(actionRow(ctx, name, touched, result));
   return result;
 }
 
-type Out = { result: ToolResult; touched: Record<string, unknown> };
+const actionRow = (ctx: ToolContext, tool: string, touched: Record<string, unknown>, result: ToolResult) => ({
+  userId: ctx.userId, turnId: ctx.turnId, tool, touched,
+  result: result.ok ? { ok: true } : { ok: false, reason: result.reason }, promptVersion: PROMPT_VERSION,
+});
+
+/** Thrown inside a plan transaction to roll it back and refuse. */
+class Refusal extends Error {}
+
+/** Spec §1.6/§6.6: lock the plan row and re-check it is active INSIDE the transaction that changes it, so a safety
+ *  stop from another tab (which pauses the plan) can never be overtaken by a tool. */
+async function lockActive(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], planId: number): Promise<void> {
+  const [p] = await tx.select({ status: plansTable.status }).from(plansTable).where(eq(plansTable.id, planId)).for("update");
+  if (p?.status !== "active") throw new Refusal("the plan is paused for safety; the member must resume it first");
+}
+
+/** Only items in a session not yet done, with no logged set (checked again at write time). */
+const stillOpen = sql`not exists (select 1 from set_logs where set_logs.item_id = ${planItemsTable.id})
+  and exists (select 1 from plan_sessions where plan_sessions.id = ${planItemsTable.sessionId} and plan_sessions.completed_at is null)`;
+
+type Out = { result: ToolResult; touched: Record<string, unknown>; logged?: boolean };
 type Impl<N extends ToolName> = (input: z.infer<(typeof Inputs)[N]>, ctx: ToolContext, changes: Change[]) => Promise<Out>;
 
 /** Every tool except write_memory needs an active block (spec §3). */
@@ -156,10 +176,6 @@ const swapExercise: Impl<"swap_exercise"> = async (input, ctx, changes) => {
   if (typeof b === "string") return { result: refuse(b), touched: {} };
   const item = b.sessions.flatMap((s) => s.items).find((i) => i.id === input.item_id);
   if (!item) return { result: refuse("no such item in the member's current block"), touched: { item_id: input.item_id } };
-  const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(agentActionsTable).where(and(
-    eq(agentActionsTable.userId, ctx.userId), eq(agentActionsTable.tool, "swap_exercise"),
-    sql`${agentActionsTable.result}->>'ok' = 'true'`, sql`${agentActionsTable.touched}->>'plan_id' = ${String(b.planId)}`));
-  if (n >= MAX_SWAPS_PER_BLOCK) return { result: refuse(`already ${MAX_SWAPS_PER_BLOCK} swaps in this block`), touched: { plan_id: b.planId } };
   const ex = EXERCISE_BY_ID.get(item.exerciseId);
   const coach = COACH_BY_ID.get(b.coachId);
   if (!ex || !coach) throw new Error("plan data missing");
@@ -185,14 +201,33 @@ const swapExercise: Impl<"swap_exercise"> = async (input, ctx, changes) => {
   const problems = validatePlan(changed, b.input);
   if (problems.length) return { result: refuse(`the swapped block failed checks: ${problems[0]}`), touched: { plan_id: b.planId, item_id: item.id } };
   const note = shown(input.reason, b, 140, `Swapped from ${ex.name} by your coach.`);
-  await db.transaction(async (tx) => {
-    for (const t of targets) {
-      await tx.update(planItemsTable).set({ exerciseId: swap.id, swappedFrom: ex.id, targetLoadKg: null, changeNote: note, ...dose(t) })
-        .where(eq(planItemsTable.id, t.id));
-    }
-  });
+  // Lock, re-check, count, write and log in ONE transaction: a pause from another tab, or two turns swapping at once,
+  // can't get past the limits.
+  const touched = { plan_id: String(b.planId), item_ids: [...ids], exercise_id: ex.id, swapped_to: swap.id };
+  let done: number[];
+  try {
+    done = await db.transaction(async (tx) => {
+      await lockActive(tx, b.planId);
+      const [{ n } = { n: 0 }] = await tx.select({ n: count() }).from(agentActionsTable).where(and(
+        eq(agentActionsTable.userId, ctx.userId), eq(agentActionsTable.tool, "swap_exercise"),
+        sql`${agentActionsTable.result}->>'ok' = 'true'`, sql`${agentActionsTable.touched}->>'plan_id' = ${String(b.planId)}`));
+      if (n >= MAX_SWAPS_PER_BLOCK) throw new Refusal(`already ${MAX_SWAPS_PER_BLOCK} swaps in this block`);
+      const updated: number[] = [];
+      for (const t of targets) {
+        const rows = await tx.update(planItemsTable).set({ exerciseId: swap.id, swappedFrom: ex.id, targetLoadKg: null, changeNote: note, ...dose(t) })
+          .where(and(eq(planItemsTable.id, t.id), eq(planItemsTable.exerciseId, ex.id), stillOpen)).returning({ id: planItemsTable.id });
+        updated.push(...rows.map((r) => r.id));
+      }
+      if (!updated.length) throw new Refusal("every session with that exercise is already done");
+      await tx.insert(agentActionsTable).values(actionRow(ctx, "swap_exercise", { ...touched, item_ids: updated }, { ok: true }));
+      return updated;
+    });
+  } catch (err) {
+    if (err instanceof Refusal) return { result: refuse(err.message), touched: { plan_id: String(b.planId), item_id: item.id } };
+    throw err;
+  }
   changes.push({ tool: "swap_exercise", line: `I swapped ${ex.name} for ${swap.name} for the rest of this block.` });
-  return { result: { ok: true, swapped_to: swap.name, swapped_to_id: swap.id, items: targets.length }, touched: { plan_id: b.planId, item_ids: [...ids], exercise_id: ex.id, swapped_to: swap.id } };
+  return { result: { ok: true, swapped_to: swap.name, swapped_to_id: swap.id, items: done.length }, touched: { ...touched, item_ids: done }, logged: true };
 };
 
 const setTargetLoad: Impl<"set_target_load"> = async (input, ctx, changes) => {
@@ -215,7 +250,17 @@ const setTargetLoad: Impl<"set_target_load"> = async (input, ctx, changes) => {
   if (kg < floor) return { result: refuse(`too big a drop: the least is ${floor} kg`), touched: { exercise_id: ex.id } };
   const after = { ...b, sessions: b.sessions.map((s) => ({ ...s, items: s.items.map((i) => (open.some((o) => o.id === i.id) ? { ...i, targetLoadKg: kg } : i)) })) };
   const note = shown(input.reason, after, 140, "Target set by your coach.");
-  await db.update(planItemsTable).set({ targetLoadKg: kg, changeNote: note }).where(inArray(planItemsTable.id, open.map((o) => o.id)));
+  try {
+    await db.transaction(async (tx) => {
+      await lockActive(tx, b.planId);
+      const rows = await tx.update(planItemsTable).set({ targetLoadKg: kg, changeNote: note })
+        .where(and(inArray(planItemsTable.id, open.map((o) => o.id)), eq(planItemsTable.exerciseId, ex.id), stillOpen)).returning({ id: planItemsTable.id });
+      if (!rows.length) throw new Refusal("no sessions left with that exercise in this block");
+    });
+  } catch (err) {
+    if (err instanceof Refusal) return { result: refuse(err.message), touched: { exercise_id: ex.id } };
+    throw err;
+  }
   changes.push({ tool: "set_target_load", line: `I set your ${ex.name} target to ${kg} kg for the rest of this block.` });
   return { result: { ok: true, exercise: ex.name, target_kg: kg, items: open.length }, touched: { plan_id: b.planId, exercise_id: ex.id, item_ids: open.map((o) => o.id), target_kg: kg } };
 };
@@ -238,6 +283,9 @@ const writeMemory: Impl<"write_memory"> = async (input, ctx, changes) => {
 };
 
 const scheduleCheckin: Impl<"schedule_checkin"> = async (input, ctx, changes) => {
+  const b = await activeBlock(ctx);
+  if (typeof b === "string") return { result: refuse(b), touched: {} };
+  if (mentionsHealth(input.topic)) return { result: refuse("health details are never stored; pick a training topic"), touched: {} };
   const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(checkinsTable).where(and(eq(checkinsTable.userId, ctx.userId), eq(checkinsTable.status, "pending")));
   if (n >= MAX_PENDING_CHECKINS) return { result: refuse(`already ${MAX_PENDING_CHECKINS} check-ins waiting`), touched: {} };
   if (filterReply(input.topic, planNumbers(ctx.block), 100) !== null) return { result: refuse("that topic can't be used"), touched: {} };

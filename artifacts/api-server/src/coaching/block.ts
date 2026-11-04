@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, max, min, sql } from "drizzle-orm";
 import { db, planItemsTable, planSessionsTable, plansTable, setLogsTable } from "@workspace/db";
 import type { Plan, PlanInput } from "./engine";
 import type { PlanNumbers } from "./output-filter";
@@ -67,6 +67,34 @@ export function planNumbers(b: Block | null): PlanNumbers {
 /** The week the member is in: the first week with a session not done, else the last week. */
 export function currentWeek(b: Block): number {
   return b.sessions.find((s) => !s.done)?.week ?? Math.max(1, ...b.sessions.map((s) => s.week));
+}
+
+/**
+ * The member's whole training history in a FIXED size (Markus, 5 Nov 2026: a 5-year member must not cost more per
+ * message than a new one). One line per main exercise, worked out by the database each time: no old chat or logs
+ * are ever sent to the model. At most 12 exercises, the ones they have logged most.
+ */
+export async function lifetimeSummary(userId: number, now = new Date()) {
+  const recent = new Date(now.getTime() - 90 * 86_400_000);
+  return db
+    .select({
+      exerciseId: setLogsTable.exerciseId,
+      sets: count(),
+      bestKg: max(setLogsTable.loadKg),
+      // Where they started: the first load ever logged (Markus, 5 Nov 2026: never lose the start of the journey).
+      firstKg: sql<number | null>`(array_agg(${setLogsTable.loadKg} order by ${setLogsTable.createdAt}) filter (where ${setLogsTable.loadKg} is not null))[1]`,
+      bestRecentKg: sql<number | null>`max(${setLogsTable.loadKg}) filter (where ${setLogsTable.createdAt} >= ${recent})`,
+      first: min(setLogsTable.createdAt),
+      last: max(setLogsTable.createdAt),
+    })
+    .from(setLogsTable)
+    .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+    .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
+    .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
+    .where(eq(plansTable.userId, userId))
+    .groupBy(setLogsTable.exerciseId)
+    .orderBy(desc(count()))
+    .limit(12);
 }
 
 /** Logged sets for one member, newest first, with the exercise and the item's target reps (for nextLoads). */

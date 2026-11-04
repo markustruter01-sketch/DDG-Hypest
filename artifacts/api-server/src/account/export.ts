@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { agentActionsTable, aiLedgerMonthlyTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { agentActionsTable, aiLedgerDailyTable, aiLedgerMonthlyTable, weeklyReviewsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -24,6 +24,8 @@ export async function exportAccount(userId: number) {
   const memory = await db.select().from(coachMemoryTable).where(eq(coachMemoryTable.userId, userId)).orderBy(asc(coachMemoryTable.id));
   const actions = await db.select().from(agentActionsTable).where(eq(agentActionsTable.userId, userId)).orderBy(asc(agentActionsTable.id));
   const checkins = await db.select().from(checkinsTable).where(eq(checkinsTable.userId, userId)).orderBy(asc(checkinsTable.id));
+  const daily = await db.select().from(aiLedgerDailyTable).where(eq(aiLedgerDailyTable.userId, userId)).orderBy(asc(aiLedgerDailyTable.day));
+  const reviews = await db.select().from(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, userId)).orderBy(asc(weeklyReviewsTable.weekOf));
   const ledger = await db.select().from(aiLedgerMonthlyTable).where(eq(aiLedgerMonthlyTable.userId, userId)).orderBy(asc(aiLedgerMonthlyTable.month));
   const [reminders] = await db.select({ lastSentAt: remindersTable.lastSentAt, createdAt: remindersTable.createdAt }).from(remindersTable).where(eq(remindersTable.userId, userId));
 
@@ -59,5 +61,7 @@ export async function exportAccount(userId: number) {
     coach_actions: actions.map((a) => ({ tool: a.tool, touched: a.touched, result: a.result, at: a.at })),
     coach_checkins: checkins.map((c) => ({ due_at: c.dueAt, topic: c.topic, status: c.status })),
     ai_use: ledger.map((l) => ({ month: l.month, chats: l.callsChat, daily_notes: l.callsDailyNote, plan_notes: l.callsPlanNotes, weekly_reviews: l.callsWeeklyReview, checkins: l.callsCheckin })),
+    ai_use_daily: daily.map((d) => ({ day: d.day, kind: d.kind, calls: d.calls })),
+    weekly_reviews: reviews.map((r) => ({ week_of: r.weekOf, status: r.status, at: r.createdAt })),
   };
 }

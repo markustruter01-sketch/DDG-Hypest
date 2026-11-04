@@ -116,10 +116,11 @@ export async function callModel(args: {
       const u = body?.usage ?? {};
       const cost = costMicroUsd(args.tier, u.input_tokens ?? 0, u.output_tokens ?? 0, u.cache_creation_input_tokens ?? 0, u.cache_read_input_tokens ?? 0);
       costMicro += cost;
+      // Its own try: a failed log line must never make us call (and pay for) the model again.
       await db.insert(aiUsageTable).values({
         userId: args.userId, purpose: args.kind, kind: args.kind, model: model.id, inputTokens: u.input_tokens ?? 0, outputTokens: u.output_tokens ?? 0,
         costMicroUsd: cost, ok: res.ok, promptVersion: args.promptVersion ?? null,
-      });
+      }).catch((err: unknown) => logger.error({ err: err instanceof Error ? err.message : String(err) }, "AI usage not logged"));
       if (res.ok) return { ok: true, content: body?.content ?? [], stopReason: body?.stop_reason ?? "end_turn", costMicro };
       const wait = retryWaitMs(res.status, res.headers.get("retry-after"));
       logger.error({ status: res.status, type: body?.error?.type, kind: args.kind, attempt }, "AI call failed");
