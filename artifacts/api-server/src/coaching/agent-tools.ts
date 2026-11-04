@@ -133,12 +133,21 @@ const actionRow = (ctx: ToolContext, tool: string, touched: Record<string, unkno
   result: result.ok ? { ok: true } : { ok: false, reason: result.reason }, promptVersion: PROMPT_VERSION,
 });
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function swapsInBlock(q: Tx | typeof db, userId: number, planId: number): Promise<number> {
+  const [{ n } = { n: 0 }] = await q.select({ n: count() }).from(agentActionsTable).where(and(
+    eq(agentActionsTable.userId, userId), eq(agentActionsTable.tool, "swap_exercise"),
+    sql`${agentActionsTable.result}->>'ok' = 'true'`, sql`${agentActionsTable.touched}->>'plan_id' = ${String(planId)}`));
+  return n;
+}
+
 /** Thrown inside a plan transaction to roll it back and refuse. */
 class Refusal extends Error {}
 
 /** Spec §1.6/§6.6: lock the plan row and re-check it is active INSIDE the transaction that changes it, so a safety
  *  stop from another tab (which pauses the plan) can never be overtaken by a tool. */
-async function lockActive(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], planId: number): Promise<void> {
+async function lockActive(tx: Tx, planId: number): Promise<void> {
   const [p] = await tx.select({ status: plansTable.status }).from(plansTable).where(eq(plansTable.id, planId)).for("update");
   if (p?.status !== "active") throw new Refusal("the plan is paused for safety; the member must resume it first");
 }
@@ -176,6 +185,8 @@ const swapExercise: Impl<"swap_exercise"> = async (input, ctx, changes) => {
   if (typeof b === "string") return { result: refuse(b), touched: {} };
   const item = b.sessions.flatMap((s) => s.items).find((i) => i.id === input.item_id);
   if (!item) return { result: refuse("no such item in the member's current block"), touched: { item_id: input.item_id } };
+  // Early answer; the same count is checked again under the plan lock before anything is written.
+  if ((await swapsInBlock(db, ctx.userId, b.planId)) >= MAX_SWAPS_PER_BLOCK) return { result: refuse(`already ${MAX_SWAPS_PER_BLOCK} swaps in this block`), touched: { plan_id: String(b.planId) } };
   const ex = EXERCISE_BY_ID.get(item.exerciseId);
   const coach = COACH_BY_ID.get(b.coachId);
   if (!ex || !coach) throw new Error("plan data missing");
@@ -208,10 +219,7 @@ const swapExercise: Impl<"swap_exercise"> = async (input, ctx, changes) => {
   try {
     done = await db.transaction(async (tx) => {
       await lockActive(tx, b.planId);
-      const [{ n } = { n: 0 }] = await tx.select({ n: count() }).from(agentActionsTable).where(and(
-        eq(agentActionsTable.userId, ctx.userId), eq(agentActionsTable.tool, "swap_exercise"),
-        sql`${agentActionsTable.result}->>'ok' = 'true'`, sql`${agentActionsTable.touched}->>'plan_id' = ${String(b.planId)}`));
-      if (n >= MAX_SWAPS_PER_BLOCK) throw new Refusal(`already ${MAX_SWAPS_PER_BLOCK} swaps in this block`);
+      if ((await swapsInBlock(tx, ctx.userId, b.planId)) >= MAX_SWAPS_PER_BLOCK) throw new Refusal(`already ${MAX_SWAPS_PER_BLOCK} swaps in this block`);
       const updated: number[] = [];
       for (const t of targets) {
         const rows = await tx.update(planItemsTable).set({ exerciseId: swap.id, swappedFrom: ex.id, targetLoadKg: null, changeNote: note, ...dose(t) })
