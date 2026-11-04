@@ -8,7 +8,7 @@ import http from "node:http";
 const dbUrl = new URL(process.env["DATABASE_URL"] ?? "postgresql://missing");
 if (!["127.0.0.1", "localhost"].includes(dbUrl.hostname)) throw new Error(`refusing: DATABASE_URL is not a local database (${dbUrl.hostname})`);
 
-const { db, usersTable, plansTable, aiUsageTable, coachMessagesTable } = await import("@workspace/db");
+const { db, usersTable, plansTable, aiUsageTable, aiLedgerDailyTable } = await import("@workspace/db");
 const { eq } = await import("drizzle-orm");
 const { costMicroUsd, fitsBudget } = await import("../lib/ai");
 const { parseNotes } = await import("./ai-notes");
@@ -52,10 +52,11 @@ if (api && fakePort) {
     let raw = "";
     req.on("data", (c) => (raw += c));
     req.on("end", () => {
-      const body = JSON.parse(raw) as { system: string; messages: { content: string }[] };
-      seen.push({ system: body.system, body: raw });
+      const body = JSON.parse(raw) as { system: string | { text: string }[]; messages: { content: string }[] };
+      const system = typeof body.system === "string" ? body.system : body.system.map((b) => b.text).join("\n");
+      seen.push({ system, body: raw });
       let text: string;
-      if (body.system.includes("Reply with ONLY a JSON object")) {
+      if (system.includes("Reply with ONLY a JSON object")) {
         const sessions = (JSON.parse(body.messages.at(-1)!.content) as { sessions: { week: number; day: number }[] }).sessions;
         text = JSON.stringify({
           intro: "Welcome to your block. We start steady and build from there.",
@@ -85,11 +86,13 @@ if (api && fakePort) {
   ok((await A("POST", "/auth/signup", { email, password: "correct horse battery", display_name: "AI Check", adult_confirmed: true })).status === 201, "signup");
   const [u] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
   ok((await A("PUT", "/me/training/profile", answers)).status === 200, "profile");
-  ok((await A("POST", "/me/coach/messages", { text: "hi" })).status === 402, "chat needs Coaching");
+  ok((await A("POST", "/me/coach/messages", { text: "hi" })).status === 402, "chat needs Plans or Coaching");
   ok((await A("POST", "/dev/unlock", { kind: "tier2" })).status === 200, "tier2");
 
-  const built = await A("POST", "/me/plans");
-  ok(built.status === 201 && built.json.intro?.startsWith("Welcome"), "plan has the coach's intro");
+  const created = await A("POST", "/me/plans");
+  ok(created.status === 201 && created.json.notes_status === "pending" && created.json.intro === null, "plan shows at once, notes pending (spec §12)");
+  const built = await A("POST", `/me/plans/${created.json.id}/notes`);
+  ok(built.status === 200 && built.json.intro?.startsWith("Welcome") && built.json.notes_status === "done", "plan has the coach's intro");
   ok(built.json.sessions[0].note === null && built.json.sessions[1].note === "Smooth, controlled reps today.", "note with a number dropped, others kept");
   ok(!seen.some((s) => s.body.includes(email) || s.body.includes("AI Check")), "no email or name sent to the AI");
   const [row] = await db.select({ record: plansTable.record }).from(plansTable).where(eq(plansTable.id, built.json.id));
@@ -107,10 +110,12 @@ if (api && fakePort) {
   ok(usage.length === 2 && usage.every((r) => r.ok && r.costMicroUsd > 0), "every AI call logged with its cost");
 
   // Daily cap
-  const today = Array.from({ length: 20 }, () => ({ userId: u!.id, coachId: "rex", role: "member", text: "x" }));
-  await db.insert(coachMessagesTable).values(today);
+  const { dayOf } = await import("./allowance");
+  const { and } = await import("drizzle-orm");
+  const day = dayOf(new Date(), null);
+  await db.update(aiLedgerDailyTable).set({ calls: 20 }).where(and(eq(aiLedgerDailyTable.userId, u!.id), eq(aiLedgerDailyTable.day, day), eq(aiLedgerDailyTable.kind, "chat")));
   ok((await A("POST", "/me/coach/messages", { text: "one more" })).status === 429, "daily message cap");
-  await db.delete(coachMessagesTable).where(eq(coachMessagesTable.text, "x"));
+  await db.update(aiLedgerDailyTable).set({ calls: 1 }).where(and(eq(aiLedgerDailyTable.userId, u!.id), eq(aiLedgerDailyTable.day, day), eq(aiLedgerDailyTable.kind, "chat")));
 
   // Budget spent → AI stops, app carries on
   const [spent] = await db.insert(aiUsageTable).values({ purpose: "chat", model: "check", inputTokens: 0, outputTokens: 0, costMicroUsd: 1_000_000, ok: true }).returning({ id: aiUsageTable.id });

@@ -288,6 +288,8 @@ export interface PlanItemView {
   logs: SetLog[];
   /** A barbell-only lift, so the player can show the plates per side */
   barbell: boolean;
+  /** Why the coach changed this item (a swap or a new target); null when it is as the rules built it */
+  change_note: string | null;
 }
 
 export interface PlanSessionView {
@@ -321,6 +323,8 @@ export interface PlanView {
   paused_reason: string | null;
   /** The coach's welcome to this block (AI layer); null when AI is off */
   intro: string | null;
+  /** pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes) */
+  notes_status: PlanViewNotesStatus;
   sessions: PlanSessionView[];
 }
 
@@ -390,12 +394,16 @@ export interface ChatMessage {
   role: ChatMessageRole;
   text: string;
   created_at: string;
+  /** A one-tap offer from the coach, still open (build_block = start a new block) */
+  action: ChatMessageAction;
 }
 
 export interface CoachChat {
-  /** Chat can be used now (Coaching member and AI on) */
+  /** Chat can be used now (Plans or Coaching member, and AI on) */
   enabled: boolean;
   remaining_today: number;
+  /** Messages a day for this member's tier */
+  per_day: number;
   messages: ChatMessage[];
 }
 
@@ -624,3 +632,79 @@ export interface AppConfig {
   screening: Screening;
 }
 
+export type PlanViewNotesStatus = typeof PlanViewNotesStatus[keyof typeof PlanViewNotesStatus];
+
+
+export const PlanViewNotesStatus = {
+  none: 'none',
+  pending: 'pending',
+  done: 'done',
+  failed: 'failed',
+} as const;
+
+export type ChatMessageAction = typeof ChatMessageAction[keyof typeof ChatMessageAction] | null;
+
+
+export const ChatMessageAction = {
+  build_block: 'build_block',
+} as const;
+
+export type CoachUpdateSource = typeof CoachUpdateSource[keyof typeof CoachUpdateSource];
+
+
+export const CoachUpdateSource = {
+  checkin: 'checkin',
+  weekly_review: 'weekly_review',
+} as const;
+
+export interface CoachUpdate {
+  id: number;
+  text: string;
+  source: CoachUpdateSource;
+  created_at: string;
+}
+
+export interface DailyNote {
+  /** Today's note; null when the member's tier has none */
+  note: string | null;
+  updates: CoachUpdate[];
+}
+
+export type MemoryItemKind = typeof MemoryItemKind[keyof typeof MemoryItemKind];
+
+
+export const MemoryItemKind = {
+  preference: 'preference',
+  schedule: 'schedule',
+  equipment: 'equipment',
+  goal_detail: 'goal_detail',
+  motivation: 'motivation',
+} as const;
+
+export type MemoryItemSource = typeof MemoryItemSource[keyof typeof MemoryItemSource];
+
+
+export const MemoryItemSource = {
+  agent: 'agent',
+  member: 'member',
+} as const;
+
+export interface MemoryItem {
+  id: number;
+  kind: MemoryItemKind;
+  text: string;
+  source: MemoryItemSource;
+  updated_at: string;
+}
+
+export interface CoachMemory {
+  items: MemoryItem[];
+}
+
+export interface MemoryEdit {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  text: string;
+}

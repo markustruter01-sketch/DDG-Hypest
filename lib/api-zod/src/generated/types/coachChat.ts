@@ -8,8 +8,10 @@
 import type { ChatMessage } from './chatMessage';
 
 export interface CoachChat {
-  /** Chat can be used now (Coaching member and AI on) */
+  /** Chat can be used now (Plans or Coaching member, and AI on) */
   enabled: boolean;
   remaining_today: number;
+  /** Messages a day for this member's tier */
+  per_day: number;
   messages: ChatMessage[];
 }

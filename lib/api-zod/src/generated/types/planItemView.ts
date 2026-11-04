@@ -24,4 +24,6 @@ export interface PlanItemView {
   logs: SetLog[];
   /** A barbell-only lift, so the player can show the plates per side */
   barbell: boolean;
+  /** Why the coach changed this item (a swap or a new target); null when it is as the rules built it */
+  change_note: string | null;
 }

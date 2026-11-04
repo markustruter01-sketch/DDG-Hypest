@@ -29,11 +29,11 @@ member.
 
 | Trigger | Who | Model | Tools allowed | Allowance kind (§5) |
 |---|---|---|---|---|
-| Member sends a chat message | Coaching (tier2) only, as today | Haiku 5.5 | all 5 (§3) | `chat` |
-| Today opens, the first time that local day | Coaching | Haiku 5.5 | `write_memory` | `daily_note` |
+| Member sends a chat message | Plans (tier1): `write_memory`, `build_block`, `schedule_checkin`. Coaching (tier2): all 5 | Haiku 5.5 | per tier (§3) | `chat` |
+| Today opens, the first time that local day | Plans and Coaching | Haiku 5.5 | `write_memory` | `daily_note` |
 | A new block is built | any paid tier | Sonnet 5.5 | none (intro and notes, as today) | `plan_notes` |
 | Sunday weekly review job (step 2.5) | Coaching | Sonnet 5.5 | `set_target_load`, `write_memory`, `schedule_checkin` | `weekly_review` |
-| A scheduled check-in comes due | Coaching | Haiku 5.5 | `write_memory` | `checkin` |
+| A scheduled check-in comes due | Plans and Coaching | Haiku 5.5 | `write_memory` | `checkin` |
 
 Models and prices stay in `lib/ai.ts` `MODELS`, the one source. The prices used in §9, in US$ per million tokens for
 prompts under 100k tokens:
@@ -57,7 +57,7 @@ description and the schema. Each result goes back to the model as JSON: `{ok: tr
 | Tool | Input | What it does | Limits (in code, not the prompt) |
 |---|---|---|---|
 | `build_block` | `{reason ≤140}` | **Does not build.** Returns a proposal the app shows as a card: "Start a new block? [Build it]". The member's tap calls the existing `POST /me/plans/next` or `POST /me/plans`. | At most 1 open proposal. Only offered when the member could build (an unused credit, or Tier 1/2). Never spends a credit. |
-| `swap_exercise` | `{item_id, missing_equipment?: Equipment[], avoid_area?: Area, reason ≤140}` | Swaps **every not-yet-completed item of that exercise** in the current block (this matches "This hurts"). The replacement comes from `findSwap(ex, input, coach)`, where `input` is the plan's stored input with `missing_equipment` taken out of `equipment`, and `avoid_area` added to `avoidAreas`. Swapped items get `target_load_kg = null`, which is what "This hurts" does. | The changed block must pass `validatePlan` against the **plan's stored input** (adjusted the same way), never the current profile. If there is no swap, it refuses. At most 3 swaps per block. No pain report is written; pain goes through "This hurts" or the chat safety rule. |
+| `swap_exercise` | `{item_id, missing_equipment?: Equipment[], avoid_area?: Area, reason ≤140}` | Swaps **every not-yet-completed item of that exercise** in the current block (this matches "This hurts"). The replacement comes from `findSwap(ex, input, coach)`, where `input` is the plan's stored input with `missing_equipment` taken out of `equipment`, and `avoid_area` added to `avoidAreas`. Swapped items get `target_load_kg = null`, which is what "This hurts" does. | The changed block must pass `validatePlan` against the **plan's stored input**, never the current profile; the replacement itself fits the adjusted input (`findSwap` guarantees it). (Validating the whole block against the *adjusted* input would refuse every swap while any other barbell lift remains.) If there is no swap, it refuses. At most 3 swaps per block. No pain report is written; pain goes through "This hurts" or the chat safety rule. |
 | `set_target_load` | `{exercise_id, load, units: "kg"\|"lb", reason ≤140}` | Converts lb to kg first, then updates `plan_items.target_load_kg` for that exercise in sessions that have `completed_at` null **and no set logs**. | The exercise must be `weighted` and in the member's current block. It refuses if the member has never logged that exercise. **Cap:** `min(nextLoads value, last logged load) × 1.10`, worked out from logs and never from the current target. **Floor:** 50% of the `nextLoads` value. Rounded down to 0.5 kg. Coaching only. |
 | `write_memory` | `{kind, text ≤200, replaces_id?}` | Saves one thing to remember (§4). | Kinds: `preference`, `schedule`, `equipment`, `goal_detail`, `motivation`. At most 40 live items. Refused if the text fails the output filter (§6) **or** matches the health word list (`coaching/health-words.ts`: conditions, medicines, injuries, pregnancy, mental-health terms). |
 | `schedule_checkin` | `{in_days: 1–14, topic ≤100}` | Queues a short coach message for that day, shown on Today and emailed only if reminders are on. | At most 2 pending per member. 9:00 local time, in the member's time zone. |
@@ -91,14 +91,18 @@ these numbers live. The "pending" limit for check-ins is enforced in code (§3).
 
 | Kind | none / plan | Plans (tier1, $3.99/mo) | Coaching (tier2, $9.99/mo) |
 |---|---|---|---|
-| `chat`, member messages | 0 | 0 (as today) | 20 / day, 300 / month |
-| `daily_note` | 0 | 0 | 1 / day, 31 / month |
+| `chat`, member messages | 0 | 3 / day, 60 / month | 20 / day, 300 / month |
+| `daily_note` | 0 | 1 / day, 31 / month | 1 / day, 31 / month |
 | `plan_notes` | 3 / month | 3 / month | 3 / month |
 | `weekly_review` | 0 | 0 | 1 / day, 5 / month |
-| `checkin` | 0 | 0 | 8 / month (and at most 2 pending) |
+| `checkin` | 0 | 2 / day, 8 / month (and at most 2 pending) | 2 / day, 8 / month (and at most 2 pending) |
 
-Prices stay as they are in Phase 2. Tier changes and new prices come in Phase 3 (build plan §3.1). An option for Markus
-to consider then: a small chat taste for Plans members, to sell Coaching.
+Prices stay as they are in Phase 2. Tier changes and new prices come in Phase 3 (build plan §3.1).
+
+**Plans (tier1) gets a small taste of the coach** (Markus, 5 Nov 2026): 3 chats a day, Today's note and check-ins. Its chat
+tools are `write_memory`, `build_block` and `schedule_checkin`; swaps, load changes, logging, progress and the weekly
+review stay Coaching. Worst case about $0.22 per Plans member per month (60 chats × $0.0023, notes, check-ins, plan
+notes).
 
 **At the limit:**
 - The coach says so in its own voice with a fixed line from its prompt file, and no AI call is made. For example, Rex:
@@ -214,7 +218,8 @@ upper bounds. The per-member cap in §7 is the hard bound.
 | Check-ins (Haiku) | 8 | 4,000 / 120 | $0.00046 | $0.0037 |
 | **Coaching member, worst case** | | | | **about $1.16** |
 | **Coaching member, typical** (60 chats, 22 notes, 4 reviews, 1 plan-notes call) | | | | **about $0.47** |
-| Plans or one-off member, worst case (plan notes only) | | | | about $0.06 |
+| Plans member, worst case (60 chats, 31 notes, 8 check-ins, plan notes) | | | | about $0.22 |
+| One-off plan member, worst case (plan notes only) | | | | about $0.06 |
 
 - **Margin:** Coaching at $9.99 leaves about $9.40 after Stripe's fee. The worst-case AI cost of about $1.16 is about
   12% of that.
@@ -290,13 +295,14 @@ second open of Today makes no call; and a weekly review with no logs that week m
 
 ## 12. Async plan builds
 
-When AI notes are on, `POST /me/plans` and `POST /me/plans/next` return `202 {job_id}`.
-- The rules save the plan at once, so the member can start training.
-- A background job adds the notes.
-- The web app polls `GET /me/jobs/:id` every 2 s for up to **70 s**: that covers a 30 s call, the 5 s retry wait and a
-  second 30 s call. The plan shows without notes until they land.
-
-With AI off, the answer is `201`, as today. A build never makes the member wait on the model.
+*Changed while building (step 2.3), because the published app scales to zero and only has CPU while a request is open,
+so a background job after the response is not reliable:*
+- `POST /me/plans` and `POST /me/plans/next` save the rules-built plan and answer `201` at once, as before, with
+  `notes_status: "pending"` when AI is on (`"none"` when off).
+- The app then calls `POST /me/plans/{planId}/notes`. That request claims the block (`pending` → `working`, atomically),
+  writes the notes inside the request and answers with the plan. A second tab gets the plan as it stands; a claim left
+  `working` for 2 minutes can be taken again.
+- The plan shows without notes until they land. A build never makes the member wait on the model.
 
 ## 13. Retries
 

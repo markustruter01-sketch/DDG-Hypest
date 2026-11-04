@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PlanSessionView } from './planSessionView';
+import type { PlanViewNotesStatus } from './planViewNotesStatus';
 import type { PlanViewStatus } from './planViewStatus';
 
 export interface PlanView {
@@ -18,5 +19,7 @@ export interface PlanView {
   paused_reason: string | null;
   /** The coach's welcome to this block (AI layer); null when AI is off */
   intro: string | null;
+  /** pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes) */
+  notes_status: PlanViewNotesStatus;
   sessions: PlanSessionView[];
 }
