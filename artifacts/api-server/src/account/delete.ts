@@ -1,5 +1,11 @@
 import { and, eq, inArray, like } from "drizzle-orm";
 import {
+  agentActionsTable,
+  aiLedgerDailyTable,
+  aiLedgerMonthlyTable,
+  checkinsTable,
+  coachMemoryTable,
+  weeklyReviewsTable,
   authFailuresTable,
   coachMessagesTable,
   db,
@@ -32,7 +38,8 @@ export async function activeSubscriptionIds(userId: number): Promise<string[]> {
 /**
  * Deletes a member's account. Order matters: subscriptions are cancelled at Stripe FIRST, so nobody is
  * charged for an account that no longer exists; if that fails, nothing is deleted.
- * Deleted: training answers, plans, sessions, set logs, pain reports, coach chat, logins, reset links, reminder settings, failed-login records, test purchases.
+ * Deleted: training answers, plans, sessions, set logs, pain reports, coach chat, the coach's memory, agent actions,
+ * check-ins, weekly reviews, AI ledgers, logins, reset links, reminder settings, failed-login records, test purchases.
  * Kept, with no personal details: membership and payment records (kind, dates, Stripe ids), because
  * payments must stay traceable. The account row stays as "Deleted member" so those records still point somewhere.
  */
@@ -66,6 +73,12 @@ export async function deleteAccount(userId: number, cancel: CancelSubscription |
       .where(and(eq(membershipsTable.userId, userId), eq(membershipsTable.status, "active")));
     await tx.delete(sessionsTable).where(eq(sessionsTable.userId, userId));
     await tx.delete(coachMessagesTable).where(eq(coachMessagesTable.userId, userId));
+    await tx.delete(coachMemoryTable).where(eq(coachMemoryTable.userId, userId));
+    await tx.delete(agentActionsTable).where(eq(agentActionsTable.userId, userId));
+    await tx.delete(checkinsTable).where(eq(checkinsTable.userId, userId));
+    await tx.delete(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, userId));
+    await tx.delete(aiLedgerDailyTable).where(eq(aiLedgerDailyTable.userId, userId));
+    await tx.delete(aiLedgerMonthlyTable).where(eq(aiLedgerMonthlyTable.userId, userId));
     await tx.delete(passwordResetsTable).where(eq(passwordResetsTable.userId, userId));
     await tx.delete(remindersTable).where(eq(remindersTable.userId, userId));
     const [who] = await tx.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, userId));
