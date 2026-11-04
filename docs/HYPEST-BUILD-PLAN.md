@@ -91,6 +91,7 @@ parallel on separate branches unless marked "after".
 ## Phase 3: The body (target: 4 weeks) — gate: free-to-paid conversion measured; day-30 retention over 10%
 
 ### 3.1 Spec: tiers, free logging, nutrition-lite, check-ins
+- **Status (5 Nov):** `docs/TIERS-AND-BODY-SPEC.md` written by Opus while Fable was out, checked by an independent reviewer agent (16 findings applied). Markus approves §1–§3 by merging.
 - **Who:** Fable. `docs/TIERS-AND-BODY-SPEC.md`: free tier (one coach, logging, one free session before signup), Plans US$4.99, Coaching $12.99, Pro $24.99 with their allowances; nutrition-lite (targets from profile and goal with declared formulas, weekly meal plan and grocery list, meal logging by sentence or photo with Haiku estimates, explicit "estimates, not medical advice"); body metrics (weight, waist, optional photos stored private); morning check-in (sleep hours, energy, soreness); share image; referral credit. Markus approves prices.
 
 ### 3.2 Free logging and the free session
@@ -103,7 +104,7 @@ parallel on separate branches unless marked "after".
 - **Who:** Opus. **Review:** Fable. **Spec:** a Journey view on Progress, built from the permanent records (set logs, plans, sessions; nothing is ever summarised away): first session and first weights, personal bests per lift (with dates), blocks finished, session counts (10, 50, 100, 250…), longest streak, and before/now per main lift. Derived on read, with a `milestones` cache table only if it gets slow. The coach's context keeps its fixed-size lifetime line (`coaching/block.ts` lifetimeSummary: started, best, recent best) so long-term members cost the same per message.
 
 ### 3.4 Body metrics and check-ins
-- **Who:** Opus. Tables `body_metrics`, `checkins`; the agent reads them; readiness rule declared in the spec (poor sleep + high soreness lowers the day's dose, with the why).
+- **Who:** Opus. Tables `body_metrics`, `morning_checkins` (Phase 2's `checkins` is the coach's scheduled messages); the agent reads them; readiness rule declared in the spec (poor sleep + high soreness lowers the day's dose, with the why).
 
 ### 3.5 Stripe live, new prices
 - **Who:** Markus (keys), Opus (price table), Fable (review of the live checklist). Set `STRIPE_LIVE_APPROVED=yes` only after the checklist in PR #10 passes on test mode with the new prices.
