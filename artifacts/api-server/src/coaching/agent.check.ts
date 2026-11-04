@@ -296,7 +296,9 @@ const settle = () => new Promise((r) => setTimeout(r, 50));
   queue.push(...[1, 2, 3, 4].map((i) => tool("write_memory", { kind: "motivation", text: `Reason ${i}` })), say("unused"));
   await chat(m.call, "remember lots");
   const turnId = (await actions(m.id)).at(-1)!.turnId;
-  ok((await actions(m.id)).filter((a) => a.turnId === turnId).length === 3 && seen.length - before === 4, "case 18: 3 tool steps, then the loop stops");
+  const turnActs = (await actions(m.id)).filter((a) => a.turnId === turnId);
+  ok(turnActs.filter((a) => a.tool === "write_memory").length === 3 && seen.length - before === 4, `case 18: 3 tool steps, then the loop stops (${turnActs.length} actions, ${seen.length - before} calls)`);
+  ok(turnActs.some((a) => a.tool === "filter_drop"), "case 18: no answer text after the limit: the fallback (logged as a drop)");
   queue.length = 0;
 
   // Due check-ins are sent by the job (step 2.5).
