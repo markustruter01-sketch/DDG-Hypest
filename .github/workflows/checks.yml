@@ -46,5 +46,10 @@ jobs:
       - name: Generated code is committed
         run: |
           changed=$(git status --porcelain -- lib/api-zod/src/generated lib/api-client-react/src/generated)
-          if [ -n "$changed" ]; then echo "$changed"; echo "Generated API code is out of date: commit the 'generated' artifact of this run"; exit 1; fi
+          if [ -n "$changed" ]; then
+            echo "$changed"
+            echo "Generated API code is out of date: commit the 'generated' artifact of this run (also in the log below, as a base64 tar)"
+            echo "GENERATED-TAR-BEGIN"; tar czf - lib/api-zod/src/generated lib/api-client-react/src/generated | base64 -w0; echo; echo "GENERATED-TAR-END"
+            exit 1
+          fi
       - run: bash scripts/check-all.sh

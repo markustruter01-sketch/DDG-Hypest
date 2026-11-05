@@ -15,6 +15,9 @@ export function ProgressPage() {
   return (
     <main className="screen-scroll">
       <h1 className="screen-title">Progress</h1>
+      <nav className="sub-links" aria-label="More progress">
+        <Link className="chip" to="/food">Food</Link>
+      </nav>
       <div className="stat-row" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
         <div className="card stat"><span className="big-number">{p.streak_days}</span><span className="label">Day streak</span></div>
         <div className="card stat"><span className="big-number">{p.sessions_done}</span><span className="label">Sessions</span></div>

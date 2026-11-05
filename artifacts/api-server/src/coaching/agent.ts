@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
-import { agentActionsTable, db, painEventsTable, trainingProfilesTable } from "@workspace/db";
+import { agentActionsTable, db, nutritionTargetsTable, painEventsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 import { callModel, costMicroUsd, globalBudgetAllows, aiOn, type ApiMessage, type ContentBlock, type Kind, type Message, type TextBlock, type Tier, type ToolUseBlock } from "../lib/ai";
 import { COACH_BY_ID, EXERCISE_BY_ID, type Coach } from "./library";
 import { currentBlock, currentWeek, lifetimeSummary, memberLogs, planNumbers, type Block } from "./block";
@@ -79,7 +79,7 @@ export async function buildContext(userId: number, timezone: string | null, leve
   const months = (d: Date | string | null) => (d ? Math.max(0, Math.round((now.getTime() - new Date(d).getTime()) / (30 * 86_400_000))) : 0);
 
   const can = tools.length ? `Tools you may use for this member: ${tools.join(", ")}.` : "You have no tools for this member.";
-  const cannot = level === "tier1" ? " This member is on Plans: swapping exercises and changing loads are part of Coaching; say so if they ask." : "";
+  const cannot = level === "tier1" ? " This member is on Starter: swapping exercises and changing loads are part of Coaching; say so if they ask." : "";
   const part1 = [
     BASE_RULES,
     `You are ${coach.name}. Discipline: ${coach.title}. Voice: ${prompt.voice}`,
@@ -93,9 +93,16 @@ export async function buildContext(userId: number, timezone: string | null, leve
     pain.length ? `Pain reports: ${pain.map((p) => `${p.stopped ? "SAFETY STOP" : "this hurts"}${p.area ? ` (${p.area})` : ""}${p.exerciseId ? ` on ${EXERCISE_BY_ID.get(p.exerciseId)?.name ?? p.exerciseId}` : ""}`).join("; ")}.` : "No recent pain reports.",
   ].join("\n\n");
 
+  // Spec 3.1 §11: the food targets as two numbers. The chat filter still drops any reply that quotes them in kcal.
+  const [who] = await db.select({ blocked: usersTable.nutritionBlocked }).from(usersTable).where(eq(usersTable.id, userId));
+  const [food] = who?.blocked ? [] : await db.select({ kcal: nutritionTargetsTable.kcal, protein: nutritionTargetsTable.proteinG }).from(nutritionTargetsTable).where(eq(nutritionTargetsTable.userId, userId));
+  const foodLine = who?.blocked
+    ? "Food: switched off for this member. If they ask about eating, say only: \"For eating advice, please see a doctor or dietitian.\""
+    : food ? `Food targets (Food screen): about ${food.kcal} a day, ${food.protein} protein. Never write these numbers or units in a reply: say "your target on the Food screen".` : "Food: not set up.";
+
   let part2: string;
   if (!block) {
-    part2 = "The member has no plan yet.";
+    part2 = `The member has no plan yet.\n${foodLine}`;
   } else {
     const week = currentWeek(block);
     const thisWeek = block.sessions.filter((s) => s.week === week);
@@ -111,6 +118,7 @@ export async function buildContext(userId: number, timezone: string | null, leve
       `Today is ${new Date(localDay(now, timezone) * 86_400_000).toISOString().slice(0, 10)} (member's local date).`,
       `Plan: block ${block.block}, ${block.status === "paused" ? `PAUSED for safety (${block.pausedReason ?? "safety stop"}): no changes until the member resumes it from the plan screen` : "active"}. Current week ${week} of ${Math.max(...block.sessions.map((s) => s.week))}.`,
       ...thisWeek.map((s) => `Week ${s.week} day ${s.day} "${s.title}" (${s.done ? "done" : "to do"}):\n${s.items.map((i) => `  ${fmtItem(i)}`).join("\n")}`),
+      foodLine,
       byEx.size ? `Logged in the last 14 days (exercise: sets logged, best load, last set):\n${[...byEx].map(([id, e]) => `${EXERCISE_BY_ID.get(id)?.name ?? id} (${id}): ${e.sets} sets${e.best !== null ? `, best ${e.best} kg` : ""}, last ${e.last}`).join("\n")}` : "Nothing logged in the last 14 days.",
     ].join("\n");
   }

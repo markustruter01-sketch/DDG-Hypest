@@ -20,13 +20,14 @@ import { RemindersOffPage } from '@/pages/reminders-off-page';
 import { SaveTimezoneOnce } from '@/components/timezone-setting';
 import { PlanNotesWhenPending } from '@/components/plan-notes';
 import { TrialPage } from '@/pages/trial-page';
+import { FoodPage } from '@/pages/food-page';
 
 // AI-coach app (pivot, 18 Oct 2026). The creator marketplace was removed in plan step 1.8.
 const destinations = [
   { label: 'Today', path: '/', Icon: House, also: [] as string[] },
   { label: 'Plan', path: '/plan', Icon: CalendarDays, also: [] as string[] },
   { label: 'Coach', path: '/coach', Icon: MessageCircle, also: ['/coaches', '/start'] },
-  { label: 'Progress', path: '/progress', Icon: LineChart, also: [] as string[] },
+  { label: 'Progress', path: '/progress', Icon: LineChart, also: ['/food'] as string[] },
   { label: 'Me', path: '/profile', Icon: UserRound, also: [] as string[] },
 ] as const;
 
@@ -73,6 +74,7 @@ function AppShell() {
         <Route path="/session/:sessionId" element={<SessionPage />} />
         <Route path="/try" element={<TrialPage />} />
         <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/food" element={<FoodPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
