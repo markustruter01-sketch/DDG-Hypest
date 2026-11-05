@@ -12,7 +12,8 @@ let n = 0;
 const ok = (cond: unknown, msg: string) => { assert.ok(cond, msg); n += 1; };
 
 // ---------- pure ----------
-ok(JSON.stringify(cleanProps({ tier: "tier2", email: "a@b.c", ip: "1.2.3.4", coach_id: "x".repeat(99) })) === JSON.stringify({ tier: "tier2", coach_id: "x".repeat(40) }),
+const cleaned = cleanProps({ tier: "tier2", email: "a@b.c", ip: "1.2.3.4", coach_id: "x".repeat(99) });
+ok(Object.keys(cleaned).sort().join() === "coach_id,tier" && cleaned["tier"] === "tier2" && cleaned["coach_id"] === "x".repeat(40),
   "events: only whitelisted props, strings cut to 40");
 ok(Object.values(DEFAULT_ALLOWANCES.none).every((a) => a.perDay === 0 && a.perMonth === 0) && DEFAULT_CAPS_MICRO_USD.none === 0, "Free: no AI allowance, US$0 cap");
 ok(PRICES.tier1_cents === 499 && PRICES.tier2_cents === 1299 && PRICES.tier3_cents === 1999, "monthly prices as the spec");
