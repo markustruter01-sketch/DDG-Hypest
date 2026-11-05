@@ -16,6 +16,8 @@ const MEDICINE_RE = wordsRe(MEDICINES);
 const DIAGNOSIS_RE = wordsRe(DIAGNOSIS_WORDS);
 const PAIN_RE = wordsRe(OUTPUT_ONLY_FLAGS);
 const CUES_RE = new RegExp(wordsRe(OUTPUT_CUES).source, "gi");
+/** Dose units a meal field may never carry, even with quantities allowed (spec 3.1 §5.4: g, kg, ml, l, cup, tbsp, tsp, piece only). */
+const DOSE_UNITS_RE = /\d[\d,.]*\s*(?:k?cals?\b|calories\b|kilojoules\b|kj\b|mg\b|mcg\b|µg\b|iu\b)/i;
 const DOSE_RE = /\d[\d,.]*\s*(?:k?cals?\b|calories\b|kilojoules\b|kj\b|mg\b|mcg\b|µg\b|ml\b|iu\b|g of\b|grams? of\b)/i;
 const LINK_RE = /https?:|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|au|co|app|uk|nz|ca|us|eu|dev|ai|me|info|biz|ly|gg|tv|xyz|site|online|shop|store|link|club|fit|health|fitness)\b/i;
 
@@ -23,17 +25,17 @@ const near = (a: number, b: number) => Math.abs(a - b) < 0.26;
 const LB_PER_KG = 2.2046226218;
 
 /** Pure: the first rule this text breaks, or null. */
-export function filterReply(text: string, plan: PlanNumbers | null, max = REPLY_MAX): FilterRule | null {
+export function filterReply(text: string, plan: PlanNumbers | null, max = REPLY_MAX, opts: { skipPlanNumbers?: boolean; allowQuantities?: boolean } = {}): FilterRule | null {
   const t = text.replace(/[’`]/g, "'").replace(/\s+/g, " ").trim();
   if (!t) return "empty";
   if (t.length > max) return "length";
   if (LINK_RE.test(t)) return "link";
   if (redFlag(t.replace(CUES_RE, " "))) return "warning_word";
   if (PAIN_RE.test(t)) return "encourages_pain";
-  if (DOSE_RE.test(t)) return "dose";
+  if (opts.allowQuantities ? DOSE_UNITS_RE.test(t) : DOSE_RE.test(t)) return "dose";
   if (MEDICINE_RE.test(t)) return "medicine";
   if (DIAGNOSIS_RE.test(t)) return "diagnosis";
-  if (!trainingNumbersMatch(t, plan)) return "plan_number";
+  if (!opts.skipPlanNumbers && !opts.allowQuantities && !trainingNumbersMatch(t, plan)) return "plan_number";
   return null;
 }
 

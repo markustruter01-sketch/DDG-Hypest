@@ -1,13 +1,14 @@
 import { Router, type IRouter, type RequestHandler } from "express";
-import { and, count, desc, eq, gte, isNotNull, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, sum, sql } from "drizzle-orm";
 import { GetAdminSummaryResponse } from "@workspace/api-zod";
 import {
-  aiUsageTable, billingEventsTable, coachMessagesTable, db, membershipsTable, planSessionsTable, plansTable, setLogsTable, usersTable,
+  aiUsageTable, billingEventsTable, coachMessagesTable, db, membershipsTable, planSessionsTable, plansTable, setLogsTable, usersTable, eventsTable,
 } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { paymentsMode } from "../lib/stripe";
 import { aiBudgetUsd, aiOn } from "../lib/ai";
 import { emailOn, siteUrl } from "../lib/email";
+import { EVENT_NAMES } from "../coaching/events";
 
 /**
  * Owner's view. ADMIN_EMAILS (Replit Secrets, comma-separated) lists who may see it; everyone else gets
@@ -43,7 +44,11 @@ router.get("/admin/summary", requireUser, requireAdmin, async (_req, res) => {
     db.select({ id: billingEventsTable.id, type: billingEventsTable.type, outcome: billingEventsTable.outcome, livemode: billingEventsTable.livemode, received_at: billingEventsTable.receivedAt }).from(billingEventsTable).orderBy(desc(billingEventsTable.receivedAt)).limit(20),
   ]);
 
-  const kinds = ["intro_plan", "plan", "tier1", "tier2"];
+  const kinds = ["intro_plan", "plan", "tier1", "tier2", "tier3"];
+  // Spec 3.1 §4.3: the conversion funnel.
+  const monthAgo = new Date(now.getTime() - 30 * 86_400_000);
+  const counts = await db.select({ name: eventsTable.name, last7: sql<number>`count(*) filter (where ${eventsTable.at} >= ${weekAgo})`.mapWith(Number), last30: count() })
+    .from(eventsTable).where(gte(eventsTable.at, monthAgo)).groupBy(eventsTable.name);
   res.json(GetAdminSummaryResponse.parse({
     generated_at: now,
     switches: { payments: paymentsMode(), ai: aiOn(), email: emailOn() && siteUrl() !== null, alerts: Boolean((process.env["DISCORD_WEBHOOK_URL"] ?? "").trim()) },
@@ -57,6 +62,7 @@ router.get("/admin/summary", requireUser, requireAdmin, async (_req, res) => {
     ai: { month_spend_usd: num(ai?.cost) / 1e6, budget_usd: aiBudgetUsd(), calls_month: num(ai?.n), failed_month: num(aiFailed?.n) },
     paused_plans: paused,
     billing_events: events,
+    funnel: EVENT_NAMES.map((name) => ({ name, last_7d: counts.find((c) => c.name === name)?.last7 ?? 0, last_30d: counts.find((c) => c.name === name)?.last30 ?? 0 })),
   }));
 });
 

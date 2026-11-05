@@ -37,10 +37,11 @@ const event = (type: string, object: object, livemode = false) => ({ id: evId(),
 {
   const as = (level: string, intro_available = true) => ({ level, intro_available }) as Parameters<typeof checkoutBlocked>[1];
   ok(checkoutBlocked("tier1", as("none")) === null && checkoutBlocked("tier2", as("plan")) === null, "non-members can join");
-  ok(checkoutBlocked("tier2", as("tier1")) === null, "Plans -> Coaching: upgrade allowed");
+  ok(checkoutBlocked("tier2", as("tier1")) === null && checkoutBlocked("tier3", as("tier2")) === null && checkoutBlocked("tier3", as("tier1")) === null, "upgrades allowed: Starter -> Coaching -> Pro");
+  ok(checkoutBlocked("tier2", as("tier3")) !== null, "Pro -> Coaching: refused (manage in the portal)");
   ok(checkoutBlocked("tier1", as("tier1")) !== null && checkoutBlocked("tier2", as("tier2")) !== null, "same membership twice: refused");
   ok(checkoutBlocked("tier1", as("tier2")) !== null, "Coaching -> Plans: refused (manage in the portal)");
-  ok(checkoutBlocked("intro_plan", as("none", false)) !== null && checkoutBlocked("plan", as("tier2")) === null, "intro once; extra plans always OK");
+  ok(checkoutBlocked("intro_plan", as("none")) !== null && checkoutBlocked("plan", as("none")) !== null, "one-off plans are no longer sold (spec 3.1 §1)");
 }
 // ---------- pure: return url ----------
 ok(safeReturnUrl("https://hypest.app/profile?x=1#y", "https://hypest.app") === "https://hypest.app/profile", "same site, query stripped");

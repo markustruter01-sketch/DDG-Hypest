@@ -13,6 +13,7 @@ import {
 import { Wordmark } from "@/components/wordmark";
 import { Offers } from "@/components/offers";
 import { CoachNote } from "@/components/coach-note";
+import { hasChat, isMember } from "@/lib/tiers";
 import { coachById, coachLine, img, money, request, useCoaches, useTraining } from "@/lib/coaching";
 import { useAppConfig } from "@/lib/config";
 import { quoteOfTheDay } from "@/lib/quotes";
@@ -97,7 +98,8 @@ export function TodayPage({ user }: { user: CurrentUser }) {
       </Link>
     );
   } else if (!plan) {
-    const canStart = state.access.level === "tier1" || state.access.level === "tier2" || state.access.plan_credits > 0;
+    // Free builds its first block too (week 1 open; spec 3.1 §1).
+    const canStart = true;
     main = canStart ? (
       <button type="button" className="today-card today-go" onClick={() => run(() => create.mutateAsync())} disabled={create.isPending}>
         <span className="label">{coach?.name ?? "Your coach"} is ready</span>
@@ -116,7 +118,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
       </div>
     );
   } else if (!upNext) {
-    const canNext = state.access.level === "tier1" || state.access.level === "tier2" || state.access.plan_credits > 0;
+    const canNext = isMember(state.access.level) || state.access.plan_credits > 0;
     main = canNext ? (
       <button type="button" className="today-card today-go" onClick={() => run(() => next.mutateAsync())} disabled={next.isPending}>
         <span className="label">Block {plan.block} done · {done} sessions</span>
@@ -164,7 +166,7 @@ export function TodayPage({ user }: { user: CurrentUser }) {
             <span className="week-strip-meta label">{done}/{total} done</span>
           </div>
         ) : null}
-        {coach && config?.ai && (state?.access.level === "tier1" || state?.access.level === "tier2") ? <CoachNote coachName={coach.name} /> : null}
+        {coach && config?.ai && hasChat(state?.access.level) ? <CoachNote coachName={coach.name} /> : null}
         {state && !state.profile ? <GettingStarted /> : null}
         {create.isError || next.isError ? <p className="error-text" role="alert">{serverErrorText(create.error ?? next.error)}</p> : null}
       </section>

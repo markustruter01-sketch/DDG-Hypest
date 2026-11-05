@@ -8,6 +8,7 @@
 import type { AdminSummaryActivity7d } from './adminSummaryActivity7d';
 import type { AdminSummaryAi } from './adminSummaryAi';
 import type { AdminSummaryBillingEventsItem } from './adminSummaryBillingEventsItem';
+import type { AdminSummaryFunnelItem } from './adminSummaryFunnelItem';
 import type { AdminSummaryMembers } from './adminSummaryMembers';
 import type { AdminSummaryMembershipsItem } from './adminSummaryMembershipsItem';
 import type { AdminSummaryPausedPlansItem } from './adminSummaryPausedPlansItem';
@@ -17,6 +18,8 @@ export interface AdminSummary {
   generated_at: Date;
   switches: AdminSummarySwitches;
   members: AdminSummaryMembers;
+  /** Conversion events (spec 3.1 §4.3), counts for the last 7 and 30 days */
+  funnel: AdminSummaryFunnelItem[];
   memberships: AdminSummaryMembershipsItem[];
   activity_7d: AdminSummaryActivity7d;
   ai: AdminSummaryAi;

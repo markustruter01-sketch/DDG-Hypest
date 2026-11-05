@@ -453,3 +453,22 @@ Each step brings its own `*.check.ts`:
   - `nextLoads` leaves low days out;
   - photos are served only to their owner, with the right headers.
 - **3.3b:** milestones from a made-up 3-year history.
+
+## 13. As built (Phase 3 PR)
+
+Where the build differs from or adds to the sections above:
+- **Progress photos (§6) are not built yet.** They need two new packages (private object storage and image
+  re-encoding), and the lockfile can only be updated from Replit. Everything else in §6 is built. Nothing on the app
+  says photos exist, so no promise is made.
+- **One-off plans** are no longer sold, but credits bought before keep working (the next block uses one).
+- **Pain reports** gain the source `food` (warning words in a meal sentence or foods to avoid).
+- **Meal plans:** an attempt claims its weekly slot before the call; a failed plan keeps the slot (it counts, §5.4),
+  a refusal before any call (limit, budget, AI off) gives it back.
+- **Low days (§7):** a session started on a low day keeps its lighter view afterwards ("Done lighter"). The Free and
+  Starter note shows on Progress only (never in the session player), and not on a day with a pain report.
+- **Monthly report (§7b):** runs from 08:00 local on the 1st and covers the month before (UTC month bounds). A month
+  with no sessions keeps a short fixed line, shown on Progress like a report. Body changes compare the first and
+  last three entries of the month (at least 4 entries); nothing about weight is sent for a blocked member.
+- **Mid-week check-in:** "no sessions" means no sets logged since Monday; the fixed line is sent as a coach message.
+- **Share image (§9):** coach colours are set in the app (`lib/share-image.ts`); the first name is the first word of
+  the display name.

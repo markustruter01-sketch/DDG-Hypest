@@ -12,4 +12,5 @@ export type CoachUpdateSource = typeof CoachUpdateSource[keyof typeof CoachUpdat
 export const CoachUpdateSource = {
   checkin: 'checkin',
   weekly_review: 'weekly_review',
+  midweek_check: 'midweek_check',
 } as const;

@@ -29,6 +29,8 @@ const queue = createQueue(store, async (e: QueuedSet) => {
 }, () => owner);
 
 let waiting: string[] = [];
+/** Queued sets the server refused while syncing (e.g. 402: a session past week 1 on Free). Shown once, then cleared. */
+let dropped = 0;
 const listeners = new Set<() => void>();
 const publish = async () => {
   waiting = await queue.pending();
@@ -37,8 +39,20 @@ const publish = async () => {
 
 export async function flushSets(): Promise<void> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return publish();
-  await queue.flush();
+  dropped += (await queue.flush()).dropped;
   await publish();
+}
+
+/** Spec 3.1 §1: say plainly when sets from the phone could not be saved. */
+export function droppedSetsText(n: number): string | null {
+  if (n <= 0) return null;
+  return `${n} ${n === 1 ? "set" : "sets"} couldn't be saved: your plan doesn't include this session.`;
+}
+
+/** The refused-set count since the member last dismissed it. */
+export function useDroppedSets(): [number, () => void] {
+  const n = useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => dropped);
+  return [n, () => { dropped = 0; listeners.forEach((l) => l()); }];
 }
 
 /** Try to send now; with no signal (or a network error) keep it on the phone. Returns where it ended up:

@@ -1,25 +1,30 @@
 import type Stripe from "stripe";
 import { PRICES, type Access } from "../coaching/access";
 
-export type Kind = "intro_plan" | "plan" | "tier1" | "tier2";
+export type Kind = "intro_plan" | "plan" | "tier1" | "tier2" | "tier3";
 
 const ITEMS: Record<Kind, { name: string; cents: number; monthly: boolean }> = {
   intro_plan: { name: "Hypest first plan (4 weeks, 50% off)", cents: PRICES.intro_plan_cents, monthly: false },
   plan: { name: "Hypest plan (4 weeks)", cents: PRICES.plan_cents, monthly: false },
-  tier1: { name: "Hypest Plans (a new plan every 4 weeks)", cents: PRICES.tier1_cents, monthly: true },
-  tier2: { name: "Hypest Coaching (plans, logging, adaptive)", cents: PRICES.tier2_cents, monthly: true },
+  tier1: { name: "Hypest Starter (a new plan every 4 weeks)", cents: PRICES.tier1_cents, monthly: true },
+  tier2: { name: "Hypest Coaching (adaptive plans, coach, food)", cents: PRICES.tier2_cents, monthly: true },
+  tier3: { name: "Hypest Pro (the most coaching, reports)", cents: PRICES.tier3_cents, monthly: true },
 };
 
 const isMonthly = (kind: Kind) => ITEMS[kind].monthly;
 
+/** Higher = more. Upgrades only go up; a move down is done in the billing portal. */
+const RANK: Record<string, number> = { tier1: 1, tier2: 2, tier3: 3 };
+
 /**
- * Pure: why this member can't buy this now, or null. Plans -> Coaching is allowed (an upgrade: the webhook cancels
- * Plans once Coaching is paid); any other second membership is refused.
+ * Pure: why this member can't buy this now, or null. Moving up (Starter -> Coaching -> Pro) is allowed: the webhook
+ * cancels the lower membership once the higher one is paid. Any other second membership is refused. One-off plans are
+ * no longer sold (docs/TIERS-AND-BODY-SPEC.md §1); credits already bought keep working.
  */
 export function checkoutBlocked(kind: Kind, access: Pick<Access, "level" | "intro_available">): string | null {
-  if (kind === "intro_plan" && !access.intro_available) return "The intro offer is already used";
-  const member = access.level === "tier1" || access.level === "tier2";
-  const upgrade = kind === "tier2" && access.level === "tier1";
+  if (kind === "intro_plan" || kind === "plan") return "One-off plans are no longer sold. Starter is $4.99 a month.";
+  const member = (RANK[access.level] ?? 0) > 0;
+  const upgrade = (RANK[kind] ?? 0) > (RANK[access.level] ?? 0);
   if (isMonthly(kind) && member && !upgrade) return "You already have a membership. Manage or cancel it first.";
   return null;
 }

@@ -15,5 +15,6 @@ export const IVY: CoachPrompt = {
     fallback: "Let me come back to you on that.",
     dailyNoteOff: "Today: slow, precise, and breathe through every movement.",
     upgrade: "Chatting with me is part of Plans and Coaching. Your plan is on Today.",
+    planIntro: "Welcome. Week 1 is about control: slow, precise, and mindful of every movement.",
   },
 };

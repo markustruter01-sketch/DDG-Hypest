@@ -5,6 +5,282 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface BodyMetricsEntry {
+  /**
+     * @minimum 35
+     * @maximum 300
+     */
+  weight_kg?: number | null;
+  /**
+     * @minimum 40
+     * @maximum 200
+     */
+  waist_cm?: number | null;
+}
+
+export interface MorningCheckinEntry {
+  /**
+     * Sleep in half hours (0 to 14 h)
+     * @minimum 0
+     * @maximum 28
+     */
+  sleep_half_hours: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  energy: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  soreness: number;
+}
+
+export type BodyStateMetricsItem = {
+  day: string;
+  weight_kg: number | null;
+  waist_cm: number | null;
+};
+
+export type BodyStateAverage7dItem = {
+  day: string;
+  weight_kg: number;
+};
+
+export type BodyStateCheckinToday = {
+  sleep_half_hours: number;
+  energy: number;
+  soreness: number;
+} | null;
+
+export type BodyStateMonthlyReportsItem = {
+  month: string;
+  text: string;
+};
+
+export interface BodyState {
+  metrics: BodyStateMetricsItem[];
+  /** 7-day moving average of weight; empty when nutrition is blocked (numbers only) */
+  average_7d: BodyStateAverage7dItem[];
+  checkin_today: BodyStateCheckinToday;
+  /** Coaching and Pro: today's sessions are shown lighter, and why */
+  low_day: string | null;
+  /** Free and Starter on a low day: one line, never after a pain report */
+  upgrade_note: string | null;
+  monthly_reports: BodyStateMonthlyReportsItem[];
+}
+
+export type JourneySessionMilestonesItem = {
+  count: number;
+  reached_on: string;
+};
+
+export type JourneyLiftsItem = {
+  exercise_id: string;
+  name: string;
+  sets: number;
+  first_on: string;
+  first_kg: number;
+  best_kg: number;
+  best_reps: number;
+  best_on: string;
+  now_kg: number;
+};
+
+export interface Journey {
+  first_session_on: string | null;
+  sessions_done: number;
+  blocks_finished: number;
+  /** Most weeks in a row with at least one session */
+  longest_week_streak: number;
+  session_milestones: JourneySessionMilestonesItem[];
+  next_milestone: number | null;
+  /** The main lifts (most sets), before and now */
+  lifts: JourneyLiftsItem[];
+}
+
+export interface MealItem {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  /**
+     * @minimum 0
+     * @maximum 2500
+     */
+  kcal: number;
+  /**
+     * @minimum 0
+     * @maximum 200
+     */
+  protein_g: number;
+}
+
+export type FoodSetupSex = typeof FoodSetupSex[keyof typeof FoodSetupSex];
+
+
+export const FoodSetupSex = {
+  female: 'female',
+  male: 'male',
+  unsaid: 'unsaid',
+} as const;
+
+export interface FoodSetup {
+  sex: FoodSetupSex;
+  /**
+     * @minimum 1900
+     * @maximum 2100
+     */
+  birth_year: number;
+  /**
+     * @minimum 120
+     * @maximum 230
+     */
+  height_cm: number;
+  /**
+     * @minimum 35
+     * @maximum 300
+     */
+  weight_kg: number;
+  /**
+     * @maxItems 10
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  foods_to_avoid: string[];
+  /** Pregnant or breastfeeding */
+  pregnant: boolean;
+}
+
+export interface MealText {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  text: string;
+}
+
+export type MealPhotoMediaType = typeof MealPhotoMediaType[keyof typeof MealPhotoMediaType];
+
+
+export const MealPhotoMediaType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface MealPhoto {
+  media_type: MealPhotoMediaType;
+  /**
+     * Base64
+     * @minLength 1
+     * @maxLength 4100000
+     */
+  data: string;
+}
+
+export interface MealEdit {
+  /**
+     * @minItems 1
+     * @maxItems 12
+     */
+  items: MealItem[];
+}
+
+export type MealPlanMealSlot = typeof MealPlanMealSlot[keyof typeof MealPlanMealSlot];
+
+
+export const MealPlanMealSlot = {
+  breakfast: 'breakfast',
+  lunch: 'lunch',
+  dinner: 'dinner',
+  snack: 'snack',
+} as const;
+
+export interface MealPlanMeal {
+  slot: MealPlanMealSlot;
+  name: string;
+  ingredients: string[];
+  kcal: number;
+  protein_g: number;
+}
+
+export type FoodStateSetupSex = typeof FoodStateSetupSex[keyof typeof FoodStateSetupSex];
+
+
+export const FoodStateSetupSex = {
+  female: 'female',
+  male: 'male',
+  unsaid: 'unsaid',
+} as const;
+
+export type FoodStateSetup = {
+  sex: FoodStateSetupSex;
+  birth_year: number;
+  height_cm: number;
+  weight_kg: number;
+  foods_to_avoid: string[];
+} | null;
+
+export type FoodStateTargets = {
+  kcal: number;
+  protein_g: number;
+  maintenance_only: boolean;
+} | null;
+
+export type FoodStateTodayMealsItem = {
+  id: number;
+  text: string;
+  items: MealItem[];
+  kcal: number;
+  protein_g: number;
+  at: string;
+};
+
+export type FoodStateToday = {
+  day: string;
+  kcal: number;
+  protein_g: number;
+  meals: FoodStateTodayMealsItem[];
+};
+
+export type FoodStateMealPlanDaysItem = {
+  day: number;
+  meals: MealPlanMeal[];
+  total_kcal: number;
+  total_protein_g: number;
+};
+
+export type FoodStateMealPlanGroceryItem = {
+  aisle: string;
+  items: string[];
+};
+
+export type FoodStateMealPlan = {
+  week_of: string;
+  days: FoodStateMealPlanDaysItem[];
+  grocery: FoodStateMealPlanGroceryItem[];
+} | null;
+
+export interface FoodState {
+  /** Nutrition is off for good (spec 3.1 §5.1): show only the fixed line */
+  blocked: boolean;
+  /** Set-up and targets are in this member's tier (Starter and above) */
+  available: boolean;
+  /** Meal plans and meal logging (Coaching and Pro */
+  can_use_ai: boolean;
+  /** A fixed safety or help message to show, once */
+  notice: string | null;
+  setup: FoodStateSetup;
+  targets: FoodStateTargets;
+  today: FoodStateToday;
+  meal_plan: FoodStateMealPlan;
+  meal_plans_left: number;
+  meal_logs_left_today: number;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -223,6 +499,9 @@ export interface Screening {
   cleared_label: string;
 }
 
+/**
+ * none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro
+ */
 export type AccessLevel = typeof AccessLevel[keyof typeof AccessLevel];
 
 
@@ -231,9 +510,11 @@ export const AccessLevel = {
   plan: 'plan',
   tier1: 'tier1',
   tier2: 'tier2',
+  tier3: 'tier3',
 } as const;
 
 export interface Access {
+  /** none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro */
   level: AccessLevel;
   intro_available: boolean;
   plan_credits: number;
@@ -300,6 +581,8 @@ export interface PlanSessionView {
   /** One line from the coach (AI layer); null when AI is off */
   note: string | null;
   completed_at: string | null;
+  /** Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged */
+  low_day: string | null;
   items: PlanItemView[];
 }
 
@@ -326,6 +609,17 @@ export const PlanViewNotesStatus = {
   failed: 'failed',
 } as const;
 
+/**
+ * week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above
+ */
+export type PlanViewAccess = typeof PlanViewAccess[keyof typeof PlanViewAccess];
+
+
+export const PlanViewAccess = {
+  full: 'full',
+  week1: 'week1',
+} as const;
+
 export interface PlanView {
   id: number | null;
   coach_id: string;
@@ -338,6 +632,8 @@ export interface PlanView {
   intro: string | null;
   /** pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes) */
   notes_status: PlanViewNotesStatus;
+  /** week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above */
+  access: PlanViewAccess;
   sessions: PlanSessionView[];
 }
 
@@ -436,6 +732,7 @@ export type CoachUpdateSource = typeof CoachUpdateSource[keyof typeof CoachUpdat
 export const CoachUpdateSource = {
   checkin: 'checkin',
   weekly_review: 'weekly_review',
+  midweek_check: 'midweek_check',
 } as const;
 
 export interface CoachUpdate {
@@ -511,6 +808,12 @@ export type AdminSummaryMembers = {
   new_7d: number;
 };
 
+export type AdminSummaryFunnelItem = {
+  name: string;
+  last_7d: number;
+  last_30d: number;
+};
+
 export type AdminSummaryMembershipsItem = {
   kind: string;
   live: number;
@@ -549,6 +852,8 @@ export interface AdminSummary {
   generated_at: string;
   switches: AdminSummarySwitches;
   members: AdminSummaryMembers;
+  /** Conversion events (spec 3.1 §4.3), counts for the last 7 and 30 days */
+  funnel: AdminSummaryFunnelItem[];
   memberships: AdminSummaryMembershipsItem[];
   activity_7d: AdminSummaryActivity7d;
   ai: AdminSummaryAi;
@@ -593,17 +898,75 @@ export const UnlockRequestKind = {
   plan: 'plan',
   tier1: 'tier1',
   tier2: 'tier2',
+  tier3: 'tier3',
 } as const;
 
 export interface UnlockRequest {
   kind: UnlockRequestKind;
 }
 
+export type TrialSessionSetsItem = {
+  /**
+     * @minimum 1
+     * @maximum 12
+     */
+  position: number;
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  exercise_id: string;
+  /**
+     * @minimum 1
+     * @maximum 8
+     */
+  set_number: number;
+  /**
+     * @minimum 0
+     * @maximum 200
+     */
+  reps: number | null;
+  /**
+     * @minimum 0
+     * @maximum 7200
+     */
+  seconds: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     */
+  load_kg: number | null;
+};
+
+export interface TrialSession {
+  finished: boolean;
+  /** @maxItems 96 */
+  sets: TrialSessionSetsItem[];
+}
+
+/**
+ * Australian prices in cents, GST included
+ */
+export type PricesAud = {
+  tier1_cents: number;
+  tier2_cents: number;
+  tier3_cents: number;
+  tier1_yearly_cents: number;
+  tier2_yearly_cents: number;
+  tier3_yearly_cents: number;
+};
+
 export interface Prices {
   intro_plan_cents: number;
   plan_cents: number;
   tier1_cents: number;
   tier2_cents: number;
+  tier3_cents: number;
+  tier1_yearly_cents: number;
+  tier2_yearly_cents: number;
+  tier3_yearly_cents: number;
+  /** Australian prices in cents, GST included */
+  aud: PricesAud;
 }
 
 export interface ChangePasswordRequest {
@@ -661,6 +1024,7 @@ export const CheckoutRequestKind = {
   plan: 'plan',
   tier1: 'tier1',
   tier2: 'tier2',
+  tier3: 'tier3',
 } as const;
 
 export interface CheckoutRequest {

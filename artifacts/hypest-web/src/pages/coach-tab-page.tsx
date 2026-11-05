@@ -4,6 +4,7 @@ import { Offers } from "@/components/offers";
 import { coachById, coachLine, img, useCoaches, useTraining } from "@/lib/coaching";
 import { useAppConfig } from "@/lib/config";
 import { CoachChat } from "@/components/coach-chat";
+import { canAdapt, hasChat } from "@/lib/tiers";
 
 /** Your coach: a full-screen chat for Plans and Coaching members (AI on); otherwise who they are and the offers. */
 export function CoachTabPage() {
@@ -22,11 +23,11 @@ export function CoachTabPage() {
     );
   }
   if (!coach || !state) return <main className="screen-scroll" aria-busy="true" />;
-  const tier2 = state.access.level === "tier2";
-  const hasChat = state.access.level === "tier1" || tier2;
+  const adapts = canAdapt(state.access.level);
+  const chat = hasChat(state.access.level);
 
   // Build plan 2.4: with chat (Plans or Coaching, AI on) the Coach tab is a full-screen chat.
-  if (hasChat && config?.ai) {
+  if (chat && config?.ai) {
     return (
       <main className="coach-page coach-page-chat">
         <header className="chat-head">
@@ -50,11 +51,11 @@ export function CoachTabPage() {
           <div><span className="label">Style</span><b>{coach.personality}</b></div>
           <div><span className="label">Your plan</span><b>{state.plan ? `Block ${state.plan.block}` : "Not started"}</b></div>
         </div>
-        <div className={hasChat ? "card chat-soon" : "card chat-soon locked"}>
+        <div className={chat ? "card chat-soon" : "card chat-soon locked"}>
           <MessageCircle size={22} aria-hidden="true" />
-          <span><b>Chat with {coach.name}</b><br /><span className="label">{hasChat ? "Coming soon" : "Part of Plans and Coaching"}</span></span>
+          <span><b>Chat with {coach.name}</b><br /><span className="label">{chat ? "Coming soon" : "Part of Starter and up"}</span></span>
         </div>
-        {!tier2 ? <Offers access={state.access} /> : null}
+        {!adapts ? <Offers access={state.access} /> : null}
         <Link className="secondary-button" to="/coaches">Change coach</Link>
       </section>
     </main>

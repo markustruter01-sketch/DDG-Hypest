@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
-import { agentActionsTable, db, painEventsTable, trainingProfilesTable } from "@workspace/db";
+import { agentActionsTable, db, nutritionTargetsTable, painEventsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 import { callModel, costMicroUsd, globalBudgetAllows, aiOn, type ApiMessage, type ContentBlock, type Kind, type Message, type TextBlock, type Tier, type ToolUseBlock } from "../lib/ai";
 import { COACH_BY_ID, EXERCISE_BY_ID, type Coach } from "./library";
 import { currentBlock, currentWeek, lifetimeSummary, memberLogs, planNumbers, type Block } from "./block";
@@ -10,6 +10,8 @@ import { reserveTurn, settleTurn } from "./allowance";
 import type { Level } from "./access";
 import { BASE_RULES, PROMPT_VERSION, promptFor, type CoachPrompt } from "./prompts";
 import { localDay } from "../lib/timezone";
+import { todayCheckin } from "./body";
+import { lowDayReason } from "./readiness";
 
 /**
  * The coach agent (docs/COACH-AGENT-SPEC.md). One member action = one turn: rules have already screened the member's
@@ -20,14 +22,17 @@ export const MAX_TOOL_STEPS = 3;
 /** Model calls per turn: 3 tool rounds and the answer (spec §3). */
 export const MAX_MODEL_CALLS = MAX_TOOL_STEPS + 1;
 
-export type TurnKind = Exclude<Kind, "plan_notes">;
+export type TurnKind = Extract<Kind, "chat" | "daily_note" | "checkin" | "weekly_review" | "midweek_check" | "monthly_report">;
 
-type KindSpec = { tier: Tier; maxTokens: number; maxChars: number };
+/** planNumbers: false = the reply may quote past lifts (the monthly report); every other filter rule still applies. */
+type KindSpec = { tier: Tier; maxTokens: number; maxChars: number; planNumbers?: false };
 export const KIND_SPECS: Record<TurnKind, KindSpec> = {
   chat: { tier: "quick", maxTokens: 300, maxChars: REPLY_MAX },
   daily_note: { tier: "quick", maxTokens: 200, maxChars: 300 },
   checkin: { tier: "quick", maxTokens: 250, maxChars: 400 },
   weekly_review: { tier: "plan", maxTokens: 800, maxChars: REPLY_MAX },
+  midweek_check: { tier: "plan", maxTokens: 800, maxChars: REPLY_MAX },
+  monthly_report: { tier: "plan", maxTokens: 700, maxChars: 1800, planNumbers: false },
 };
 
 export type TurnOutcome = {
@@ -51,7 +56,7 @@ export function turnEstimateMicro(tier: Tier, promptChars: number, maxTokens: nu
   return MAX_MODEL_CALLS * 2 * costMicroUsd(tier, 0, maxTokens, inputTokens, 0);
 }
 
-type Ctx = { coach: Coach; prompt: CoachPrompt; block: Block | null; system: TextBlock[] };
+type Ctx = { coach: Coach; prompt: CoachPrompt; block: Block | null; system: TextBlock[]; lowDay: boolean };
 
 const fmtItem = (i: Block["sessions"][number]["items"][number]) => {
   const ex = EXERCISE_BY_ID.get(i.exerciseId);
@@ -76,7 +81,7 @@ export async function buildContext(userId: number, timezone: string | null, leve
   const months = (d: Date | string | null) => (d ? Math.max(0, Math.round((now.getTime() - new Date(d).getTime()) / (30 * 86_400_000))) : 0);
 
   const can = tools.length ? `Tools you may use for this member: ${tools.join(", ")}.` : "You have no tools for this member.";
-  const cannot = level === "tier1" ? " This member is on Plans: swapping exercises and changing loads are part of Coaching; say so if they ask." : "";
+  const cannot = level === "tier1" ? " This member is on Starter: swapping exercises and changing loads are part of Coaching; say so if they ask." : "";
   const part1 = [
     BASE_RULES,
     `You are ${coach.name}. Discipline: ${coach.title}. Voice: ${prompt.voice}`,
@@ -90,9 +95,22 @@ export async function buildContext(userId: number, timezone: string | null, leve
     pain.length ? `Pain reports: ${pain.map((p) => `${p.stopped ? "SAFETY STOP" : "this hurts"}${p.area ? ` (${p.area})` : ""}${p.exerciseId ? ` on ${EXERCISE_BY_ID.get(p.exerciseId)?.name ?? p.exerciseId}` : ""}`).join("; ")}.` : "No recent pain reports.",
   ].join("\n\n");
 
+  // Spec 3.1 §11: the food targets as two numbers. The chat filter still drops any reply that quotes them in kcal.
+  const [who] = await db.select({ blocked: usersTable.nutritionBlocked }).from(usersTable).where(eq(usersTable.id, userId));
+  const [food] = who?.blocked ? [] : await db.select({ kcal: nutritionTargetsTable.kcal, protein: nutritionTargetsTable.proteinG }).from(nutritionTargetsTable).where(eq(nutritionTargetsTable.userId, userId));
+  // Spec 3.1 §7: today's morning check-in and the readiness result. The rule is code; the coach can't change it.
+  const checkin = await todayCheckin(userId, timezone, now);
+  const low = level === "tier2" || level === "tier3" ? lowDayReason(checkin) : null;
+  const checkinLine = checkin
+    ? `Morning check-in today: sleep ${checkin.sleepHalfHours / 2} h, energy ${checkin.energy}/5, soreness ${checkin.soreness}/5. ${low ? "LOW DAY: sessions not started today are shown lighter (one fewer set, lighter targets); the stored plan is unchanged." : "Not a low day."}`
+    : "No morning check-in today.";
+  const foodLine = who?.blocked
+    ? "Food: switched off for this member. If they ask about eating, say only: \"For eating advice, please see a doctor or dietitian.\""
+    : food ? `Food targets (Food screen): about ${food.kcal} a day, ${food.protein} protein. Never write these numbers or units in a reply: say "your target on the Food screen".` : "Food: not set up.";
+
   let part2: string;
   if (!block) {
-    part2 = "The member has no plan yet.";
+    part2 = `The member has no plan yet.\n${checkinLine}\n${foodLine}`;
   } else {
     const week = currentWeek(block);
     const thisWeek = block.sessions.filter((s) => s.week === week);
@@ -108,11 +126,13 @@ export async function buildContext(userId: number, timezone: string | null, leve
       `Today is ${new Date(localDay(now, timezone) * 86_400_000).toISOString().slice(0, 10)} (member's local date).`,
       `Plan: block ${block.block}, ${block.status === "paused" ? `PAUSED for safety (${block.pausedReason ?? "safety stop"}): no changes until the member resumes it from the plan screen` : "active"}. Current week ${week} of ${Math.max(...block.sessions.map((s) => s.week))}.`,
       ...thisWeek.map((s) => `Week ${s.week} day ${s.day} "${s.title}" (${s.done ? "done" : "to do"}):\n${s.items.map((i) => `  ${fmtItem(i)}`).join("\n")}`),
+      checkinLine,
+      foodLine,
       byEx.size ? `Logged in the last 14 days (exercise: sets logged, best load, last set):\n${[...byEx].map(([id, e]) => `${EXERCISE_BY_ID.get(id)?.name ?? id} (${id}): ${e.sets} sets${e.best !== null ? `, best ${e.best} kg` : ""}, last ${e.last}`).join("\n")}` : "Nothing logged in the last 14 days.",
     ].join("\n");
   }
   return {
-    coach, prompt, block,
+    coach, prompt, block, lowDay: low !== null,
     system: [
       { type: "text", text: part1, cache_control: { type: "ephemeral" } },
       { type: "text", text: part2 },
@@ -201,7 +221,7 @@ export async function runTurn(args: {
 
   if (proposal) changes.push({ tool: "build_block", line: "Tap the button below to start your new block." });
   if (failed) return fixed(ctx.prompt.lines.fallback, failed, true, changes, proposal);
-  const rule = filterReply(lastText, planNumbers(block), spec.maxChars);
+  const rule = filterReply(lastText, planNumbers(block, ctx.lowDay), spec.maxChars, { skipPlanNumbers: spec.planNumbers === false });
   if (rule !== null) {
     await db.insert(agentActionsTable).values({ userId: args.userId, turnId, tool: "filter_drop", touched: {}, result: { ok: false, rule }, promptVersion: PROMPT_VERSION });
     return fixed(ctx.prompt.lines.fallback, `filter:${rule}`, true, changes, proposal);

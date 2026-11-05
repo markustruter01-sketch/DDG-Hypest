@@ -21,6 +21,8 @@ export type CoachPrompt = {
     dailyNoteOff: string;
     /** Chat is not part of the member's tier. */
     upgrade: string;
+    /** The welcome on a Free member's block (spec 3.1 §2: Free makes no AI calls). */
+    planIntro: string;
   };
 };
 

@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { tidyExpired } from "./lib/tidy";
 import { devLoginProblem, listenHost } from "./lib/dev-login";
+import { backfillNutritionBlocks } from "./coaching/food";
 import { seedAllowances } from "./coaching/allowance";
 
 const rawPort = process.env["PORT"];
@@ -26,6 +27,8 @@ if (devProblem) {
 
 try {
   await seedAllowances(); // docs/COACH-AGENT-SPEC.md §5: fills missing rows only; never overwrites Markus's edits
+  const blocked = await backfillNutritionBlocks(); // spec 3.1 §5.1: once at deploy; a no-op after
+  if (blocked) logger.info({ blocked }, "Nutrition blocks backfilled");
 } catch (err) {
   logger.error({ err }, "Failed to seed AI allowances");
   process.exit(1);

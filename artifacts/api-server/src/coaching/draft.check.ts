@@ -36,7 +36,26 @@ if (api) {
   ok(signed.status === 201 && !signed.jar.has("hypest_draft"), "signup claims the draft and clears its cookie");
   const training = await A("GET", "/me/training");
   ok(training.json.profile?.coach_id === "jade" && training.json.profile.days_per_week === 5 && training.json.profile.avoid_areas.includes("knee"), "the answers became the profile");
-  ok((await A("POST", "/me/plans")).status === 402, "then=plan with nothing bought: Today shows the offer card");
+  const freePlan = await A("POST", "/me/plans");
+  ok(freePlan.status === 201 && freePlan.json.access === "week1" && freePlan.json.sessions.every((x: { week: number }) => x.week === 1), "then=plan on Free: the first block, week 1 only");
+  ok(typeof freePlan.json.intro === "string" && freePlan.json.notes_status === "none", "Free: the coach's fixed intro, no AI notes");
+
+  // Spec 3.1 §4.2: day 1 tried before signup is in the plan after signup (not after login).
+  const T = browser();
+  ok((await T("PUT", "/onboarding/draft/trial", { finished: false, sets: [] })).status === 409, "trial without a draft: refused");
+  await T("PUT", "/onboarding/draft", answers);
+  const preview = await T("POST", "/coaching/preview", answers);
+  const first = preview.json.sessions[0].items[0] as { exercise_id: string; measure: string };
+  const set = { position: 1, exercise_id: first.exercise_id, set_number: 1, reps: first.measure === "reps" ? 8 : null, seconds: first.measure === "time" ? 30 : null, load_kg: null };
+  ok((await T("PUT", "/onboarding/draft/trial", { finished: false, sets: [{ ...set, set_number: 99 }] })).status === 400, "trial: out-of-range set refused");
+  ok((await T("PUT", "/onboarding/draft/trial", { finished: true, sets: [set] })).status === 204, "trial saved with the draft");
+  ok((await T("PUT", "/onboarding/draft/trial", { finished: false, sets: [set] })).status === 204, "a late save is accepted");
+  ok((await T("POST", "/auth/signup", { email: `draft-t-${Date.now()}@example.test`, password, display_name: "Trial", adult_confirmed: true })).status === 201, "signup after the trial");
+  const tPlan = (await T("GET", "/me/training")).json.plan;
+  const day1 = tPlan?.sessions.find((x: { week: number; day: number }) => x.week === 1 && x.day === 1);
+  ok(day1 && day1.items[0].logs.length === 1, "the trial set is in week 1 day 1");
+  ok(day1 && day1.completed_at !== null, "a finished trial (even after a late save) marks day 1 done");
+
 
   // An existing member who onboarded while logged out: login claims it too.
   const B = browser();

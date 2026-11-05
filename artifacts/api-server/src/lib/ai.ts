@@ -19,14 +19,16 @@ export const MODELS = {
 } as const;
 export type Tier = keyof typeof MODELS;
 /** The allowance kinds (spec §5); also the ai_usage purpose. */
-export type Kind = "chat" | "daily_note" | "plan_notes" | "weekly_review" | "checkin";
+export type Kind = "chat" | "daily_note" | "plan_notes" | "weekly_review" | "checkin" | "meal_log" | "meal_plan" | "midweek_check" | "monthly_report";
 export type Purpose = Kind;
 export type Message = { role: "user" | "assistant"; content: string };
 
 export type TextBlock = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 export type ToolUseBlock = { type: "tool_use"; id: string; name: string; input: unknown };
 export type ToolResultBlock = { type: "tool_result"; tool_use_id: string; content: string; is_error?: boolean };
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
+/** A photo for one call only (meal logging, spec 3.1 §5.5): never stored or logged. */
+export type ImageBlock = { type: "image"; source: { type: "base64"; media_type: "image/jpeg" | "image/png" | "image/webp"; data: string } };
+export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ImageBlock;
 export type ApiMessage = { role: "user" | "assistant"; content: string | ContentBlock[] };
 export type ToolDef = { name: string; description: string; input_schema: Record<string, unknown> };
 

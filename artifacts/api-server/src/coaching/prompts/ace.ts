@@ -15,5 +15,6 @@ export const ACE: CoachPrompt = {
     fallback: "Let me come back to you on that.",
     dailyNoteOff: "Today: warm up properly, then make every rep count.",
     upgrade: "Chat is part of Plans and Coaching. Your plan is on Today.",
+    planIntro: "Week 1. Set your standards: warm up properly and make every rep count.",
   },
 };

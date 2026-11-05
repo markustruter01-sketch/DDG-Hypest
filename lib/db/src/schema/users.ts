@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { type AnyPgColumn, check, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { type AnyPgColumn, boolean, check, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable(
   "users",
@@ -19,6 +19,8 @@ export const usersTable = pgTable(
     stripeCustomerId: text("stripe_customer_id"),
     // The member's IANA time zone (e.g. "America/New_York"), from their browser; null until it is first sent.
     timezone: text("timezone"),
+    // Spec 3.1 §5.1: no nutrition targets, meal plans or meal logging. Set by the app, cleared only by Markus.
+    nutritionBlocked: boolean("nutrition_blocked").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

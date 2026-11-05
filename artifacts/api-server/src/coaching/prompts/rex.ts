@@ -15,5 +15,6 @@ export const REX: CoachPrompt = {
     fallback: "Let me come back to you on that.",
     dailyNoteOff: "Today: show up, warm up, hit the first lift clean.",
     upgrade: "Chat is part of Plans and Coaching. Your plan is on Today.",
+    planIntro: "Week 1. Learn the moves, own the form, log every set. We build from here.",
   },
 };

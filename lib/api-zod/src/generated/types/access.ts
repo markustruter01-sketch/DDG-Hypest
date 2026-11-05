@@ -8,6 +8,7 @@
 import type { AccessLevel } from './accessLevel';
 
 export interface Access {
+  /** none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro */
   level: AccessLevel;
   intro_available: boolean;
   plan_credits: number;

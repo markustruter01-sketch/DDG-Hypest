@@ -11,7 +11,7 @@ export function CoachNote({ coachName }: { coachName: string }) {
   return (
     <div className="card coach-note">
       {update ? (
-        <p><span className="label">{update.source === "weekly_review" ? `Your week, from ${coachName}` : `${coachName} checked in`}</span><br />{update.text}</p>
+        <p><span className="label">{update.source === "weekly_review" ? `Your week, from ${coachName}` : update.source === "midweek_check" ? `Mid-week, from ${coachName}` : `${coachName} checked in`}</span><br />{update.text}</p>
       ) : null}
       {note.data?.note ? <p><span className="label">{coachName} today</span><br />{note.data.note}</p> : null}
     </div>

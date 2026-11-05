@@ -1,7 +1,8 @@
 import { db, trainingProfilesTable } from "@workspace/db";
 import { SaveTrainingProfileBody } from "@workspace/api-zod";
 import { COACH_BY_ID, type Area, type Equipment, type Experience, type Goal } from "./library";
-import { screeningResult, type ScreeningInput } from "./screening";
+import { screeningResult, type ScreeningInput, type ScreeningRecord } from "./screening";
+import { blockNutrition } from "./safety-stop";
 
 export type Answers = {
   coach_id: string;
@@ -49,4 +50,6 @@ export function checkAnswers(raw: unknown): CheckedAnswers {
 
 export async function saveProfile(userId: number, values: Omit<ProfileValues, "userId" | "id">): Promise<void> {
   await db.insert(trainingProfilesTable).values({ userId, ...values }).onConflictDoUpdate({ target: trainingProfilesTable.userId, set: values });
+  // Spec 3.1 §5.1: any "yes" on the health check, cleared or not, turns nutrition off for good (re-answering can't undo it).
+  if ((values.screening as ScreeningRecord | null | undefined)?.any_yes) await blockNutrition(userId, "A yes on the health check");
 }

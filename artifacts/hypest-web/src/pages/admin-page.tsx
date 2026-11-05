@@ -1,7 +1,7 @@
 import { getGetAdminSummaryQueryKey, useGetAdminSummary } from "@workspace/api-client-react";
 import { errorStatus } from "@/lib/server-error";
 
-const KIND: Record<string, string> = { intro_plan: "First plan", plan: "One plan", tier1: "Plans", tier2: "Coaching" };
+const KIND: Record<string, string> = { intro_plan: "First plan", plan: "One plan", tier1: "Starter", tier2: "Coaching", tier3: "Pro" };
 const when = (d: string | Date) => new Date(d).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 /** Owner's view (ADMIN_EMAILS only). Not in the menu: open /admin. Read-only. */
@@ -32,6 +32,11 @@ export function AdminPage() {
       <section className="card admin-block">
         <h2 className="section-title">Active memberships</h2>
         {s.memberships.map((m) => <div key={m.kind} className="admin-row"><span>{KIND[m.kind] ?? m.kind}</span><b>{m.live}</b><span className="label">{m.test} test</span></div>)}
+      </section>
+      <section className="card admin-block">
+        <h2 className="section-title">Funnel</h2>
+        <div className="admin-row"><span className="label">Event</span><span className="label">7 days</span><span className="label">30 days</span></div>
+        {s.funnel.map((f) => <div key={f.name} className="admin-row"><span>{f.name.replace(/_/g, " ")}</span><b>{f.last_7d}</b><span>{f.last_30d}</span></div>)}
       </section>
       <section className="card admin-block">
         <h2 className="section-title">AI this month</h2>

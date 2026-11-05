@@ -15,5 +15,6 @@ export const MARA: CoachPrompt = {
     fallback: "Let me come back to you on that.",
     dailyNoteOff: "Today, move gently and notice your breath.",
     upgrade: "Chatting with me is part of Plans and Coaching. Your plan is waiting on Today.",
+    planIntro: "Welcome. This first week is about moving well and breathing easy. Take it gently.",
   },
 };

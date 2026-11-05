@@ -4,12 +4,13 @@ import {
   DeleteCoachMemoryParams, GetCoachChatResponse, GetCoachMemoryResponse, GetDailyNoteResponse, SendCoachMessageBody,
   SendCoachMessageResponse, UpdateCoachMemoryBody, UpdateCoachMemoryParams, UpdateCoachMemoryResponse,
 } from "@workspace/api-zod";
-import { coachMemoryTable, coachMessagesTable, db, painEventsTable, plansTable, trainingProfilesTable } from "@workspace/db";
+import { coachMemoryTable, coachMessagesTable, db, trainingProfilesTable } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { accessFor } from "../coaching/access";
 import { COACH_BY_ID } from "../coaching/library";
 import { HISTORY, MESSAGE_MAX, screenMessage, STOP_MESSAGE, WELLBEING_MESSAGE } from "../coaching/chat";
 import { runTurn } from "../coaching/agent";
+import { blockIfEatingWords, safetyStop } from "../coaching/safety-stop";
 import { CHAT_TOOLS, usage } from "../coaching/allowance";
 import { currentBlock } from "../coaching/block";
 import { filterReply } from "../coaching/output-filter";
@@ -59,12 +60,10 @@ router.post("/me/coach/messages", requireUser, async (req, res) => {
   if (screen.kind !== "ok") {
     let reply: string;
     if (screen.kind === "stop") {
-      const paused = await db.update(plansTable).set({ status: "paused", pausedReason: `Safety stop (chat): "${screen.flag}"` })
-        .where(and(eq(plansTable.userId, user.id), eq(plansTable.status, "active"))).returning({ id: plansTable.id });
-      await db.insert(painEventsTable).values({ userId: user.id, planId: paused.at(0)?.id ?? null, note: text, source: "chat", flag: screen.flag, stopped: true });
+      await safetyStop(user.id, text, screen.flag, "chat");
       reply = STOP_MESSAGE;
-      void alert("info", `Safety stop: member #${user.id}`, `Coach chat matched "${screen.flag}". Plan paused; member told to see a doctor or physio.`);
     } else {
+      await blockIfEatingWords(user.id, text, "coach chat");
       reply = WELLBEING_MESSAGE;
       void alert("warning", `Wellbeing words in coach chat: member #${user.id}`, "The member was shown the fixed help message (emergency numbers). Their text is not in this alert.");
     }
@@ -106,9 +105,9 @@ router.post("/me/coach/daily-note", requireUser, async (_req, res) => {
   const dayStart = localDayStart(new Date(), user.timezone);
   const updates = await db.select({ id: coachMessagesTable.id, text: coachMessagesTable.text, source: coachMessagesTable.source, created_at: coachMessagesTable.createdAt })
     .from(coachMessagesTable)
-    .where(and(eq(coachMessagesTable.userId, user.id), inArray(coachMessagesTable.source, ["checkin", "weekly_review"]), gte(coachMessagesTable.createdAt, new Date(Date.now() - 3 * 86_400_000))))
+    .where(and(eq(coachMessagesTable.userId, user.id), inArray(coachMessagesTable.source, ["checkin", "weekly_review", "midweek_check"]), gte(coachMessagesTable.createdAt, new Date(Date.now() - 3 * 86_400_000))))
     .orderBy(desc(coachMessagesTable.id)).limit(3);
-  const reply = (note: string | null) => res.json(GetDailyNoteResponse.parse({ note, updates: updates.map((u) => ({ ...u, source: u.source as "checkin" | "weekly_review" })) }));
+  const reply = (note: string | null) => res.json(GetDailyNoteResponse.parse({ note, updates: updates.map((u) => ({ ...u, source: u.source as "checkin" | "weekly_review" | "midweek_check" })) }));
 
   const [today] = await db.select({ text: coachMessagesTable.text }).from(coachMessagesTable)
     .where(and(eq(coachMessagesTable.userId, user.id), eq(coachMessagesTable.source, "daily_note"), gte(coachMessagesTable.createdAt, dayStart)))
@@ -148,6 +147,7 @@ router.patch("/me/coach/memory/:memoryId", requireUser, async (req, res) => {
   const body = UpdateCoachMemoryBody.strict().safeParse(req.body);
   if (!params.success || !body.success) return void res.status(400).json({ message: "invalid request" });
   const text = body.data.text.trim();
+  if (await blockIfEatingWords(user.id, text, "a memory edit")) return void res.status(400).json({ message: WELLBEING_MESSAGE });
   if (mentionsHealth(text)) return void res.status(400).json({ message: "Health details aren't kept here. Your coach remembers training things only." });
   if (filterReply(text, null, 200) !== null) return void res.status(400).json({ message: "That can't be saved here." });
   const updated = await db.update(coachMemoryTable).set({ text, source: "member", updatedAt: new Date() })

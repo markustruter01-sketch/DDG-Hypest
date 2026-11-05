@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, max, min, sql } from "drizzle-orm";
+import { lighterLoad, lighterSets } from "./readiness";
 import { db, planItemsTable, planSessionsTable, plansTable, setLogsTable } from "@workspace/db";
 import type { Plan, PlanInput } from "./engine";
 import type { PlanNumbers } from "./output-filter";
@@ -53,14 +54,16 @@ export function asPlan(b: Block): Plan {
 }
 
 /** Every training number in the block, for the output filter (spec §6.5). */
-export function planNumbers(b: Block | null): PlanNumbers {
+export function planNumbers(b: Block | null, lowDay = false): PlanNumbers {
   const items = b?.sessions.flatMap((s) => s.items) ?? [];
+  // Spec 3.1 §7: on a low day the member sees lighter numbers for sessions not done yet, so the coach may quote those too.
+  const lighter = lowDay ? (b?.sessions.filter((s) => !s.done).flatMap((s) => s.items) ?? []) : [];
   const uniq = (xs: (number | null)[]) => [...new Set(xs.filter((x): x is number => x !== null))];
   return {
-    sets: uniq(items.map((i) => i.sets)),
+    sets: uniq([...items.map((i) => i.sets), ...lighter.map((i) => lighterSets(i.sets))]),
     reps: uniq(items.map((i) => i.reps)),
     seconds: uniq([...items.map((i) => i.seconds), ...items.map((i) => i.restSeconds)]),
-    loadsKg: uniq(items.map((i) => i.targetLoadKg)),
+    loadsKg: uniq([...items.map((i) => i.targetLoadKg), ...lighter.map((i) => lighterLoad(i.targetLoadKg))]),
   };
 }
 

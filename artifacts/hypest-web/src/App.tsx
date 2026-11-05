@@ -19,13 +19,15 @@ import { AdminPage } from '@/pages/admin-page';
 import { RemindersOffPage } from '@/pages/reminders-off-page';
 import { SaveTimezoneOnce } from '@/components/timezone-setting';
 import { PlanNotesWhenPending } from '@/components/plan-notes';
+import { TrialPage } from '@/pages/trial-page';
+import { FoodPage } from '@/pages/food-page';
 
 // AI-coach app (pivot, 18 Oct 2026). The creator marketplace was removed in plan step 1.8.
 const destinations = [
   { label: 'Today', path: '/', Icon: House, also: [] as string[] },
   { label: 'Plan', path: '/plan', Icon: CalendarDays, also: [] as string[] },
   { label: 'Coach', path: '/coach', Icon: MessageCircle, also: ['/coaches', '/start'] },
-  { label: 'Progress', path: '/progress', Icon: LineChart, also: [] as string[] },
+  { label: 'Progress', path: '/progress', Icon: LineChart, also: ['/food'] as string[] },
   { label: 'Me', path: '/profile', Icon: UserRound, also: [] as string[] },
 ] as const;
 
@@ -55,7 +57,7 @@ function AppShell() {
   const loggedOut = me.isError && errorStatus(me.error) === 401;
   // Full-screen places: the logged-out landing page, onboarding, and a live session.
   const onLanding = pathname === '/' && loggedOut;
-  const fullScreen = onLanding || pathname.startsWith('/session/') || pathname.startsWith('/start/') || (loggedOut && pathname.startsWith('/coaches'));
+  const fullScreen = onLanding || pathname.startsWith('/session/') || pathname.startsWith('/start/') || pathname === '/try' || (loggedOut && pathname.startsWith('/coaches'));
 
   return (
     <div className={onLanding ? 'app-shell app-shell-wide' : 'app-shell'}>
@@ -70,7 +72,9 @@ function AppShell() {
         <Route path="/coaches/:coachId" element={<CoachPage />} />
         <Route path="/start/:coachId" element={<OnboardingPage />} />
         <Route path="/session/:sessionId" element={<SessionPage />} />
+        <Route path="/try" element={<TrialPage />} />
         <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/food" element={<FoodPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />

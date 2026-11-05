@@ -1,10 +1,13 @@
-import { and, asc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
-import { checkinsTable, coachMessagesTable, db, membershipsTable, plansTable, remindersTable, trainingProfilesTable, usersTable, weeklyReviewsTable } from "@workspace/db";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import {
+  bodyMetricsTable, checkinsTable, coachMessagesTable, db, mealLogsTable, membershipsTable, midweekChecksTable, monthlyReportsTable, planSessionsTable, plansTable,
+  remindersTable, trainingProfilesTable, usersTable, weeklyReviewsTable,
+} from "@workspace/db";
 import { runTurn } from "./agent";
 import { expireActions, expireMemory } from "./agent-tools";
 import { accessFor } from "./access";
 import { allowanceFor } from "./allowance";
-import { COACH_BY_ID } from "./library";
+import { COACH_BY_ID, EXERCISE_BY_ID } from "./library";
 import { emailOn, sendEmail, siteUrl } from "../lib/email";
 import { logger } from "../lib/logger";
 import { localDay, localDayStart, localWeekStart } from "../lib/timezone";
@@ -81,13 +84,13 @@ export async function runDueCheckins(now = new Date(), scope: JobScope = {}): Pr
   return { sent, cancelled, more: due.length > handled };
 }
 
-/** The Sunday review for every Coaching member with an active block, once per member per local week. */
+/** The Sunday review for every Coaching and Pro member with an active block, once per member per local week. */
 export async function runWeeklyReviews(now = new Date(), scope: JobScope = {}): Promise<{ done: number; skipped: number; more: boolean }> {
   const members = await db.selectDistinct({ userId: membershipsTable.userId, timezone: usersTable.timezone })
     .from(membershipsTable)
     .innerJoin(usersTable, eq(usersTable.id, membershipsTable.userId))
     .innerJoin(plansTable, and(eq(plansTable.userId, membershipsTable.userId), eq(plansTable.status, "active")))
-    .where(and(eq(membershipsTable.kind, "tier2"), eq(membershipsTable.status, "active"), or(isNull(membershipsTable.endsAt), gt(membershipsTable.endsAt, now)),
+    .where(and(inArray(membershipsTable.kind, ["tier2", "tier3"]), eq(membershipsTable.status, "active"), or(isNull(membershipsTable.endsAt), gt(membershipsTable.endsAt, now)),
       scope.userIds ? inArray(membershipsTable.userId, scope.userIds) : undefined));
   const sunday = members.filter((m) => isReviewTime(now, m.timezone));
   const weeks = new Map(sunday.map((m) => [m.userId, localWeekStart(now, m.timezone)]));
@@ -105,7 +108,7 @@ export async function runWeeklyReviews(now = new Date(), scope: JobScope = {}): 
       if (!claimed) continue;
       const who = await memberOf(m.userId);
       const access = await accessFor(m.userId);
-      if (!who || access.level !== "tier2") {
+      if (!who || (access.level !== "tier2" && access.level !== "tier3")) {
         await db.update(weeklyReviewsTable).set({ status: "skipped" }).where(eq(weeklyReviewsTable.id, claimed.id));
         skipped += 1;
         continue;
@@ -140,12 +143,184 @@ export async function runWeeklyReviews(now = new Date(), scope: JobScope = {}): 
   return { done, skipped, more: todo.length > handled };
 }
 
+/** Pure: Wednesday, from 18:00 where this member lives (spec 3.1 §7b). */
+export function isMidweekTime(now: Date, tz: string | null): boolean {
+  return (localDay(now, tz) + 4) % 7 === 3 && now.getTime() - localDayStart(now, tz).getTime() >= REVIEW_FROM_HOUR * 3_600_000;
+}
+
+/** Pure: the first of the month, from 08:00 where this member lives; the report covers the month before. */
+export const REPORT_FROM_HOUR = 8;
+export function reportMonth(now: Date, tz: string | null): string | null {
+  const today = new Date(localDay(now, tz) * 86_400_000);
+  if (today.getUTCDate() !== 1 || now.getTime() - localDayStart(now, tz).getTime() < REPORT_FROM_HOUR * 3_600_000) return null;
+  return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+}
+
+export const MIDWEEK_NOTHING = "No sessions yet this week, and that's fine. Your next one is ready whenever you are.";
+export const REPORT_NOTHING = "No sessions last month, so there's no report this time. Your plan is ready when you want to start again.";
+
+async function proMembers(now: Date, scope: JobScope) {
+  return db.selectDistinct({ userId: membershipsTable.userId, timezone: usersTable.timezone })
+    .from(membershipsTable)
+    .innerJoin(usersTable, eq(usersTable.id, membershipsTable.userId))
+    .where(and(eq(membershipsTable.kind, "tier3"), eq(membershipsTable.status, "active"), or(isNull(membershipsTable.endsAt), gt(membershipsTable.endsAt, now)),
+      scope.userIds ? inArray(membershipsTable.userId, scope.userIds) : undefined));
+}
+
+/** Pro: Wednesday evening's check-in, once per member per local week. Same batching as the Sunday review. */
+export async function runMidweekChecks(now = new Date(), scope: JobScope = {}): Promise<{ done: number; skipped: number; more: boolean }> {
+  const due = (await proMembers(now, scope)).filter((m) => isMidweekTime(now, m.timezone));
+  const weeks = new Map(due.map((m) => [m.userId, localWeekStart(now, m.timezone)]));
+  const already = due.length
+    ? await db.select({ userId: midweekChecksTable.userId, weekOf: midweekChecksTable.weekOf }).from(midweekChecksTable).where(inArray(midweekChecksTable.userId, due.map((m) => m.userId)))
+    : [];
+  const todo = due.filter((m) => !already.some((a) => a.userId === m.userId && a.weekOf === weeks.get(m.userId)));
+  let done = 0, skipped = 0, handled = 0;
+  for (const m of todo.slice(0, REVIEWS_PER_CALL)) {
+    if (timeUp(scope)) break;
+    handled += 1;
+    const weekOf = weeks.get(m.userId)!;
+    try {
+      const [claimed] = await db.insert(midweekChecksTable).values({ userId: m.userId, weekOf, status: "working" }).onConflictDoNothing().returning({ id: midweekChecksTable.id });
+      if (!claimed) continue;
+      const who = await memberOf(m.userId);
+      const access = await accessFor(m.userId);
+      const monday = localDayStart(new Date(Date.parse(`${weekOf}T12:00:00Z`)), m.timezone);
+      const logs = who && access.level === "tier3" ? await memberLogs(m.userId, monday) : [];
+      if (!who || access.level !== "tier3" || logs.length === 0) {
+        // Nothing this week: a short fixed line instead of a model turn (spec §7b).
+        const [msg] = who && access.level === "tier3"
+          ? await db.insert(coachMessagesTable).values({ userId: m.userId, coachId: who.coachId, role: "coach", text: MIDWEEK_NOTHING, source: "midweek_check" }).returning({ id: coachMessagesTable.id })
+          : [];
+        await db.update(midweekChecksTable).set({ status: "skipped", messageId: msg?.id ?? null }).where(eq(midweekChecksTable.id, claimed.id));
+        skipped += 1;
+        continue;
+      }
+      const turn = await runTurn({
+        userId: m.userId, timezone: m.timezone, level: access.level, kind: "midweek_check", tools: ["set_target_load", "write_memory", "schedule_checkin"],
+        userText: [
+          "Mid-week check-in. Look at the sessions done since Monday and the logged sets above.",
+          "You may adjust at most 2 target loads with set_target_load, only where this week's logs show a clear reason (the code caps the jump).",
+          "Then write one message: how the week is going, and anything to adjust before the weekend. At most 70 words.",
+        ].join(" "),
+      });
+      if (turn.source !== "ai" && turn.changes.length === 0) {
+        await db.update(midweekChecksTable).set({ status: turn.counted ? "failed" : "skipped" }).where(eq(midweekChecksTable.id, claimed.id));
+        skipped += 1;
+        continue;
+      }
+      const [msg] = await db.insert(coachMessagesTable).values({ userId: m.userId, coachId: who.coachId, role: "coach", text: turn.text.slice(0, 2000), source: "midweek_check" }).returning({ id: coachMessagesTable.id });
+      await db.update(midweekChecksTable).set({ status: "done", messageId: msg!.id }).where(eq(midweekChecksTable.id, claimed.id));
+      await emailIfOn(m.userId, "Mid-week, from your coach", turn.text);
+      done += 1;
+    } catch (err) {
+      logger.error({ err: err instanceof Error ? err.message : String(err), member: m.userId }, "mid-week check failed");
+      await db.update(midweekChecksTable).set({ status: "failed" }).where(and(eq(midweekChecksTable.userId, m.userId), eq(midweekChecksTable.weekOf, weekOf))).catch(() => undefined);
+    }
+  }
+  return { done, skipped, more: todo.length > handled };
+}
+
+/** Pure: the month's numbers for the report, as plain lines. Body metrics only as changes, never absolute weight. */
+export function reportFacts(f: { sessions: number; bests: { name: string; kg: number; reps: number }[]; weightChangeKg: number | null; waistChangeCm: number | null; mealDays: number; avgKcal: number | null }): string {
+  return [
+    `Sessions done last month: ${f.sessions}.`,
+    f.bests.length ? `New bests last month: ${f.bests.map((b) => `${b.name} ${b.kg} kg x ${b.reps}`).join("; ")}.` : "No new bests last month.",
+    f.weightChangeKg !== null ? `Average weight change over the month: ${f.weightChangeKg > 0 ? "+" : ""}${f.weightChangeKg} kg.` : "",
+    f.waistChangeCm !== null ? `Average waist change over the month: ${f.waistChangeCm > 0 ? "+" : ""}${f.waistChangeCm} cm.` : "",
+    f.mealDays ? `Meals logged on ${f.mealDays} days${f.avgKcal !== null ? `, about ${f.avgKcal} a day on those days` : ""}.` : "",
+  ].filter(Boolean).join("\n");
+}
+
+/** Pro: the monthly progress report on the 1st (local), kept forever. Skipped with a fixed line when nothing was done. */
+export async function runMonthlyReports(now = new Date(), scope: JobScope = {}): Promise<{ done: number; skipped: number; more: boolean }> {
+  const due = (await proMembers(now, scope)).flatMap((m) => { const month = reportMonth(now, m.timezone); return month ? [{ ...m, month }] : []; });
+  const already = due.length
+    ? await db.select({ userId: monthlyReportsTable.userId, month: monthlyReportsTable.month }).from(monthlyReportsTable).where(inArray(monthlyReportsTable.userId, due.map((m) => m.userId)))
+    : [];
+  const todo = due.filter((m) => !already.some((a) => a.userId === m.userId && a.month === m.month));
+  let done = 0, skipped = 0, handled = 0;
+  for (const m of todo.slice(0, REVIEWS_PER_CALL)) {
+    if (timeUp(scope)) break;
+    handled += 1;
+    try {
+      const [claimed] = await db.insert(monthlyReportsTable).values({ userId: m.userId, month: m.month, status: "working" }).onConflictDoNothing().returning({ id: monthlyReportsTable.id });
+      if (!claimed) continue;
+      const access = await accessFor(m.userId);
+      const facts = access.level === "tier3" ? await monthFacts(m.userId, m.month) : null;
+      if (!facts || facts.sessions === 0) {
+        await db.update(monthlyReportsTable).set({ status: "skipped", text: REPORT_NOTHING }).where(eq(monthlyReportsTable.id, claimed.id));
+        skipped += 1;
+        continue;
+      }
+      const turn = await runTurn({
+        userId: m.userId, timezone: m.timezone, level: access.level, kind: "monthly_report", tools: [],
+        userText: [
+          `Monthly progress report for ${m.month}. Use the training history above and these numbers:`,
+          reportFacts(facts),
+          "Write 150 to 250 words in your voice: what went well, what the numbers show, and one focus for next month.",
+          "Talk about weight or waist only as the change given, never as a number someone weighs, and only if it's there. No calorie numbers.",
+        ].join("\n"),
+      });
+      const ok = turn.source === "ai";
+      await db.update(monthlyReportsTable).set({ status: ok ? "done" : turn.counted ? "failed" : "skipped", text: ok ? turn.text : null }).where(eq(monthlyReportsTable.id, claimed.id));
+      if (ok) {
+        await emailIfOn(m.userId, `Your ${m.month} report, from your coach`, turn.text);
+        done += 1;
+      } else skipped += 1;
+    } catch (err) {
+      logger.error({ err: err instanceof Error ? err.message : String(err), member: m.userId }, "monthly report failed");
+      await db.update(monthlyReportsTable).set({ status: "failed" }).where(and(eq(monthlyReportsTable.userId, m.userId), eq(monthlyReportsTable.month, m.month))).catch(() => undefined);
+    }
+  }
+  return { done, skipped, more: todo.length > handled };
+}
+
+/** The numbers for one month (UTC month bounds; close enough for a monthly summary). */
+async function monthFacts(userId: number, month: string) {
+  const from = new Date(`${month}-01T00:00:00Z`);
+  const to = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
+  const sessions = await db.select({ n: sql<number>`count(*)`.mapWith(Number) }).from(planSessionsTable)
+    .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
+    .where(and(eq(plansTable.userId, userId), gte(planSessionsTable.completedAt, from), lt(planSessionsTable.completedAt, to)));
+  const logs = await memberLogs(userId, new Date(0));
+  const before = new Map<string, number>(), inMonth = new Map<string, { kg: number; reps: number }>();
+  for (const l of logs) {
+    if (l.loadKg === null) continue;
+    if (l.at < from) before.set(l.exerciseId, Math.max(before.get(l.exerciseId) ?? 0, l.loadKg));
+    else if (l.at < to && l.loadKg > (inMonth.get(l.exerciseId)?.kg ?? 0)) inMonth.set(l.exerciseId, { kg: l.loadKg, reps: l.reps ?? 0 });
+  }
+  const bests = [...inMonth].filter(([id, b]) => b.kg > (before.get(id) ?? 0)).slice(0, 5)
+    .map(([id, b]) => ({ name: EXERCISE_BY_ID.get(id)?.name ?? id, kg: b.kg, reps: b.reps }));
+  const [u] = await db.select({ blocked: usersTable.nutritionBlocked }).from(usersTable).where(eq(usersTable.id, userId));
+  let weightChangeKg: number | null = null, waistChangeCm: number | null = null, mealDays = 0, avgKcal: number | null = null;
+  if (!u?.blocked) {
+    // Body: the first and last week's averages in the month, as a change.
+    const body = await db.select().from(bodyMetricsTable).where(and(eq(bodyMetricsTable.userId, userId), gte(bodyMetricsTable.day, month + "-01"), lt(bodyMetricsTable.day, to.toISOString().slice(0, 10)))).orderBy(asc(bodyMetricsTable.day));
+    const change = (vals: (number | null)[]) => {
+      const v = vals.filter((x): x is number => x !== null);
+      if (v.length < 4) return null;
+      const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+      return Math.round((avg(v.slice(-3)) - avg(v.slice(0, 3))) * 10) / 10;
+    };
+    weightChangeKg = change(body.map((b) => b.weightKg));
+    waistChangeCm = change(body.map((b) => b.waistCm));
+    const meals = await db.select({ day: mealLogsTable.day, kcal: sql<number>`sum(${mealLogsTable.kcal})`.mapWith(Number) }).from(mealLogsTable)
+      .where(and(eq(mealLogsTable.userId, userId), gte(mealLogsTable.day, month + "-01"), lt(mealLogsTable.day, to.toISOString().slice(0, 10)))).groupBy(mealLogsTable.day);
+    mealDays = meals.length;
+    avgKcal = meals.length ? Math.round(meals.reduce((a, d) => a + d.kcal, 0) / meals.length / 10) * 10 : null;
+  }
+  return { sessions: sessions[0]?.n ?? 0, bests, weightChangeKg, waistChangeCm, mealDays, avgKcal };
+}
+
 /** One call of the hourly job. */
 export async function runCoachJobs(now = new Date()) {
   const scope: JobScope = { deadline: Date.now() + CALL_BUDGET_MS };
   const checkins = await runDueCheckins(now, scope);
   const reviews = await runWeeklyReviews(now, scope);
+  const midweek = await runMidweekChecks(now, scope);
+  const reports = await runMonthlyReports(now, scope);
   const expired = { memory: await expireMemory(now), actions: await expireActions(now) };
-  logger.info({ checkins, reviews, expired }, "coach jobs run");
-  return { checkins, reviews, expired, more: checkins.more || reviews.more };
+  logger.info({ checkins, reviews, midweek, reports, expired }, "coach jobs run");
+  return { checkins, reviews, midweek, reports, expired, more: checkins.more || reviews.more || midweek.more || reports.more };
 }

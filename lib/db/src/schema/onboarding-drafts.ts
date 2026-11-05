@@ -11,6 +11,8 @@ export const onboardingDraftsTable = pgTable(
     id: serial("id").primaryKey(),
     tokenHash: text("token_hash").notNull(),
     answers: jsonb("answers").notNull(),
+    // Spec 3.1 §4.2: the free session done before signup (sets by position), carried over at signup only.
+    trial: jsonb("trial"),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

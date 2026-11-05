@@ -6,9 +6,11 @@ import {
   CreateNextPlanResponse,
   CreatePlanResponse,
   AddPlanNotesParams,
+  SaveOnboardingTrialBody,
   AddPlanNotesResponse,
   DevUnlockBody,
   GetProgressResponse,
+  GetJourneyResponse,
   GetTrainingResponse,
   ListPastPlansResponse,
   ListCoachesResponse,
@@ -33,6 +35,7 @@ import {
   plansTable,
   setLogsTable,
   trainingProfilesTable,
+  usersTable,
 } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { devToolsOn } from "../lib/dev-login";
@@ -44,10 +47,16 @@ import { notesPrompt, parseNotes } from "../coaching/ai-notes";
 import { aiOn, callModel, costMicroUsd, globalBudgetAllows, type TextBlock } from "../lib/ai";
 import { reserveTurn, settleTurn } from "../coaching/allowance";
 import { alert } from "../lib/alerts";
-import { accessFor, canAutoNext, canLog } from "../coaching/access";
+import { accessFor, blockAccess, canAdapt, canAutoNext, type Access } from "../coaching/access";
+import { promptFor } from "../coaching/prompts";
+import { recordEvent } from "../coaching/events";
 import { answersError, checkAnswers, saveProfile, type Answers } from "../coaching/profile";
-import { saveDraft } from "../coaching/draft";
+import { draftHashOf, saveDraft, saveTrial } from "../coaching/draft";
+import { savePlan, toInput } from "../coaching/plan-store";
 import { allowIp } from "../lib/ip-limit";
+import { journeyFrom } from "../coaching/journey";
+import { lowDayFor } from "../coaching/body";
+import { lighterLoad, lighterSets } from "../coaching/readiness";
 
 const router: IRouter = Router();
 
@@ -59,12 +68,6 @@ function coachView(c: Coach) {
   return { id: c.id, name: c.name, discipline: c.discipline, title: c.title, personality: c.personality, good_for: c.goodFor, photo: c.photo, goals: c.goals };
 }
 
-function toInput(a: Answers, block: number, targetLoads?: Record<string, number>): PlanInput {
-  return {
-    coachId: a.coach_id, goal: a.goal, experience: a.experience, daysPerWeek: a.days_per_week, minutes: a.minutes,
-    equipment: [...new Set(a.equipment)], avoidAreas: [...new Set(a.avoid_areas)], block, targetLoads,
-  };
-}
 
 async function profileOf(userId: number): Promise<Answers | null> {
   const [p] = await db.select().from(trainingProfilesTable).where(eq(trainingProfilesTable.userId, userId)).limit(1);
@@ -105,23 +108,48 @@ async function currentPlanRow(userId: number) {
   return plan ?? null;
 }
 
-async function planView(planId: number, withLogs: boolean) {
+/** The plan as the member may see it: Free sees week 1 only (spec 3.1 §1); weeks 2-4 are left out, not just locked. */
+async function viewOf(userId: number, planId: number, access?: Access) {
+  const [plan] = await db.select({ createdAt: plansTable.createdAt }).from(plansTable).where(eq(plansTable.id, planId)).limit(1);
+  if (!plan) throw new Error("plan vanished");
+  const a = access ?? (await accessFor(userId));
+  const [u] = await db.select({ timezone: usersTable.timezone }).from(usersTable).where(eq(usersTable.id, userId));
+  return planView(planId, await blockAccess(userId, plan, a), await lowDayFor(userId, u?.timezone ?? null, a));
+}
+
+/**
+ * `lowDay` (spec 3.1 §7, Coaching and Pro): today's why line when the morning check-in says low. Sessions with nothing
+ * logged yet, and sessions started on a low day, are shown lighter; the stored plan never changes.
+ */
+async function planView(planId: number, scope: "full" | "week1", lowDay: string | null = null) {
   const [plan] = await db.select().from(plansTable).where(eq(plansTable.id, planId)).limit(1);
   if (!plan) throw new Error("plan vanished");
-  const sessions = await db.select().from(planSessionsTable).where(eq(planSessionsTable.planId, planId)).orderBy(asc(planSessionsTable.week), asc(planSessionsTable.day));
+  const allSessions = await db.select().from(planSessionsTable).where(eq(planSessionsTable.planId, planId)).orderBy(asc(planSessionsTable.week), asc(planSessionsTable.day));
+  const sessions = scope === "week1" ? allSessions.filter((s) => s.week === 1) : allSessions;
   const items = sessions.length === 0 ? [] : await db.select().from(planItemsTable).where(inArray(planItemsTable.sessionId, sessions.map((s) => s.id))).orderBy(asc(planItemsTable.position));
-  const logs = withLogs && items.length > 0 ? await db.select().from(setLogsTable).where(inArray(setLogsTable.itemId, items.map((i) => i.id))).orderBy(asc(setLogsTable.setNumber)) : [];
-  const daysPerWeek = Math.max(0, ...sessions.map((s) => s.day));
+  // Logging is on every tier (spec 3.1 §4.1).
+  const logs = items.length > 0 ? await db.select().from(setLogsTable).where(inArray(setLogsTable.itemId, items.map((i) => i.id))).orderBy(asc(setLogsTable.setNumber)) : [];
+  const daysPerWeek = Math.max(0, ...allSessions.map((s) => s.day));
   return {
     id: plan.id, coach_id: plan.coachId, block: plan.block, weeks: plan.weeks, days_per_week: daysPerWeek,
     status: plan.status as "active" | "paused" | "done", paused_reason: plan.pausedReason, intro: plan.intro,
     // Spec §12: "pending" = the app should ask for the coach's notes (POST /me/plans/{id}/notes).
     notes_status: (plan.notesStatus === "working" ? "pending" : plan.notesStatus) as "none" | "pending" | "done" | "failed",
-    sessions: sessions.map((s) => ({
-      id: s.id, week: s.week, day: s.day, title: s.title, note: s.note, completed_at: s.completedAt?.toISOString() ?? null,
-      items: items.filter((i) => i.sessionId === s.id).map((i) =>
-        itemView(i, logs.filter((l) => l.itemId === i.id).map((l) => ({ set_number: l.setNumber, reps: l.reps, seconds: l.seconds, load_kg: l.loadKg })))),
-    })),
+    // Spec 3.1 §1: "week1" = Free, weeks 2 to 4 are part of Starter and above.
+    access: scope,
+    sessions: sessions.map((s) => {
+      const own = items.filter((i) => i.sessionId === s.id);
+      const started = own.some((i) => logs.some((l) => l.itemId === i.id));
+      const lighter = s.lowDay || (lowDay !== null && !started && !s.completedAt);
+      return {
+        id: s.id, week: s.week, day: s.day, title: s.title, note: s.note, completed_at: s.completedAt?.toISOString() ?? null,
+        low_day: lighter ? (s.lowDay && !lowDay ? "Done lighter: short sleep or low energy, and sore." : lowDay) : null,
+        items: own.map((i) => {
+          const v = itemView(i, logs.filter((l) => l.itemId === i.id).map((l) => ({ set_number: l.setNumber, reps: l.reps, seconds: l.seconds, load_kg: l.loadKg })));
+          return lighter ? { ...v, sets: lighterSets(v.sets), target_load_kg: lighterLoad(v.target_load_kg) } : v;
+        }),
+      };
+    }),
   };
 }
 
@@ -162,26 +190,6 @@ async function addAiNotes(planId: number, userId: number, timezone: string | nul
   }
 }
 
-async function savePlan(userId: number, plan: Plan, input: PlanInput, block: number): Promise<number> {
-  return db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(plansTable)
-      .values({ userId, coachId: plan.coachId, block, weeks: plan.weeks, status: "active", engine: "rules", record: { input, plan }, notesStatus: aiOn() ? "pending" : "none" })
-      .returning({ id: plansTable.id });
-    if (!row) throw new Error("plan insert failed");
-    for (const s of plan.sessions) {
-      const [sess] = await tx.insert(planSessionsTable).values({ planId: row.id, week: s.week, day: s.day, title: s.title }).returning({ id: planSessionsTable.id });
-      if (!sess) throw new Error("session insert failed");
-      if (s.items.length > 0) {
-        await tx.insert(planItemsTable).values(s.items.map((it, i) => ({
-          sessionId: sess.id, position: i + 1, exerciseId: it.exerciseId, sets: it.sets, reps: it.reps, seconds: it.seconds,
-          restSeconds: it.restSeconds, targetLoadKg: it.targetLoadKg,
-        })));
-      }
-    }
-    return row.id;
-  });
-}
 
 async function trainingState(userId: number) {
   const access = await accessFor(userId);
@@ -190,8 +198,14 @@ async function trainingState(userId: number) {
   return {
     profile,
     access: { level: access.level, intro_available: access.intro_available, plan_credits: access.plan_credits },
-    plan: current ? await planView(current.id, canLog(access)) : null,
+    plan: current ? await viewOf(userId, current.id, access) : null,
   };
+}
+
+/** Any set logged in this block? */
+/** Spec 3.1 §1: Free may only use week 1 of the block. */
+async function itemOpen(userId: number, owned: { session: { week: number }; plan: { createdAt: Date } }): Promise<boolean> {
+  return owned.session.week === 1 || (await blockAccess(userId, owned.plan, await accessFor(userId))) === "full";
 }
 
 /** Item and its plan, only if it belongs to this user. */
@@ -220,16 +234,30 @@ router.post("/coaching/preview", (req, res) => {
   if (err) return void res.status(400).json({ message: err });
   const plan = buildPlan(toInput(a, 1));
   res.json(PreviewPlanResponse.parse({
-    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null, notes_status: "none",
-    sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, items: s.items.map((it) => itemView(it)) })),
+    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null, notes_status: "none", access: "week1",
+    sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, low_day: null, items: s.items.map((it) => itemView(it)) })),
   }));
 });
 
 // Answers given before signup are kept server-side for a day under an httpOnly cookie (build plan 1.4).
 router.put("/onboarding/draft", async (req, res) => {
   if (!(await allowIp(req, res, "draft"))) return;
+  const fresh = draftHashOf(req) === null;
   const saved = await saveDraft(req, res, req.body);
   if (!saved.ok) return void res.status(400).json({ message: saved.message });
+  const body = req.body as { coach_id?: unknown; goal?: unknown };
+  if (fresh) void recordEvent("onboarding_done", { props: { coach_id: body.coach_id, goal: body.goal } });
+  res.status(204).end();
+});
+
+/** Spec 3.1 §4.2: the free session done before signup, kept with the draft (needs a saved draft first). */
+router.put("/onboarding/draft/trial", async (req, res) => {
+  if (!(await allowIp(req, res, "draft"))) return;
+  const body = SaveOnboardingTrialBody.strict().safeParse(req.body);
+  if (!body.success) return bad(res, body.error.issues);
+  const out = await saveTrial(req, body.data);
+  if (out === "no_draft") return void res.status(409).json({ message: "Answer the questions first" });
+  if (out === "bad") return void res.status(400).json({ message: "invalid request" });
   res.status(204).end();
 });
 
@@ -285,19 +313,52 @@ router.post("/me/plans", requireUser, async (_req, res) => {
   if (!profile || !(await screened(user.id))) return void res.status(409).json({ message: "answer the questions first" });
   const access = await accessFor(user.id);
   const current = await currentPlanRow(user.id);
-  // Members (Tier 1/2) can restart with new answers or a new coach; one-off buyers finish the block they paid for.
-  if (current && !canAutoNext(access)) return void res.status(409).json({ message: "finish your current plan first" });
-  if (access.creditId === null && !canAutoNext(access)) return void res.status(402).json({ message: "get a plan or membership first" });
+  // Spec 3.1 §1, Free: the first block once per account (week 1 open). A new coach is allowed until the first set is
+  // logged (the unused block is replaced); after that, a new block is part of Starter.
+  const free = access.creditId === null && !canAutoNext(access);
+  if (free) {
+    // One transaction under a lock on the member, so two taps can't build two blocks. An untouched block (no set
+    // logged) is deleted and rebuilt with the same block number, as often as the member likes.
+    const outcome = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from users where id = ${user.id} for update`);
+      const plans = await tx.select({ id: plansTable.id, block: plansTable.block }).from(plansTable).where(eq(plansTable.userId, user.id));
+      if (plans.length > 1) return null;
+      const old = plans[0];
+      if (old) {
+        const [logged] = await tx.select({ id: setLogsTable.itemId }).from(setLogsTable)
+          .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+          .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
+          .where(eq(planSessionsTable.planId, old.id)).limit(1);
+        if (logged) return null;
+        const sessionIds = (await tx.select({ id: planSessionsTable.id }).from(planSessionsTable).where(eq(planSessionsTable.planId, old.id))).map((x) => x.id);
+        if (sessionIds.length) await tx.delete(planItemsTable).where(inArray(planItemsTable.sessionId, sessionIds));
+        await tx.delete(planSessionsTable).where(eq(planSessionsTable.planId, old.id));
+        await tx.update(painEventsTable).set({ planId: null }).where(eq(painEventsTable.planId, old.id));
+        await tx.delete(plansTable).where(eq(plansTable.id, old.id));
+      }
+      const input = toInput(profile, 1);
+      const plan = buildPlan(input);
+      return { planId: await savePlan(user.id, plan, input, 1, promptFor(plan.coachId).lines.planIntro, tx), coachId: plan.coachId };
+    });
+    if (!outcome) return void res.status(402).json({ message: "A new plan is part of Starter" });
+    void recordEvent("plan_built", { userId: user.id, props: { tier: access.level, coach_id: outcome.coachId } });
+    return void res.status(201).json(CreatePlanResponse.parse(await viewOf(user.id, outcome.planId, access)));
+  } else if (current && !canAutoNext(access)) {
+    // One-off buyers finish the block they paid for.
+    return void res.status(409).json({ message: "finish your current plan first" });
+  }
   if (current) await db.update(plansTable).set({ status: "done" }).where(eq(plansTable.id, current.id));
   const [last] = await db.select({ block: plansTable.block }).from(plansTable).where(eq(plansTable.userId, user.id)).orderBy(desc(plansTable.id)).limit(1);
   const block = (last?.block ?? 0) + 1;
   const input = toInput(profile, block);
   const built = buildPlan(input);
-  const planId = await savePlan(user.id, built, input, block);
-  if (access.creditId !== null) {
+  // Spec 3.1 §2: only the monthly tiers get AI plan notes; a legacy credit gets the fixed intro, like Free.
+  const planId = await savePlan(user.id, built, input, block, canAutoNext(access) ? null : promptFor(built.coachId).lines.planIntro);
+  if (access.creditId !== null && !canAutoNext(access)) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }
-  res.status(201).json(CreatePlanResponse.parse(await planView(planId, canLog(access))));
+  void recordEvent("plan_built", { userId: user.id, props: { tier: access.level, coach_id: built.coachId } });
+  res.status(201).json(CreatePlanResponse.parse(await viewOf(user.id, planId, access)));
 });
 
 router.post("/me/plans/next", requireUser, async (_req, res) => {
@@ -308,26 +369,27 @@ router.post("/me/plans/next", requireUser, async (_req, res) => {
   const access = await accessFor(user.id);
   if (!canAutoNext(access) && access.creditId === null) return void res.status(402).json({ message: "a membership or another plan is needed" });
 
-  // Tier 2: set next loads from the last two weeks of logs.
+  // Coaching and Pro: set next loads from the last two weeks of logs. Low-day sessions (spec 3.1 §7) are left out, so
+  // one rough morning never lowers the next block.
   let targetLoads: Record<string, number> | undefined;
-  if (canLog(access)) {
+  if (canAdapt(access)) {
     const rows = await db
       .select({ exerciseId: setLogsTable.exerciseId, targetReps: planItemsTable.reps, reps: setLogsTable.reps, loadKg: setLogsTable.loadKg, week: planSessionsTable.week })
       .from(setLogsTable)
       .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
       .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
-      .where(eq(planSessionsTable.planId, current.id));
+      .where(and(eq(planSessionsTable.planId, current.id), eq(planSessionsTable.lowDay, false)));
     targetLoads = nextLoads(rows.filter((r) => r.week >= WEEKS - 1));
   }
   const block = current.block + 1;
   const input = toInput(profile, block, targetLoads);
   const plan = buildPlan(input);
   await db.update(plansTable).set({ status: "done" }).where(eq(plansTable.id, current.id));
-  const planId = await savePlan(user.id, plan, input, block);
+  const planId = await savePlan(user.id, plan, input, block, canAutoNext(access) ? null : promptFor(plan.coachId).lines.planIntro);
   if (!canAutoNext(access) && access.creditId !== null) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }
-  res.status(201).json(CreateNextPlanResponse.parse(await planView(planId, canLog(access))));
+  res.status(201).json(CreateNextPlanResponse.parse(await viewOf(user.id, planId, access)));
 });
 
 /**
@@ -350,7 +412,7 @@ router.post("/me/plans/:planId/notes", requireUser, async (req, res) => {
     const done = await addAiNotes(own.id, user.id, user.timezone, plan, input);
     await db.update(plansTable).set({ notesStatus: done ? "done" : "failed" }).where(eq(plansTable.id, own.id));
   }
-  res.json(AddPlanNotesResponse.parse(await planView(own.id, canLog(await accessFor(user.id)))));
+  res.json(AddPlanNotesResponse.parse(await viewOf(user.id, own.id)));
 });
 
 router.post("/me/plans/resume", requireUser, async (req, res) => {
@@ -378,7 +440,7 @@ router.post("/me/plans/resume", requireUser, async (req, res) => {
     }
     await tx.update(plansTable).set({ status: "active", pausedReason: null }).where(eq(plansTable.id, current.id));
   });
-  res.json(ResumePlanResponse.parse(await planView(current.id, canLog(await accessFor(user.id)))));
+  res.json(ResumePlanResponse.parse(await viewOf(user.id, current.id)));
 });
 
 router.post("/me/sessions/:sessionId/complete", requireUser, async (req, res) => {
@@ -386,14 +448,20 @@ router.post("/me/sessions/:sessionId/complete", requireUser, async (req, res) =>
   const params = CompleteSessionParams.safeParse(req.params);
   if (!params.success) return bad(res, params.error.issues);
   const [row] = await db
-    .select({ id: planSessionsTable.id, planId: planSessionsTable.planId })
+    .select({ id: planSessionsTable.id, planId: planSessionsTable.planId, week: planSessionsTable.week, createdAt: plansTable.createdAt })
     .from(planSessionsTable)
     .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
     .where(and(eq(planSessionsTable.id, params.data.sessionId), eq(plansTable.userId, user.id)))
     .limit(1);
   if (!row) return void res.status(404).json({ message: "not found" });
-  await db.update(planSessionsTable).set({ completedAt: new Date() }).where(and(eq(planSessionsTable.id, row.id), isNull(planSessionsTable.completedAt)));
-  const view = await planView(row.planId, canLog(await accessFor(user.id)));
+  if (row.week > 1 && (await blockAccess(user.id, row, await accessFor(user.id))) === "week1") return void res.status(402).json({ message: "Part of Starter" });
+  const marked = await db.update(planSessionsTable).set({ completedAt: new Date() }).where(and(eq(planSessionsTable.id, row.id), isNull(planSessionsTable.completedAt))).returning({ id: planSessionsTable.id });
+  if (marked.length && row.week === 1) {
+    const [open] = await db.select({ id: planSessionsTable.id }).from(planSessionsTable)
+      .where(and(eq(planSessionsTable.planId, row.planId), eq(planSessionsTable.week, 1), isNull(planSessionsTable.completedAt))).limit(1);
+    if (!open) void recordEvent("week1_done", { userId: user.id, props: { tier: (await accessFor(user.id)).level } });
+  }
+  const view = await viewOf(user.id, row.planId);
   const session = view.sessions.find((s) => s.id === row.id);
   res.json(CompleteSessionResponse.parse(session));
 });
@@ -404,12 +472,20 @@ router.put("/me/items/:itemId/sets/:setNumber", requireUser, async (req, res) =>
   if (!params.success) return bad(res, params.error.issues);
   const body = LogSetBody.strict().safeParse(req.body);
   if (!body.success) return bad(res, body.error.issues);
-  if (!canLog(await accessFor(user.id))) return void res.status(402).json({ message: "logging is part of Coaching" });
   const owned = await ownedItem(user.id, params.data.itemId);
   if (!owned) return void res.status(404).json({ message: "not found" });
+  if (!(await itemOpen(user.id, owned))) return void res.status(402).json({ message: "Part of Starter" });
   const n = params.data.setNumber;
   if (n < 1 || n > owned.item.sets) return void res.status(400).json({ message: "no such set" });
   const values = { reps: body.data.reps, seconds: body.data.seconds, loadKg: body.data.load_kg };
+  // Spec 3.1 §7: the first set of a session on a low day marks it, so nextLoads leaves it out.
+  if (!owned.session.lowDay && !owned.session.completedAt) {
+    const [any] = await db.select({ id: setLogsTable.itemId }).from(setLogsTable).innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+      .where(eq(planItemsTable.sessionId, owned.session.id)).limit(1);
+    if (!any && (await lowDayFor(user.id, user.timezone, await accessFor(user.id)))) {
+      await db.update(planSessionsTable).set({ lowDay: true }).where(eq(planSessionsTable.id, owned.session.id));
+    }
+  }
   await db.insert(setLogsTable).values({ itemId: owned.item.id, exerciseId: owned.item.exerciseId, setNumber: n, ...values }).onConflictDoUpdate({ target: [setLogsTable.itemId, setLogsTable.setNumber], set: values });
   res.json(LogSetResponse.parse({ set_number: n, reps: values.reps, seconds: values.seconds, load_kg: values.loadKg }));
 });
@@ -436,10 +512,11 @@ router.post("/me/items/:itemId/hurts", requireUser, async (req, res) => {
   }
 
   const access = await accessFor(user.id);
-  if (!canLog(access)) {
+  if (!canAdapt(access)) {
+    // Spec 3.1 §1: nobody is sold anything at the moment they're hurt, so no upgrade line here.
     return void res.json(ReportPainResponse.parse({
-      stopped: false, needs_tier2: true, swapped_to: null,
-      message: "Skip this one today. If it keeps hurting, see a physio. Coaching swaps it for a gentler exercise automatically.",
+      stopped: false, needs_tier2: false, swapped_to: null,
+      message: "Skip this one today. If it keeps hurting, see a physio.",
     }));
   }
 
@@ -476,7 +553,6 @@ router.post("/me/items/:itemId/hurts", requireUser, async (req, res) => {
 
 router.get("/me/progress", requireUser, async (_req, res) => {
   const user = authUser(res);
-  if (!canLog(await accessFor(user.id))) return void res.status(402).json({ message: "progress is part of Coaching" });
 
   const done = await db
     .select({ completedAt: planSessionsTable.completedAt })
@@ -515,6 +591,23 @@ router.get("/me/progress", requireUser, async (_req, res) => {
   }));
 });
 
+// Spec 3.1 §8: Journey, derived on read from the permanent records. Every tier.
+router.get("/me/journey", requireUser, async (_req, res) => {
+  const user = authUser(res);
+  const done = await db.select({ completedAt: planSessionsTable.completedAt }).from(planSessionsTable)
+    .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
+    .where(and(eq(plansTable.userId, user.id), sql`${planSessionsTable.completedAt} is not null`));
+  const logs = await db.select({ exerciseId: setLogsTable.exerciseId, reps: setLogsTable.reps, loadKg: setLogsTable.loadKg, at: setLogsTable.createdAt })
+    .from(setLogsTable)
+    .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+    .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
+    .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
+    .where(eq(plansTable.userId, user.id));
+  const [blocks] = await db.select({ n: sql<number>`count(*)`.mapWith(Number) }).from(plansTable).where(and(eq(plansTable.userId, user.id), eq(plansTable.status, "done")));
+  const j = journeyFrom(logs, done.map((d) => d.completedAt!), blocks?.n ?? 0);
+  res.json(GetJourneyResponse.parse({ ...j, lifts: j.lifts.map((l) => ({ ...l, name: EXERCISE_BY_ID.get(l.exercise_id)?.name ?? l.exercise_id })) }));
+});
+
 // ---------- Development only ----------
 
 router.post("/dev/unlock", requireUser, async (req, res) => {
@@ -526,7 +619,7 @@ router.post("/dev/unlock", requireUser, async (req, res) => {
   const access = await accessFor(user.id);
   if (kind === "intro_plan" && !access.intro_available) return void res.status(409).json({ message: "intro already used" });
   const month = new Date(Date.now() + 30 * 86_400_000);
-  await db.insert(membershipsTable).values({ userId: user.id, kind, status: "active", test: true, endsAt: kind === "tier1" || kind === "tier2" ? month : null });
+  await db.insert(membershipsTable).values({ userId: user.id, kind, status: "active", test: true, endsAt: kind === "tier1" || kind === "tier2" || kind === "tier3" ? month : null });
   res.json(GetTrainingResponse.parse(await trainingState(user.id)));
 });
 

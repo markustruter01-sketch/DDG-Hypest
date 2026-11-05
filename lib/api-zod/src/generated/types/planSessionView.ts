@@ -15,5 +15,7 @@ export interface PlanSessionView {
   /** One line from the coach (AI layer); null when AI is off */
   note: string | null;
   completed_at: string | null;
+  /** Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged */
+  low_day: string | null;
   items: PlanItemView[];
 }
