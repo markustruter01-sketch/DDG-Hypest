@@ -270,7 +270,19 @@ export const GetConfigResponse = zod.object({
   "intro_plan_cents": zod.number().int(),
   "plan_cents": zod.number().int(),
   "tier1_cents": zod.number().int(),
-  "tier2_cents": zod.number().int()
+  "tier2_cents": zod.number().int(),
+  "tier3_cents": zod.number().int(),
+  "tier1_yearly_cents": zod.number().int(),
+  "tier2_yearly_cents": zod.number().int(),
+  "tier3_yearly_cents": zod.number().int(),
+  "aud": zod.object({
+  "tier1_cents": zod.number().int(),
+  "tier2_cents": zod.number().int(),
+  "tier3_cents": zod.number().int(),
+  "tier1_yearly_cents": zod.number().int(),
+  "tier2_yearly_cents": zod.number().int(),
+  "tier3_yearly_cents": zod.number().int()
+}).describe('Australian prices in cents, GST included')
 }),
   "screening": zod.object({
   "version": zod.string(),
@@ -333,6 +345,7 @@ export const PreviewPlanResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -340,6 +353,7 @@ export const PreviewPlanResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -396,6 +410,43 @@ export const SaveOnboardingDraftResponse = zod.void()
 
 
 /**
+ * @summary Public. The free session done before signup, kept with the onboarding draft and carried into the plan at signup
+ */
+export const saveOnboardingTrialBodySetsItemPositionMax = 12;
+
+export const saveOnboardingTrialBodySetsItemExerciseIdMax = 60;
+
+export const saveOnboardingTrialBodySetsItemSetNumberMax = 8;
+
+export const saveOnboardingTrialBodySetsItemRepsMin = 0;
+export const saveOnboardingTrialBodySetsItemRepsMax = 200;
+
+export const saveOnboardingTrialBodySetsItemSecondsMin = 0;
+export const saveOnboardingTrialBodySetsItemSecondsMax = 7200;
+
+export const saveOnboardingTrialBodySetsItemLoadKgMin = 0;
+export const saveOnboardingTrialBodySetsItemLoadKgMax = 1000;
+
+export const saveOnboardingTrialBodySetsMax = 96;
+
+
+
+export const SaveOnboardingTrialBody = zod.object({
+  "finished": zod.boolean(),
+  "sets": zod.array(zod.object({
+  "position": zod.number().int().min(1).max(saveOnboardingTrialBodySetsItemPositionMax),
+  "exercise_id": zod.string().min(1).max(saveOnboardingTrialBodySetsItemExerciseIdMax),
+  "set_number": zod.number().int().min(1).max(saveOnboardingTrialBodySetsItemSetNumberMax),
+  "reps": zod.number().int().min(saveOnboardingTrialBodySetsItemRepsMin).max(saveOnboardingTrialBodySetsItemRepsMax).nullable(),
+  "seconds": zod.number().int().min(saveOnboardingTrialBodySetsItemSecondsMin).max(saveOnboardingTrialBodySetsItemSecondsMax).nullable(),
+  "load_kg": zod.number().min(saveOnboardingTrialBodySetsItemLoadKgMin).max(saveOnboardingTrialBodySetsItemLoadKgMax).nullable()
+})).max(saveOnboardingTrialBodySetsMax)
+})
+
+export const SaveOnboardingTrialResponse = zod.void()
+
+
+/**
  * @summary Onboarding answers, access level and current plan
  */
 export const getTrainingResponseProfileOneDaysPerWeekMin = 2;
@@ -422,7 +473,7 @@ export const GetTrainingResponse = zod.object({
 }).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
-  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2', 'tier3']).describe('none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro'),
   "intro_available": zod.boolean(),
   "plan_credits": zod.number().int()
 }),
@@ -436,6 +487,7 @@ export const GetTrainingResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -443,6 +495,7 @@ export const GetTrainingResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -520,7 +573,7 @@ export const SaveTrainingProfileResponse = zod.object({
 }).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
-  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2', 'tier3']).describe('none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro'),
   "intro_available": zod.boolean(),
   "plan_credits": zod.number().int()
 }),
@@ -534,6 +587,7 @@ export const SaveTrainingProfileResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -541,6 +595,7 @@ export const SaveTrainingProfileResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -599,7 +654,7 @@ export const SetUnitsResponse = zod.object({
 }).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
-  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2', 'tier3']).describe('none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro'),
   "intro_available": zod.boolean(),
   "plan_credits": zod.number().int()
 }),
@@ -613,6 +668,7 @@ export const SetUnitsResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -620,6 +676,7 @@ export const SetUnitsResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -660,6 +717,7 @@ export const CreatePlanResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -667,6 +725,7 @@ export const CreatePlanResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -706,6 +765,7 @@ export const CreateNextPlanResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -713,6 +773,7 @@ export const CreateNextPlanResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -756,6 +817,7 @@ export const AddPlanNotesResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -763,6 +825,7 @@ export const AddPlanNotesResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -875,6 +938,7 @@ export const ResumePlanResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -882,6 +946,7 @@ export const ResumePlanResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -922,6 +987,7 @@ export const CompleteSessionResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -1076,6 +1142,11 @@ export const GetAdminSummaryResponse = zod.object({
   "total": zod.number().int(),
   "new_7d": zod.number().int()
 }),
+  "funnel": zod.array(zod.object({
+  "name": zod.string(),
+  "last_7d": zod.number().int(),
+  "last_30d": zod.number().int()
+})).describe('Conversion events (spec 3.1 §4.3), counts for the last 7 and 30 days'),
   "memberships": zod.array(zod.object({
   "kind": zod.string(),
   "live": zod.number().int(),
@@ -1109,6 +1180,169 @@ export const GetAdminSummaryResponse = zod.object({
 
 
 /**
+ * @summary Journey and milestones, derived from every block (spec 3.1 §8)
+ */
+export const GetJourneyResponse = zod.object({
+  "first_session_on": zod.string().nullable(),
+  "sessions_done": zod.number().int(),
+  "blocks_finished": zod.number().int(),
+  "longest_week_streak": zod.number().int().describe('Most weeks in a row with at least one session'),
+  "session_milestones": zod.array(zod.object({
+  "count": zod.number().int(),
+  "reached_on": zod.string()
+})),
+  "next_milestone": zod.number().int().nullable(),
+  "lifts": zod.array(zod.object({
+  "exercise_id": zod.string(),
+  "name": zod.string(),
+  "sets": zod.number().int(),
+  "first_on": zod.string(),
+  "first_kg": zod.number(),
+  "best_kg": zod.number(),
+  "best_reps": zod.number().int(),
+  "best_on": zod.string(),
+  "now_kg": zod.number()
+})).describe('The main lifts (most sets), before and now')
+})
+
+
+/**
+ * @summary Body metrics, the morning check-in and monthly reports (spec 3.1 §6, §7)
+ */
+export const GetBodyResponse = zod.object({
+  "metrics": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number().nullable(),
+  "waist_cm": zod.number().nullable()
+})),
+  "average_7d": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number()
+})).describe('7-day moving average of weight; empty when nutrition is blocked (numbers only)'),
+  "checkin_today": zod.object({
+  "sleep_half_hours": zod.number().int(),
+  "energy": zod.number().int(),
+  "soreness": zod.number().int()
+}).nullable(),
+  "low_day": zod.string().nullable().describe('Coaching and Pro: today\'s sessions are shown lighter, and why'),
+  "upgrade_note": zod.string().nullable().describe('Free and Starter on a low day: one line, never after a pain report'),
+  "monthly_reports": zod.array(zod.object({
+  "month": zod.string(),
+  "text": zod.string()
+}))
+})
+
+
+/**
+ * @summary Today's weight and/or waist (replaces today's entry)
+ */
+export const saveBodyMetricsBodyWeightKgMin = 35;
+export const saveBodyMetricsBodyWeightKgMax = 300;
+
+export const saveBodyMetricsBodyWaistCmMin = 40;
+export const saveBodyMetricsBodyWaistCmMax = 200;
+
+
+
+export const SaveBodyMetricsBody = zod.object({
+  "weight_kg": zod.number().min(saveBodyMetricsBodyWeightKgMin).max(saveBodyMetricsBodyWeightKgMax).nullish(),
+  "waist_cm": zod.number().min(saveBodyMetricsBodyWaistCmMin).max(saveBodyMetricsBodyWaistCmMax).nullish()
+})
+
+export const SaveBodyMetricsResponse = zod.object({
+  "metrics": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number().nullable(),
+  "waist_cm": zod.number().nullable()
+})),
+  "average_7d": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number()
+})).describe('7-day moving average of weight; empty when nutrition is blocked (numbers only)'),
+  "checkin_today": zod.object({
+  "sleep_half_hours": zod.number().int(),
+  "energy": zod.number().int(),
+  "soreness": zod.number().int()
+}).nullable(),
+  "low_day": zod.string().nullable().describe('Coaching and Pro: today\'s sessions are shown lighter, and why'),
+  "upgrade_note": zod.string().nullable().describe('Free and Starter on a low day: one line, never after a pain report'),
+  "monthly_reports": zod.array(zod.object({
+  "month": zod.string(),
+  "text": zod.string()
+}))
+})
+
+
+/**
+ * @summary Delete today's entry
+ */
+export const DeleteTodayBodyMetricsResponse = zod.object({
+  "metrics": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number().nullable(),
+  "waist_cm": zod.number().nullable()
+})),
+  "average_7d": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number()
+})).describe('7-day moving average of weight; empty when nutrition is blocked (numbers only)'),
+  "checkin_today": zod.object({
+  "sleep_half_hours": zod.number().int(),
+  "energy": zod.number().int(),
+  "soreness": zod.number().int()
+}).nullable(),
+  "low_day": zod.string().nullable().describe('Coaching and Pro: today\'s sessions are shown lighter, and why'),
+  "upgrade_note": zod.string().nullable().describe('Free and Starter on a low day: one line, never after a pain report'),
+  "monthly_reports": zod.array(zod.object({
+  "month": zod.string(),
+  "text": zod.string()
+}))
+})
+
+
+/**
+ * @summary Today's morning check-in (replaces today's answer)
+ */
+export const saveMorningCheckinBodySleepHalfHoursMin = 0;
+export const saveMorningCheckinBodySleepHalfHoursMax = 28;
+
+export const saveMorningCheckinBodyEnergyMax = 5;
+
+export const saveMorningCheckinBodySorenessMax = 5;
+
+
+
+export const SaveMorningCheckinBody = zod.object({
+  "sleep_half_hours": zod.number().int().min(saveMorningCheckinBodySleepHalfHoursMin).max(saveMorningCheckinBodySleepHalfHoursMax).describe('Sleep in half hours (0 to 14 h)'),
+  "energy": zod.number().int().min(1).max(saveMorningCheckinBodyEnergyMax),
+  "soreness": zod.number().int().min(1).max(saveMorningCheckinBodySorenessMax)
+})
+
+export const SaveMorningCheckinResponse = zod.object({
+  "metrics": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number().nullable(),
+  "waist_cm": zod.number().nullable()
+})),
+  "average_7d": zod.array(zod.object({
+  "day": zod.string(),
+  "weight_kg": zod.number()
+})).describe('7-day moving average of weight; empty when nutrition is blocked (numbers only)'),
+  "checkin_today": zod.object({
+  "sleep_half_hours": zod.number().int(),
+  "energy": zod.number().int(),
+  "soreness": zod.number().int()
+}).nullable(),
+  "low_day": zod.string().nullable().describe('Coaching and Pro: today\'s sessions are shown lighter, and why'),
+  "upgrade_note": zod.string().nullable().describe('Free and Starter on a low day: one line, never after a pain report'),
+  "monthly_reports": zod.array(zod.object({
+  "month": zod.string(),
+  "text": zod.string()
+}))
+})
+
+
+/**
  * @summary Streak, best lifts and weekly volume (Tier 2)
  */
 export const GetProgressResponse = zod.object({
@@ -1131,7 +1365,7 @@ export const GetProgressResponse = zod.object({
  * @summary DEVELOPMENT ONLY. Grant a test membership with no payment. 404 outside development.
  */
 export const DevUnlockBody = zod.object({
-  "kind": zod.enum(['intro_plan', 'plan', 'tier1', 'tier2'])
+  "kind": zod.enum(['intro_plan', 'plan', 'tier1', 'tier2', 'tier3'])
 })
 
 export const devUnlockResponseProfileOneDaysPerWeekMin = 2;
@@ -1158,7 +1392,7 @@ export const DevUnlockResponse = zod.object({
 }).optional().describe('Answers to the health check (one per question in AppConfig.screening, in order). Required when saving the profile; never returned.')
 }).nullable(),
   "access": zod.object({
-  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2', 'tier3']).describe('none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro'),
   "intro_available": zod.boolean(),
   "plan_credits": zod.number().int()
 }),
@@ -1172,6 +1406,7 @@ export const DevUnlockResponse = zod.object({
   "paused_reason": zod.string().nullable(),
   "intro": zod.string().nullable().describe('The coach\'s welcome to this block (AI layer); null when AI is off'),
   "notes_status": zod.enum(['none', 'pending', 'done', 'failed']).describe('pending = the app should ask for the coach\'s notes (POST /me/plans/{planId}/notes)'),
+  "access": zod.enum(['full', 'week1']).describe('week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above'),
   "sessions": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "week": zod.number().int(),
@@ -1179,6 +1414,7 @@ export const DevUnlockResponse = zod.object({
   "title": zod.string(),
   "note": zod.string().nullable().describe('One line from the coach (AI layer); null when AI is off'),
   "completed_at": zod.string().nullable(),
+  "low_day": zod.string().nullable().describe('Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged'),
   "items": zod.array(zod.object({
   "id": zod.number().int().nullable(),
   "exercise_id": zod.string(),
@@ -1210,7 +1446,7 @@ export const DevUnlockResponse = zod.object({
  * @summary Start a Stripe Checkout for a plan or membership. Returns the Stripe page to send the member to.
  */
 export const CreateCheckoutBody = zod.object({
-  "kind": zod.enum(['intro_plan', 'plan', 'tier1', 'tier2']),
+  "kind": zod.enum(['intro_plan', 'plan', 'tier1', 'tier2', 'tier3']),
   "return_url": zod.string().describe('Page on this site to come back to after Stripe')
 })
 
@@ -1235,7 +1471,7 @@ export const ConfirmCheckoutBody = zod.object({
 export const ConfirmCheckoutResponse = zod.object({
   "outcome": zod.string(),
   "access": zod.object({
-  "level": zod.enum(['none', 'plan', 'tier1', 'tier2']),
+  "level": zod.enum(['none', 'plan', 'tier1', 'tier2', 'tier3']).describe('none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro'),
   "intro_available": zod.boolean(),
   "plan_credits": zod.number().int()
 })
@@ -1251,6 +1487,572 @@ export const CreateBillingPortalBody = zod.object({
 
 export const CreateBillingPortalResponse = zod.object({
   "url": zod.string()
+})
+
+
+/**
+ * @summary The Food screen (spec 3.1 §5)
+ */
+export const getFoodResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const getFoodResponseTodayMealsItemItemsItemKcalMin = 0;
+export const getFoodResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const getFoodResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const getFoodResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const GetFoodResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(getFoodResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(getFoodResponseTodayMealsItemItemsItemKcalMin).max(getFoodResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(getFoodResponseTodayMealsItemItemsItemProteinGMin).max(getFoodResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
+})
+
+
+/**
+ * @summary Save the nutrition set-up; works out the targets
+ */
+export const saveFoodSetupBodyBirthYearMin = 1900;
+export const saveFoodSetupBodyBirthYearMax = 2100;
+
+export const saveFoodSetupBodyHeightCmMin = 120;
+export const saveFoodSetupBodyHeightCmMax = 230;
+
+export const saveFoodSetupBodyWeightKgMin = 35;
+export const saveFoodSetupBodyWeightKgMax = 300;
+
+export const saveFoodSetupBodyFoodsToAvoidItemMax = 40;
+
+export const saveFoodSetupBodyFoodsToAvoidMax = 10;
+
+
+
+export const SaveFoodSetupBody = zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int().min(saveFoodSetupBodyBirthYearMin).max(saveFoodSetupBodyBirthYearMax),
+  "height_cm": zod.number().min(saveFoodSetupBodyHeightCmMin).max(saveFoodSetupBodyHeightCmMax),
+  "weight_kg": zod.number().min(saveFoodSetupBodyWeightKgMin).max(saveFoodSetupBodyWeightKgMax),
+  "foods_to_avoid": zod.array(zod.string().min(1).max(saveFoodSetupBodyFoodsToAvoidItemMax)).max(saveFoodSetupBodyFoodsToAvoidMax),
+  "pregnant": zod.boolean().describe('Pregnant or breastfeeding')
+})
+
+export const saveFoodSetupResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const saveFoodSetupResponseTodayMealsItemItemsItemKcalMin = 0;
+export const saveFoodSetupResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const saveFoodSetupResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const saveFoodSetupResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const SaveFoodSetupResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(saveFoodSetupResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(saveFoodSetupResponseTodayMealsItemItemsItemKcalMin).max(saveFoodSetupResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(saveFoodSetupResponseTodayMealsItemItemsItemProteinGMin).max(saveFoodSetupResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
+})
+
+
+/**
+ * @summary This week's meal plan and grocery list (Coaching and Pro)
+ */
+export const makeMealPlanResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const makeMealPlanResponseTodayMealsItemItemsItemKcalMin = 0;
+export const makeMealPlanResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const makeMealPlanResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const makeMealPlanResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const MakeMealPlanResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(makeMealPlanResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(makeMealPlanResponseTodayMealsItemItemsItemKcalMin).max(makeMealPlanResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(makeMealPlanResponseTodayMealsItemItemsItemProteinGMin).max(makeMealPlanResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
+})
+
+
+/**
+ * @summary Log a meal from a sentence (Coaching and Pro)
+ */
+export const logMealBodyTextMax = 300;
+
+
+
+export const LogMealBody = zod.object({
+  "text": zod.string().min(1).max(logMealBodyTextMax)
+})
+
+export const logMealResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const logMealResponseTodayMealsItemItemsItemKcalMin = 0;
+export const logMealResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const logMealResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const logMealResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const LogMealResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(logMealResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(logMealResponseTodayMealsItemItemsItemKcalMin).max(logMealResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(logMealResponseTodayMealsItemItemsItemProteinGMin).max(logMealResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
+})
+
+
+/**
+ * @summary Log a meal from a photo (never stored)
+ */
+export const logMealPhotoBodyDataMax = 4100000;
+
+
+
+export const LogMealPhotoBody = zod.object({
+  "media_type": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "data": zod.string().min(1).max(logMealPhotoBodyDataMax).describe('Base64')
+})
+
+export const logMealPhotoResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const logMealPhotoResponseTodayMealsItemItemsItemKcalMin = 0;
+export const logMealPhotoResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const logMealPhotoResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const logMealPhotoResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const LogMealPhotoResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(logMealPhotoResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(logMealPhotoResponseTodayMealsItemItemsItemKcalMin).max(logMealPhotoResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(logMealPhotoResponseTodayMealsItemItemsItemProteinGMin).max(logMealPhotoResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
+})
+
+
+/**
+ * @summary Edit a logged meal
+ */
+export const UpdateMealParams = zod.object({
+  "mealId": zod.coerce.number().int()
+})
+
+export const updateMealBodyItemsItemNameMax = 80;
+
+export const updateMealBodyItemsItemKcalMin = 0;
+export const updateMealBodyItemsItemKcalMax = 2500;
+
+export const updateMealBodyItemsItemProteinGMin = 0;
+export const updateMealBodyItemsItemProteinGMax = 200;
+
+export const updateMealBodyItemsMax = 12;
+
+
+
+export const UpdateMealBody = zod.object({
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(updateMealBodyItemsItemNameMax),
+  "kcal": zod.number().int().min(updateMealBodyItemsItemKcalMin).max(updateMealBodyItemsItemKcalMax),
+  "protein_g": zod.number().int().min(updateMealBodyItemsItemProteinGMin).max(updateMealBodyItemsItemProteinGMax)
+})).min(1).max(updateMealBodyItemsMax)
+})
+
+export const updateMealResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const updateMealResponseTodayMealsItemItemsItemKcalMin = 0;
+export const updateMealResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const updateMealResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const updateMealResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const UpdateMealResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(updateMealResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(updateMealResponseTodayMealsItemItemsItemKcalMin).max(updateMealResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(updateMealResponseTodayMealsItemItemsItemProteinGMin).max(updateMealResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
+})
+
+
+/**
+ * @summary Delete a logged meal
+ */
+export const DeleteMealParams = zod.object({
+  "mealId": zod.coerce.number().int()
+})
+
+export const deleteMealResponseTodayMealsItemItemsItemNameMax = 80;
+
+export const deleteMealResponseTodayMealsItemItemsItemKcalMin = 0;
+export const deleteMealResponseTodayMealsItemItemsItemKcalMax = 2500;
+
+export const deleteMealResponseTodayMealsItemItemsItemProteinGMin = 0;
+export const deleteMealResponseTodayMealsItemItemsItemProteinGMax = 200;
+
+
+
+export const DeleteMealResponse = zod.object({
+  "blocked": zod.boolean().describe('Nutrition is off for good (spec 3.1 §5.1): show only the fixed line'),
+  "available": zod.boolean().describe('Set-up and targets are in this member\'s tier (Starter and above)'),
+  "can_use_ai": zod.boolean().describe('Meal plans and meal logging (Coaching and Pro'),
+  "notice": zod.string().nullable().describe('A fixed safety or help message to show, once'),
+  "setup": zod.object({
+  "sex": zod.enum(['female', 'male', 'unsaid']),
+  "birth_year": zod.number().int(),
+  "height_cm": zod.number(),
+  "weight_kg": zod.number(),
+  "foods_to_avoid": zod.array(zod.string())
+}).nullable(),
+  "targets": zod.object({
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "maintenance_only": zod.boolean()
+}).nullable(),
+  "today": zod.object({
+  "day": zod.string(),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "text": zod.string(),
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(deleteMealResponseTodayMealsItemItemsItemNameMax),
+  "kcal": zod.number().int().min(deleteMealResponseTodayMealsItemItemsItemKcalMin).max(deleteMealResponseTodayMealsItemItemsItemKcalMax),
+  "protein_g": zod.number().int().min(deleteMealResponseTodayMealsItemItemsItemProteinGMin).max(deleteMealResponseTodayMealsItemItemsItemProteinGMax)
+})),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int(),
+  "at": zod.coerce.date()
+}))
+}),
+  "meal_plan": zod.object({
+  "week_of": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "slot": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "name": zod.string(),
+  "ingredients": zod.array(zod.string()),
+  "kcal": zod.number().int(),
+  "protein_g": zod.number().int()
+})),
+  "total_kcal": zod.number().int(),
+  "total_protein_g": zod.number().int()
+})),
+  "grocery": zod.array(zod.object({
+  "aisle": zod.string(),
+  "items": zod.array(zod.string())
+}))
+}).nullable(),
+  "meal_plans_left": zod.number().int(),
+  "meal_logs_left_today": zod.number().int()
 })
 
 

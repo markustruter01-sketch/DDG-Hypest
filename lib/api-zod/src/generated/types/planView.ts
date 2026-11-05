@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PlanSessionView } from './planSessionView';
+import type { PlanViewAccess } from './planViewAccess';
 import type { PlanViewNotesStatus } from './planViewNotesStatus';
 import type { PlanViewStatus } from './planViewStatus';
 
@@ -21,5 +22,7 @@ export interface PlanView {
   intro: string | null;
   /** pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes) */
   notes_status: PlanViewNotesStatus;
+  /** week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above */
+  access: PlanViewAccess;
   sessions: PlanSessionView[];
 }

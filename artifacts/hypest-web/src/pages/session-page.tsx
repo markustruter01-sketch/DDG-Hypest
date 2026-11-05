@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Minus, Plus } from "lucide-react";
 import {
+  getGetCurrentUserQueryKey,
   getGetTrainingQueryKey,
+  useGetCurrentUser,
   useCompleteSession,
   useReportPain,
   type PainResult,
@@ -58,6 +60,7 @@ export function SessionPage() {
   const [finished, setFinished] = useState<FinishStats | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
   const coaches = useCoaches();
+  const me = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false }, request });
 
   useScreenAwake();
 
@@ -134,6 +137,8 @@ export function SessionPage() {
       <FinishCard
         stats={finished}
         coachName={coachName}
+        coachId={plan?.coach_id ?? ""}
+        firstName={me.data?.display_name?.split(" ")[0] ?? null}
         next={upNext ? `Next: Week ${upNext.week} · Day ${upNext.day}.` : "That was the last session of this block."}
         onDone={() => navigate("/")}
       />
@@ -158,6 +163,7 @@ export function SessionPage() {
       <div className="session-head">
         <span className="label" style={{ color: "var(--color-on-dark-muted)" }}>Week {session.week} · Day {session.day}{item.swapped_from ? " · swapped for you" : ""}</span>
         {index === 0 && session.note ? <p className="player-body session-note-dark">{session.note}</p> : null}
+        {index === 0 && session.low_day ? <p className="player-body session-note-dark">{session.low_day}</p> : null}
         <h1 className="hero-title" style={{ margin: 0, fontSize: "2.6rem" }}>{item.name}</h1>
         <p className="player-body">{item.cue}</p>
         <span className="session-dose">{dose(item)}{item.target_load_kg ? ` @ ${targetLoad(item.target_load_kg, units)} ${units}` : ""}</span>

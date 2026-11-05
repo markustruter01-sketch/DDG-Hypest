@@ -14,4 +14,5 @@ export const CheckoutRequestKind = {
   plan: 'plan',
   tier1: 'tier1',
   tier2: 'tier2',
+  tier3: 'tier3',
 } as const;

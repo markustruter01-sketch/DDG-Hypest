@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Response } from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { GetBodyResponse, SaveBodyMetricsBody, SaveMorningCheckinBody } from "@workspace/api-zod";
 import { bodyMetricsTable, db, monthlyReportsTable, morningCheckinsTable } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
@@ -18,7 +18,7 @@ async function send(res: Response, user: User) {
   const rows = await bodyRows(user.id);
   const c = await todayCheckin(user.id, user.timezone);
   const reports = await db.select({ month: monthlyReportsTable.month, text: monthlyReportsTable.text }).from(monthlyReportsTable)
-    .where(and(eq(monthlyReportsTable.userId, user.id), eq(monthlyReportsTable.status, "done"))).orderBy(desc(monthlyReportsTable.month)).limit(24);
+    .where(and(eq(monthlyReportsTable.userId, user.id), inArray(monthlyReportsTable.status, ["done", "skipped"]))).orderBy(desc(monthlyReportsTable.month)).limit(24);
   res.json(GetBodyResponse.parse({
     // Spec §5.1: a member with nutrition blocked sees the numbers only (no trend line).
     metrics: rows.map((r) => ({ day: r.day, weight_kg: r.weightKg, waist_cm: r.waistCm })),

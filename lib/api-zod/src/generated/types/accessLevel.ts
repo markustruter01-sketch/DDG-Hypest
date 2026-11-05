@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro
+ */
 export type AccessLevel = typeof AccessLevel[keyof typeof AccessLevel];
 
 
@@ -14,4 +17,5 @@ export const AccessLevel = {
   plan: 'plan',
   tier1: 'tier1',
   tier2: 'tier2',
+  tier3: 'tier3',
 } as const;

@@ -5,10 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PricesAud } from './pricesAud';
 
 export interface Prices {
   intro_plan_cents: number;
   plan_cents: number;
   tier1_cents: number;
   tier2_cents: number;
+  tier3_cents: number;
+  tier1_yearly_cents: number;
+  tier2_yearly_cents: number;
+  tier3_yearly_cents: number;
+  /** Australian prices in cents, GST included */
+  aud: PricesAud;
 }
