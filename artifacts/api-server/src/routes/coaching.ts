@@ -35,6 +35,7 @@ import {
   plansTable,
   setLogsTable,
   trainingProfilesTable,
+  usersTable,
 } from "@workspace/db";
 import { authUser, requireUser } from "../middleware/require-user";
 import { devToolsOn } from "../lib/dev-login";
@@ -54,6 +55,8 @@ import { draftHashOf, saveDraft, saveTrial } from "../coaching/draft";
 import { savePlan, toInput } from "../coaching/plan-store";
 import { allowIp } from "../lib/ip-limit";
 import { journeyFrom } from "../coaching/journey";
+import { lowDayFor } from "../coaching/body";
+import { lighterLoad, lighterSets } from "../coaching/readiness";
 
 const router: IRouter = Router();
 
@@ -109,10 +112,16 @@ async function currentPlanRow(userId: number) {
 async function viewOf(userId: number, planId: number, access?: Access) {
   const [plan] = await db.select({ createdAt: plansTable.createdAt }).from(plansTable).where(eq(plansTable.id, planId)).limit(1);
   if (!plan) throw new Error("plan vanished");
-  return planView(planId, await blockAccess(userId, plan, access ?? (await accessFor(userId))));
+  const a = access ?? (await accessFor(userId));
+  const [u] = await db.select({ timezone: usersTable.timezone }).from(usersTable).where(eq(usersTable.id, userId));
+  return planView(planId, await blockAccess(userId, plan, a), await lowDayFor(userId, u?.timezone ?? null, a));
 }
 
-async function planView(planId: number, scope: "full" | "week1") {
+/**
+ * `lowDay` (spec 3.1 §7, Coaching and Pro): today's why line when the morning check-in says low. Sessions with nothing
+ * logged yet, and sessions started on a low day, are shown lighter; the stored plan never changes.
+ */
+async function planView(planId: number, scope: "full" | "week1", lowDay: string | null = null) {
   const [plan] = await db.select().from(plansTable).where(eq(plansTable.id, planId)).limit(1);
   if (!plan) throw new Error("plan vanished");
   const allSessions = await db.select().from(planSessionsTable).where(eq(planSessionsTable.planId, planId)).orderBy(asc(planSessionsTable.week), asc(planSessionsTable.day));
@@ -128,11 +137,19 @@ async function planView(planId: number, scope: "full" | "week1") {
     notes_status: (plan.notesStatus === "working" ? "pending" : plan.notesStatus) as "none" | "pending" | "done" | "failed",
     // Spec 3.1 §1: "week1" = Free, weeks 2 to 4 are part of Starter and above.
     access: scope,
-    sessions: sessions.map((s) => ({
-      id: s.id, week: s.week, day: s.day, title: s.title, note: s.note, completed_at: s.completedAt?.toISOString() ?? null,
-      items: items.filter((i) => i.sessionId === s.id).map((i) =>
-        itemView(i, logs.filter((l) => l.itemId === i.id).map((l) => ({ set_number: l.setNumber, reps: l.reps, seconds: l.seconds, load_kg: l.loadKg })))),
-    })),
+    sessions: sessions.map((s) => {
+      const own = items.filter((i) => i.sessionId === s.id);
+      const started = own.some((i) => logs.some((l) => l.itemId === i.id));
+      const lighter = s.lowDay || (lowDay !== null && !started && !s.completedAt);
+      return {
+        id: s.id, week: s.week, day: s.day, title: s.title, note: s.note, completed_at: s.completedAt?.toISOString() ?? null,
+        low_day: lighter ? (s.lowDay && !lowDay ? "Done lighter: short sleep or low energy, and sore." : lowDay) : null,
+        items: own.map((i) => {
+          const v = itemView(i, logs.filter((l) => l.itemId === i.id).map((l) => ({ set_number: l.setNumber, reps: l.reps, seconds: l.seconds, load_kg: l.loadKg })));
+          return lighter ? { ...v, sets: lighterSets(v.sets), target_load_kg: lighterLoad(v.target_load_kg) } : v;
+        }),
+      };
+    }),
   };
 }
 
@@ -226,7 +243,7 @@ router.post("/coaching/preview", (req, res) => {
   const plan = buildPlan(toInput(a, 1));
   res.json(PreviewPlanResponse.parse({
     id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null, notes_status: "none",
-    sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, items: s.items.map((it) => itemView(it)) })),
+    sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, low_day: null, items: s.items.map((it) => itemView(it)) })),
   }));
 });
 
@@ -445,6 +462,14 @@ router.put("/me/items/:itemId/sets/:setNumber", requireUser, async (req, res) =>
   const n = params.data.setNumber;
   if (n < 1 || n > owned.item.sets) return void res.status(400).json({ message: "no such set" });
   const values = { reps: body.data.reps, seconds: body.data.seconds, loadKg: body.data.load_kg };
+  // Spec 3.1 §7: the first set of a session on a low day marks it, so nextLoads leaves it out.
+  if (!owned.session.lowDay && !owned.session.completedAt) {
+    const [any] = await db.select({ id: setLogsTable.itemId }).from(setLogsTable).innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+      .where(eq(planItemsTable.sessionId, owned.session.id)).limit(1);
+    if (!any && (await lowDayFor(user.id, user.timezone, await accessFor(user.id)))) {
+      await db.update(planSessionsTable).set({ lowDay: true }).where(eq(planSessionsTable.id, owned.session.id));
+    }
+  }
   await db.insert(setLogsTable).values({ itemId: owned.item.id, exerciseId: owned.item.exerciseId, setNumber: n, ...values }).onConflictDoUpdate({ target: [setLogsTable.itemId, setLogsTable.setNumber], set: values });
   res.json(LogSetResponse.parse({ set_number: n, reps: values.reps, seconds: values.seconds, load_kg: values.loadKg }));
 });

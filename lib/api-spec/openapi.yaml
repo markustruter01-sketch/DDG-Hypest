@@ -1057,6 +1057,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/body:
+    get:
+      operationId: getBody
+      tags: [coaching]
+      summary: Body metrics, the morning check-in and monthly reports (spec 3.1 §6, §7)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    put:
+      operationId: saveBodyMetrics
+      tags: [coaching]
+      summary: Today's weight and/or waist (replaces today's entry)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyMetricsEntry"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/body/today:
+    delete:
+      operationId: deleteTodayBodyMetrics
+      tags: [coaching]
+      summary: Delete today's entry
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/checkin:
+    put:
+      operationId: saveMorningCheckin
+      tags: [coaching]
+      summary: Today's morning check-in (replaces today's answer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MorningCheckinEntry"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/progress:
     get:
       operationId: getProgress
@@ -1615,6 +1710,65 @@ components:
       schema:
         type: integer
   schemas:
+    BodyMetricsEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        weight_kg: {type: number, minimum: 35, maximum: 300, nullable: true}
+        waist_cm: {type: number, minimum: 40, maximum: 200, nullable: true}
+    MorningCheckinEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        sleep_half_hours: {type: integer, minimum: 0, maximum: 28, description: "Sleep in half hours (0 to 14 h)"}
+        energy: {type: integer, minimum: 1, maximum: 5}
+        soreness: {type: integer, minimum: 1, maximum: 5}
+      required: [sleep_half_hours, energy, soreness]
+    BodyState:
+      type: object
+      additionalProperties: false
+      properties:
+        metrics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              day: {type: string}
+              weight_kg: {type: number, nullable: true}
+              waist_cm: {type: number, nullable: true}
+            required: [day, weight_kg, waist_cm]
+        average_7d:
+          type: array
+          description: 7-day moving average of weight; empty when nutrition is blocked (numbers only)
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              day: {type: string}
+              weight_kg: {type: number}
+            required: [day, weight_kg]
+        checkin_today:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            sleep_half_hours: {type: integer}
+            energy: {type: integer}
+            soreness: {type: integer}
+          required: [sleep_half_hours, energy, soreness]
+        low_day: {type: string, nullable: true, description: "Coaching and Pro: today's sessions are shown lighter, and why"}
+        upgrade_note: {type: string, nullable: true, description: "Free and Starter on a low day: one line, never after a pain report"}
+        monthly_reports:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              month: {type: string}
+              text: {type: string}
+            required: [month, text]
+      required: [metrics, average_7d, checkin_today, low_day, upgrade_note, monthly_reports]
     Journey:
       type: object
       additionalProperties: false
@@ -2076,11 +2230,15 @@ components:
         title: {type: string}
         note: {type: string, nullable: true, description: "One line from the coach (AI layer); null when AI is off"}
         completed_at: {type: string, nullable: true}
+        low_day:
+          type: string
+          nullable: true
+          description: "Shown lighter today (spec 3.1 §7): the why line. The stored plan is unchanged"
         items:
           type: array
           items:
             $ref: "#/components/schemas/PlanItemView"
-      required: [id, week, day, title, note, completed_at, items]
+      required: [id, week, day, title, note, completed_at, low_day, items]
     PlanView:
       type: object
       additionalProperties: false

@@ -105,7 +105,7 @@ router.post("/me/coach/daily-note", requireUser, async (_req, res) => {
   const dayStart = localDayStart(new Date(), user.timezone);
   const updates = await db.select({ id: coachMessagesTable.id, text: coachMessagesTable.text, source: coachMessagesTable.source, created_at: coachMessagesTable.createdAt })
     .from(coachMessagesTable)
-    .where(and(eq(coachMessagesTable.userId, user.id), inArray(coachMessagesTable.source, ["checkin", "weekly_review"]), gte(coachMessagesTable.createdAt, new Date(Date.now() - 3 * 86_400_000))))
+    .where(and(eq(coachMessagesTable.userId, user.id), inArray(coachMessagesTable.source, ["checkin", "weekly_review", "midweek_check"]), gte(coachMessagesTable.createdAt, new Date(Date.now() - 3 * 86_400_000))))
     .orderBy(desc(coachMessagesTable.id)).limit(3);
   const reply = (note: string | null) => res.json(GetDailyNoteResponse.parse({ note, updates: updates.map((u) => ({ ...u, source: u.source as "checkin" | "weekly_review" })) }));
 
