@@ -16,6 +16,8 @@ const MEDICINE_RE = wordsRe(MEDICINES);
 const DIAGNOSIS_RE = wordsRe(DIAGNOSIS_WORDS);
 const PAIN_RE = wordsRe(OUTPUT_ONLY_FLAGS);
 const CUES_RE = new RegExp(wordsRe(OUTPUT_CUES).source, "gi");
+/** Dose units a meal field may never carry, even with quantities allowed (spec 3.1 §5.4: g, kg, ml, l, cup, tbsp, tsp, piece only). */
+const DOSE_UNITS_RE = /\d[\d,.]*\s*(?:k?cals?\b|calories\b|kilojoules\b|kj\b|mg\b|mcg\b|µg\b|iu\b)/i;
 const DOSE_RE = /\d[\d,.]*\s*(?:k?cals?\b|calories\b|kilojoules\b|kj\b|mg\b|mcg\b|µg\b|ml\b|iu\b|g of\b|grams? of\b)/i;
 const LINK_RE = /https?:|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|au|co|app|uk|nz|ca|us|eu|dev|ai|me|info|biz|ly|gg|tv|xyz|site|online|shop|store|link|club|fit|health|fitness)\b/i;
 
@@ -30,7 +32,7 @@ export function filterReply(text: string, plan: PlanNumbers | null, max = REPLY_
   if (LINK_RE.test(t)) return "link";
   if (redFlag(t.replace(CUES_RE, " "))) return "warning_word";
   if (PAIN_RE.test(t)) return "encourages_pain";
-  if (!opts.allowQuantities && DOSE_RE.test(t)) return "dose";
+  if (opts.allowQuantities ? DOSE_UNITS_RE.test(t) : DOSE_RE.test(t)) return "dose";
   if (MEDICINE_RE.test(t)) return "medicine";
   if (DIAGNOSIS_RE.test(t)) return "diagnosis";
   if (!opts.skipPlanNumbers && !opts.allowQuantities && !trainingNumbersMatch(t, plan)) return "plan_number";

@@ -12,8 +12,10 @@ export function toInput(a: Answers, block: number, targetLoads?: Record<string, 
 }
 
 /** fixedIntro: Free's block gets the coach's fixed welcome and no AI notes (spec 3.1 §2: Free spend is zero). */
-export async function savePlan(userId: number, plan: Plan, input: PlanInput, block: number, fixedIntro: string | null = null): Promise<number> {
-  return db.transaction(async (tx) => {
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function savePlan(userId: number, plan: Plan, input: PlanInput, block: number, fixedIntro: string | null = null, outer?: Tx): Promise<number> {
+  const write = async (tx: Tx) => {
     const [row] = await tx
       .insert(plansTable)
       .values({ userId, coachId: plan.coachId, block, weeks: plan.weeks, status: "active", engine: "rules", record: { input, plan },
@@ -31,5 +33,6 @@ export async function savePlan(userId: number, plan: Plan, input: PlanInput, blo
       }
     }
     return row.id;
-  });
+  };
+  return outer ? write(outer) : db.transaction(write);
 }

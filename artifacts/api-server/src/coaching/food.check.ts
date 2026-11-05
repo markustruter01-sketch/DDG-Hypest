@@ -49,6 +49,7 @@ ok(!eatingFlag("two eggs on toast"), "a normal meal is fine");
 ok(mealTextOk("1 kg rice", true) && mealTextOk("200 g chicken breast", true), "the meal filter allows quantities");
 ok(!mealTextOk("creatine", true) && !mealTextOk("1 scoop whey", true) && !mealTextOk("see www.recipes.com", true), "the meal filter drops supplements and links");
 ok(!mealTextOk("x".repeat(201), true), "fields over 200 characters dropped");
+ok(!mealTextOk("500 mg of something", true) && !mealTextOk("1000 IU drops", true) && !mealTextOk("toast, 300 kcal", true), "the meal filter still drops dose units");
 ok(namesAvoided("Peanut butter toast", ["peanut"]) && !namesAvoided("Peanuts", ["peanut"]) && namesAvoided("Pine nuts", ["pine nuts"]), "foods to avoid: whole words, any case");
 
 const targets = { kcal: 2000, proteinG: 120, floorKcal: 1400, ceilingKcal: 2400 };

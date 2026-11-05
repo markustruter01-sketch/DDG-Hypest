@@ -56,7 +56,7 @@ export async function claimDraft(req: Request, res: Response, userId: number, op
     await saveProfile(userId, checked.values);
     const trial = opts.signup ? cleanTrial(row.trial) : null;
     if (trial?.sets.length) await carryTrial(userId, trial);
-    void recordEvent("signup", { userId, draftHash: h, props: { from_trial: Boolean(trial?.sets.length), coach_id: checked.values.coachId } });
+    if (opts.signup) void recordEvent("signup", { userId, draftHash: h, props: { from_trial: Boolean(trial?.sets.length), coach_id: checked.values.coachId } });
     return true;
   } catch (err) {
     logger.warn({ err }, "onboarding draft not claimed");

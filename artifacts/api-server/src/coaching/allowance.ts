@@ -17,8 +17,8 @@ const r = (perDay: number, perMonth: number): Row => ({ perDay, perMonth });
 const FREE: Record<Kind, Row> = { chat: none, daily_note: none, plan_notes: none, weekly_review: none, checkin: none, meal_log: none, meal_plan: none, midweek_check: none, monthly_report: none };
 export const DEFAULT_ALLOWANCES: Record<Level, Record<Kind, Row>> = {
   none: FREE,
-  // Legacy one-off credit: Free's allowances, plus AI notes on the block it paid for.
-  plan: { ...FREE, plan_notes: r(3, 3) },
+  // Legacy one-off credit: Free's allowances (spec 3.1 §2); its blocks get the fixed intro.
+  plan: FREE,
   // Starter: a small taste of the coach. No swaps, load changes, reviews or food AI: those are Coaching.
   tier1: { ...FREE, chat: r(3, 60), daily_note: r(1, 31), plan_notes: r(3, 3), checkin: r(2, 8) },
   tier2: { ...FREE, chat: r(20, 300), daily_note: r(1, 31), plan_notes: r(3, 3), weekly_review: r(1, 5), checkin: r(2, 8), meal_log: r(5, 100), meal_plan: r(2, 10) },
@@ -26,7 +26,7 @@ export const DEFAULT_ALLOWANCES: Record<Level, Record<Kind, Row>> = {
 };
 
 /** Spec 3.1 §2: the most a member's AI may cost in a UTC month, per tier (defaults for the member_caps table). */
-export const DEFAULT_CAPS_MICRO_USD: Record<Level, number> = { none: 0, plan: 100_000, tier1: 500_000, tier2: 2_000_000, tier3: 3_500_000 };
+export const DEFAULT_CAPS_MICRO_USD: Record<Level, number> = { none: 0, plan: 0, tier1: 500_000, tier2: 2_000_000, tier3: 3_500_000 };
 
 /** Meal plans per local week (spec 3.1 §2: a plan plus rebuilds), counted in code; the allowance rows are the backstop. */
 export const MEAL_PLANS_PER_WEEK: Record<Level, number> = { none: 0, plan: 0, tier1: 0, tier2: 2, tier3: 3 };

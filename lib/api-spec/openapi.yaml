@@ -2350,7 +2350,7 @@ components:
         text: {type: string}
         source:
           type: string
-          enum: [checkin, weekly_review]
+          enum: [checkin, weekly_review, midweek_check]
         created_at: {type: string, format: date-time}
       required: [id, text, source, created_at]
     DailyNote:

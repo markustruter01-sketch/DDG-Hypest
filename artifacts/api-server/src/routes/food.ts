@@ -131,14 +131,18 @@ router.patch("/me/food/meals/:mealId", requireUser, async (req, res) => {
   const params = UpdateMealParams.safeParse(req.params);
   const body = UpdateMealBody.strict().safeParse(req.body);
   if (!params.success || !body.success) return void res.status(400).json({ message: "invalid request" });
+  const access = await gate(res, user, true);
+  if (!access) return;
   const items = checkMealItems(body.data);
   if (!items) return void res.status(400).json({ message: "Those foods can't be saved here." });
-  for (const it of items) if (screenMessage(it.name).kind !== "ok") return void res.status(400).json({ message: "Those foods can't be saved here." });
+  // Spec §5.1: the same rules as a meal sentence (stop flow, or the help message and the block).
+  const notice = await screened(user, items.map((i) => i.name).join(", "), "a meal edit");
+  if (notice) return send(res, user, access, notice);
   const t = totalsOf(items);
   const done = await db.update(mealLogsTable).set({ items, kcal: t.kcal, proteinG: t.protein_g })
     .where(and(eq(mealLogsTable.id, params.data.mealId), eq(mealLogsTable.userId, user.id))).returning({ id: mealLogsTable.id });
   if (!done.length) return void res.status(404).json({ message: "not found" });
-  await send(res, user, await accessFor(user.id));
+  await send(res, user, access);
 });
 
 router.delete("/me/food/meals/:mealId", requireUser, async (req, res) => {

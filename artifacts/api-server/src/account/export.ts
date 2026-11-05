@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { agentActionsTable, bodyMetricsTable, mealLogsTable, mealPlansTable, monthlyReportsTable, morningCheckinsTable, nutritionProfilesTable, nutritionTargetsTable, aiLedgerDailyTable, aiLedgerMonthlyTable, weeklyReviewsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { agentActionsTable, bodyMetricsTable, eventsTable, midweekChecksTable, mealLogsTable, mealPlansTable, monthlyReportsTable, morningCheckinsTable, nutritionProfilesTable, nutritionTargetsTable, aiLedgerDailyTable, aiLedgerMonthlyTable, weeklyReviewsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -33,6 +33,8 @@ export async function exportAccount(userId: number) {
   const meals = await db.select().from(mealLogsTable).where(eq(mealLogsTable.userId, userId)).orderBy(asc(mealLogsTable.id));
   const body = await db.select().from(bodyMetricsTable).where(eq(bodyMetricsTable.userId, userId)).orderBy(asc(bodyMetricsTable.day));
   const mornings = await db.select().from(morningCheckinsTable).where(eq(morningCheckinsTable.userId, userId)).orderBy(asc(morningCheckinsTable.day));
+  const midweek = await db.select().from(midweekChecksTable).where(eq(midweekChecksTable.userId, userId)).orderBy(asc(midweekChecksTable.weekOf));
+  const events = await db.select().from(eventsTable).where(eq(eventsTable.userId, userId)).orderBy(asc(eventsTable.id));
   const reports = await db.select().from(monthlyReportsTable).where(eq(monthlyReportsTable.userId, userId)).orderBy(asc(monthlyReportsTable.month));
   const [reminders] = await db.select({ lastSentAt: remindersTable.lastSentAt, createdAt: remindersTable.createdAt }).from(remindersTable).where(eq(remindersTable.userId, userId));
 
@@ -78,7 +80,9 @@ export async function exportAccount(userId: number) {
     meal_logs: meals.map((m) => ({ day: m.day, text: m.text, items: m.items, kcal: m.kcal, protein_g: m.proteinG, at: m.at })),
     body_metrics: body.map((b) => ({ day: b.day, weight_kg: b.weightKg, waist_cm: b.waistCm })),
     morning_checkins: mornings.map((m) => ({ day: m.day, sleep_hours: m.sleepHalfHours / 2, energy: m.energy, soreness: m.soreness })),
-    monthly_reports: reports.filter((r) => r.status === "done").map((r) => ({ month: r.month, text: r.text })),
+    monthly_reports: reports.filter((r) => r.status === "done" || r.status === "skipped").map((r) => ({ month: r.month, text: r.text })),
+    midweek_checks: midweek.map((m) => ({ week_of: m.weekOf, status: m.status })),
+    product_events: events.map((e) => ({ name: e.name, props: e.props, at: e.at })),
     weekly_reviews: reviews.map((r) => ({ week_of: r.weekOf, status: r.status, at: r.createdAt })),
   };
 }

@@ -43,7 +43,7 @@ export function TrialPage() {
 
   // Keep progress with the draft as the visitor goes (best effort: the tab keeps it too).
   useEffect(() => {
-    if (!day) return;
+    if (!day || hurt) return;
     const done = Object.values(sets).some((list) => list.some((e) => e.done));
     if (done) void saveOnboardingTrial(body(false), request).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,6 +61,13 @@ export function TrialPage() {
 
   const update = (pos: number, n: number, patch: Partial<Entry>) =>
     setSets((all) => ({ ...all, [pos]: (all[pos] ?? []).map((e, i) => (i === n ? { ...e, ...patch } : e)) }));
+
+  /** Spec 3.1 §4.2: "This hurts" ends the trial; nothing from it carries into a plan. */
+  function stopForPain() {
+    setHurt(true);
+    try { sessionStorage.removeItem(TRIAL_KEY); } catch { /* storage off: nothing kept anyway */ }
+    void saveOnboardingTrial({ finished: false, sets: [] }, request).catch(() => undefined);
+  }
 
   async function finish() {
     setError(null);
@@ -104,7 +111,7 @@ export function TrialPage() {
               </button>
             </div>
           ))}
-          <button type="button" className="text-link" onClick={() => setHurt(true)}>This hurts</button>
+          <button type="button" className="text-link" onClick={stopForPain}>This hurts</button>
         </article>
       ))}
       <button type="button" className="primary-button" onClick={finish}>Finish: save it and get the rest of week 1 free</button>

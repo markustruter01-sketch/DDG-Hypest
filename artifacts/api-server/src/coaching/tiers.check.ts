@@ -105,8 +105,27 @@ const set = { reps: 8, seconds: null, load_kg: 10 };
   await G("PUT", "/me/training/profile", { ...profile, coach_id: "jade" });
   const b = await G("POST", "/me/plans");
   ok(a.status === 201 && b.status === 201 && b.json.coach_id === "jade", "Free: an untouched block can be rebuilt for a new coach");
-  const live = await db.select({ id: plansTable.id }).from(plansTable).where(and(eq(plansTable.userId, id), eq(plansTable.status, "active")));
-  ok(live.length === 1, "only one active block");
+  await G("PUT", "/me/training/profile", { ...profile, coach_id: "rex" });
+  const c3 = await G("POST", "/me/plans");
+  ok(c3.status === 201 && c3.json.coach_id === "rex" && c3.json.block === 1, "and again, still block 1 (the unused block is replaced)");
+  const all = await db.select({ id: plansTable.id }).from(plansTable).where(eq(plansTable.userId, id));
+  ok(all.length === 1, "only one block kept");
+  const [twice] = await Promise.all([G("POST", "/me/plans"), G("POST", "/me/plans")]);
+  void twice;
+  ok((await db.select({ id: plansTable.id }).from(plansTable).where(and(eq(plansTable.userId, id), eq(plansTable.status, "active")))).length === 1, "two taps at once: still one active block");
+}
+
+// ---------- upgrade during the Free block, then lapse: the block stays open ----------
+{
+  const U = member();
+  const id = await signup(U, "uplapse");
+  const planId = (await U("POST", "/me/plans")).json.id as number;
+  await U("POST", "/dev/unlock", { kind: "tier1" });
+  const w2 = await itemIn(planId, 2);
+  ok((await U("PUT", `/me/items/${w2.item}/sets/1`, set)).status === 200, "upgraded: logs week 2 of the Free block");
+  await db.update(membershipsTable).set({ status: "ended", endsAt: new Date() }).where(eq(membershipsTable.userId, id));
+  const t = (await U("GET", "/me/training")).json;
+  ok(t.access.level === "none" && t.plan.id === planId && t.plan.access === "full", "lapsed after upgrading mid-block: the block stays open");
 }
 
 console.log(`tiers: ${n} passed`);

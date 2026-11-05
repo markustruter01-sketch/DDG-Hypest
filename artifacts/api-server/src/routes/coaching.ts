@@ -203,14 +203,6 @@ async function trainingState(userId: number) {
 }
 
 /** Any set logged in this block? */
-async function hasLogs(planId: number): Promise<boolean> {
-  const [row] = await db.select({ id: setLogsTable.id }).from(setLogsTable)
-    .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
-    .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
-    .where(eq(planSessionsTable.planId, planId)).limit(1);
-  return Boolean(row);
-}
-
 /** Spec 3.1 §1: Free may only use week 1 of the block. */
 async function itemOpen(userId: number, owned: { session: { week: number }; plan: { createdAt: Date } }): Promise<boolean> {
   return owned.session.week === 1 || (await blockAccess(userId, owned.plan, await accessFor(userId))) === "full";
@@ -325,9 +317,32 @@ router.post("/me/plans", requireUser, async (_req, res) => {
   // logged (the unused block is replaced); after that, a new block is part of Starter.
   const free = access.creditId === null && !canAutoNext(access);
   if (free) {
-    const [built] = await db.select({ n: sql<number>`count(*)`.mapWith(Number) }).from(plansTable).where(eq(plansTable.userId, user.id));
-    const untouched = current && !(await hasLogs(current.id));
-    if ((built?.n ?? 0) > 0 && !(untouched && (built?.n ?? 0) === 1)) return void res.status(402).json({ message: "A new plan is part of Starter" });
+    // One transaction under a lock on the member, so two taps can't build two blocks. An untouched block (no set
+    // logged) is deleted and rebuilt with the same block number, as often as the member likes.
+    const outcome = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from users where id = ${user.id} for update`);
+      const plans = await tx.select({ id: plansTable.id, block: plansTable.block }).from(plansTable).where(eq(plansTable.userId, user.id));
+      if (plans.length > 1) return null;
+      const old = plans[0];
+      if (old) {
+        const [logged] = await tx.select({ id: setLogsTable.itemId }).from(setLogsTable)
+          .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+          .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
+          .where(eq(planSessionsTable.planId, old.id)).limit(1);
+        if (logged) return null;
+        const sessionIds = (await tx.select({ id: planSessionsTable.id }).from(planSessionsTable).where(eq(planSessionsTable.planId, old.id))).map((x) => x.id);
+        if (sessionIds.length) await tx.delete(planItemsTable).where(inArray(planItemsTable.sessionId, sessionIds));
+        await tx.delete(planSessionsTable).where(eq(planSessionsTable.planId, old.id));
+        await tx.update(painEventsTable).set({ planId: null }).where(eq(painEventsTable.planId, old.id));
+        await tx.delete(plansTable).where(eq(plansTable.id, old.id));
+      }
+      const input = toInput(profile, 1);
+      const plan = buildPlan(input);
+      return { planId: await savePlan(user.id, plan, input, 1, promptFor(plan.coachId).lines.planIntro, tx), coachId: plan.coachId };
+    });
+    if (!outcome) return void res.status(402).json({ message: "A new plan is part of Starter" });
+    void recordEvent("plan_built", { userId: user.id, props: { tier: access.level, coach_id: outcome.coachId } });
+    return void res.status(201).json(CreatePlanResponse.parse(await viewOf(user.id, outcome.planId, access)));
   } else if (current && !canAutoNext(access)) {
     // One-off buyers finish the block they paid for.
     return void res.status(409).json({ message: "finish your current plan first" });
@@ -337,7 +352,8 @@ router.post("/me/plans", requireUser, async (_req, res) => {
   const block = (last?.block ?? 0) + 1;
   const input = toInput(profile, block);
   const built = buildPlan(input);
-  const planId = await savePlan(user.id, built, input, block, free ? promptFor(built.coachId).lines.planIntro : null);
+  // Spec 3.1 §2: only the monthly tiers get AI plan notes; a legacy credit gets the fixed intro, like Free.
+  const planId = await savePlan(user.id, built, input, block, canAutoNext(access) ? null : promptFor(built.coachId).lines.planIntro);
   if (access.creditId !== null && !canAutoNext(access)) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }
@@ -369,7 +385,7 @@ router.post("/me/plans/next", requireUser, async (_req, res) => {
   const input = toInput(profile, block, targetLoads);
   const plan = buildPlan(input);
   await db.update(plansTable).set({ status: "done" }).where(eq(plansTable.id, current.id));
-  const planId = await savePlan(user.id, plan, input, block);
+  const planId = await savePlan(user.id, plan, input, block, canAutoNext(access) ? null : promptFor(plan.coachId).lines.planIntro);
   if (!canAutoNext(access) && access.creditId !== null) {
     await db.update(membershipsTable).set({ usedAt: new Date() }).where(eq(membershipsTable.id, access.creditId));
   }

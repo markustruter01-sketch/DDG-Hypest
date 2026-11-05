@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
-import { and, eq, inArray, isNull } from "drizzle-orm";
-import { billingEventsTable, db, membershipsTable, usersTable } from "@workspace/db";
-import { recordEvent } from "../coaching/events";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { billingEventsTable, db, eventsTable, membershipsTable, usersTable } from "@workspace/db";
+import { cleanProps } from "../coaching/events";
 
 /**
  * Stripe webhook → memberships. The ONLY code that grants paid access (Stripe is the source of truth).
@@ -90,14 +90,17 @@ async function applySubscription(tx: Tx, sub: Stripe.Subscription, test: boolean
   const kind = sub.metadata["kind"] ?? "";
   if (!Number.isInteger(userId) || !MONTHLY.has(kind) || !(await userExists(tx, userId))) return "skipped: subscription without a known user/kind";
   const { status, endsAt } = subscriptionAccess(sub);
+  // Lock the member, so two webhooks for one subscription (created + updated) see each other's write.
+  await tx.execute(sql`select id from users where id = ${userId} for update`);
   const [before] = await tx.select({ status: membershipsTable.status }).from(membershipsTable).where(eq(membershipsTable.stripeRef, sub.id));
   await tx
     .insert(membershipsTable)
     .values({ userId, kind, status, test, endsAt, stripeRef: sub.id })
     .onConflictDoUpdate({ target: membershipsTable.stripeRef, set: { status, endsAt } });
   // Conversion events (spec 3.1 §4.3): the first time it is active, and when it ends.
-  if (status === "active" && before?.status !== "active") void recordEvent("paid", { userId, props: { kind, tier: kind } });
-  if (status === "ended" && before?.status === "active") void recordEvent("cancelled", { userId, props: { kind, tier: kind } });
+  // Written in this transaction, so a rolled-back event (Stripe retries it) leaves no conversion event behind.
+  if (status === "active" && before?.status !== "active") await tx.insert(eventsTable).values({ name: "paid", userId, props: cleanProps({ kind, tier: kind }) });
+  if (status === "ended" && before?.status === "active") await tx.insert(eventsTable).values({ name: "cancelled", userId, props: cleanProps({ kind, tier: kind }) });
   await rememberCustomer(tx, userId, idOf(sub.customer));
   return `subscription ${status}`;
 }

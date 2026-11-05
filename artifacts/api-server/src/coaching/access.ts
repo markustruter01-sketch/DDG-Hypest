@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { db, membershipsTable } from "@workspace/db";
 
 /**
@@ -78,19 +78,24 @@ export const canAdapt = (a: Access) => a.level === "tier2" || a.level === "tier3
 
 /**
  * Spec 3.1 §1/§4.1: is this whole block open to the member, or only week 1 (Free)? Computed, never stored: a block is
- * fully open while the member pays (any paid tier), and stays open to its end if it was built while they paid (a
- * subscription, or a one-off credit), because they paid for it.
+ * fully open while the member pays, and stays open after a lapse if they paid at any time during its life: a monthly
+ * tier that overlapped it (upgrade mid-block included), or the one-off credit that built it (not refunded).
  */
-export async function blockAccess(userId: number, plan: { createdAt: Date }, access: Access): Promise<"full" | "week1"> {
+export async function blockAccess(userId: number, plan: { createdAt: Date }, access: Access, now = new Date()): Promise<"full" | "week1"> {
   if (canAutoNext(access)) return "full";
-  const paidThen = await db
+  const built = plan.createdAt.getTime();
+  const paid = await db
     .select({ id: membershipsTable.id })
     .from(membershipsTable)
     .where(and(
       eq(membershipsTable.userId, userId),
-      lte(membershipsTable.startsAt, new Date(plan.createdAt.getTime() + 60_000)),
-      or(isNull(membershipsTable.endsAt), gt(membershipsTable.endsAt, plan.createdAt)),
+      or(
+        and(inArray(membershipsTable.kind, [...PAID_MONTHLY]), lte(membershipsTable.startsAt, now),
+          or(isNull(membershipsTable.endsAt), gt(membershipsTable.endsAt, plan.createdAt))),
+        and(inArray(membershipsTable.kind, ["intro_plan", "plan"]), ne(membershipsTable.status, "ended"),
+          gte(membershipsTable.usedAt, new Date(built - 60_000)), lte(membershipsTable.usedAt, new Date(built + 60_000))),
+      ),
     ))
     .limit(1);
-  return paidThen.length ? "full" : "week1";
+  return paid.length ? "full" : "week1";
 }
