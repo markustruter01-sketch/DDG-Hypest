@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { getGetProgressQueryKey, useGetProgress } from "@workspace/api-client-react";
+import { getGetJourneyQueryKey, getGetProgressQueryKey, useGetJourney, useGetProgress, type Journey } from "@workspace/api-client-react";
 import { request, useTraining } from "@/lib/coaching";
 import { shownLoad, useUnits } from "@/lib/units";
 
@@ -37,8 +37,49 @@ export function ProgressPage() {
           </li>
         ))}
       </ul>
+      <JourneyCard />
       <Link className="text-link" to="/plan">See plan</Link>
     </main>
+  );
+}
+
+const when = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+/** Spec 3.1 §8: the whole journey, from every block. */
+function JourneyCard() {
+  const q = useGetJourney({ query: { queryKey: getGetJourneyQueryKey(), retry: false }, request });
+  const units = useUnits();
+  const j: Journey | undefined = q.data;
+  if (!j || j.sessions_done === 0) return null;
+  return (
+    <section className="card journey">
+      <h2 className="section-title">Your journey</h2>
+      <p className="screen-copy">
+        Since {when(j.first_session_on!)}: {j.sessions_done} sessions, {j.blocks_finished} {j.blocks_finished === 1 ? "block" : "blocks"} finished,
+        best run {j.longest_week_streak} {j.longest_week_streak === 1 ? "week" : "weeks"} in a row.
+      </p>
+      {j.session_milestones.length ? (
+        <ul className="journey-milestones">
+          {j.session_milestones.map((m) => <li key={m.count}><b>{m.count}</b> <span className="label">sessions · {when(m.reached_on)}</span></li>)}
+        </ul>
+      ) : null}
+      {j.next_milestone ? <span className="label">Next: {j.next_milestone} sessions ({j.next_milestone - j.sessions_done} to go)</span> : null}
+      {j.lifts.length ? (
+        <table className="journey-lifts">
+          <thead><tr><th>Lift</th><th>Then</th><th>Best</th><th>Now</th></tr></thead>
+          <tbody>
+            {j.lifts.map((l) => (
+              <tr key={l.exercise_id}>
+                <td>{l.name}</td>
+                <td>{shownLoad(l.first_kg, units)}</td>
+                <td title={when(l.best_on)}>{shownLoad(l.best_kg, units)} × {l.best_reps}</td>
+                <td>{shownLoad(l.now_kg, units)} {units}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+    </section>
   );
 }
 

@@ -10,6 +10,7 @@ import {
   AddPlanNotesResponse,
   DevUnlockBody,
   GetProgressResponse,
+  GetJourneyResponse,
   GetTrainingResponse,
   ListPastPlansResponse,
   ListCoachesResponse,
@@ -52,6 +53,7 @@ import { answersError, checkAnswers, saveProfile, type Answers } from "../coachi
 import { draftHashOf, saveDraft, saveTrial } from "../coaching/draft";
 import { savePlan, toInput } from "../coaching/plan-store";
 import { allowIp } from "../lib/ip-limit";
+import { journeyFrom } from "../coaching/journey";
 
 const router: IRouter = Router();
 
@@ -546,6 +548,23 @@ router.get("/me/progress", requireUser, async (_req, res) => {
     best_lifts: [...best].map(([id, v]) => ({ exercise_id: id, name: EXERCISE_BY_ID.get(id)?.name ?? id, load_kg: v.load, reps: v.reps })).sort((a, b) => b.load_kg - a.load_kg).slice(0, 6),
     weekly_volume: [...volume].map(([week_start, volume_kg]) => ({ week_start, volume_kg: Math.round(volume_kg) })).sort((a, b) => a.week_start.localeCompare(b.week_start)).slice(-8),
   }));
+});
+
+// Spec 3.1 §8: Journey, derived on read from the permanent records. Every tier.
+router.get("/me/journey", requireUser, async (_req, res) => {
+  const user = authUser(res);
+  const done = await db.select({ completedAt: planSessionsTable.completedAt }).from(planSessionsTable)
+    .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
+    .where(and(eq(plansTable.userId, user.id), sql`${planSessionsTable.completedAt} is not null`));
+  const logs = await db.select({ exerciseId: setLogsTable.exerciseId, reps: setLogsTable.reps, loadKg: setLogsTable.loadKg, at: setLogsTable.createdAt })
+    .from(setLogsTable)
+    .innerJoin(planItemsTable, eq(planItemsTable.id, setLogsTable.itemId))
+    .innerJoin(planSessionsTable, eq(planSessionsTable.id, planItemsTable.sessionId))
+    .innerJoin(plansTable, eq(plansTable.id, planSessionsTable.planId))
+    .where(eq(plansTable.userId, user.id));
+  const [blocks] = await db.select({ n: sql<number>`count(*)`.mapWith(Number) }).from(plansTable).where(and(eq(plansTable.userId, user.id), eq(plansTable.status, "done")));
+  const j = journeyFrom(logs, done.map((d) => d.completedAt!), blocks?.n ?? 0);
+  res.json(GetJourneyResponse.parse({ ...j, lifts: j.lifts.map((l) => ({ ...l, name: EXERCISE_BY_ID.get(l.exercise_id)?.name ?? l.exercise_id })) }));
 });
 
 // ---------- Development only ----------

@@ -1039,6 +1039,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/journey:
+    get:
+      operationId: getJourney
+      tags: [coaching]
+      summary: Journey and milestones, derived from every block (spec 3.1 §8)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Journey"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/progress:
     get:
       operationId: getProgress
@@ -1597,6 +1615,42 @@ components:
       schema:
         type: integer
   schemas:
+    Journey:
+      type: object
+      additionalProperties: false
+      properties:
+        first_session_on: {type: string, nullable: true}
+        sessions_done: {type: integer}
+        blocks_finished: {type: integer}
+        longest_week_streak: {type: integer, description: Most weeks in a row with at least one session}
+        session_milestones:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              count: {type: integer}
+              reached_on: {type: string}
+            required: [count, reached_on]
+        next_milestone: {type: integer, nullable: true}
+        lifts:
+          type: array
+          description: The main lifts (most sets), before and now
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              exercise_id: {type: string}
+              name: {type: string}
+              sets: {type: integer}
+              first_on: {type: string}
+              first_kg: {type: number}
+              best_kg: {type: number}
+              best_reps: {type: integer}
+              best_on: {type: string}
+              now_kg: {type: number}
+            required: [exercise_id, name, sets, first_on, first_kg, best_kg, best_reps, best_on, now_kg]
+      required: [first_session_on, sessions_done, blocks_finished, longest_week_streak, session_milestones, next_milestone, lifts]
     MealItem:
       type: object
       additionalProperties: false
