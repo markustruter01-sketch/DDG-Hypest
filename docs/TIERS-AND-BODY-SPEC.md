@@ -20,9 +20,9 @@ Markus, 5 Nov 2026: four tiers. **Coaching is the one we want people on**, so th
 coach live there. Pro is "the best" for people who want more. **Every feature listed is built in Phases 2–3**: nothing
 is promised that isn't built (no watch data, no video form checks, no extra programs; those come later or not at all).
 
-| | **Free** | **Plans** $4.99 / month | **Coaching** $12.99 / month (highlighted: "Most popular") | **Pro** $19.99 / month |
+| | **Free: try your first week** | **Starter** $4.99 / month | **Coaching** $12.99 / month (badge: "Best value") | **Pro** $19.99 / month |
 |---|---|---|---|---|
-| **The plan** | Week 1 of your first plan | A new 4-week plan every month | Plans, plus **weights go up when you hit your reps** | Same as Coaching |
+| **The plan** | Week 1 of your first plan | A new 4-week plan every month, a little harder each week | Starter, plus **your weights set from what you actually lifted** | Same as Coaching |
 | **Your coach** | Picks your plan; no chat | 3 chats a day; remembers you; daily note | **20 chats a day, and the coach changes your plan when you ask** (swaps, loads) | **40 chats a day** |
 | **When something hurts** | Safety stop | Safety stop | **Safety stop, plus a gentler swap for the rest of the plan** | Same as Coaching |
 | **Rough morning** | Log sleep, energy, soreness | Same | **A lighter session that day, automatically** | Same as Coaching |
@@ -30,31 +30,66 @@ is promised that isn't built (no watch data, no video form checks, no extra prog
 | **Food** | None | Calorie and protein targets | **Weekly meal plan and grocery list (plus 1 rebuild); log meals by typing or photo (5 a day)** | **Meal plan rebuilds 3 a week; 10 meal logs a day** |
 | **Progress** | Logging, progress, milestones, weight and waist | Same | **Plus private progress photos** | Same as Coaching |
 
-**What pulls people up to Coaching** (all built in step 3.5 with Stripe, no new features):
+**Names.** The display name of `tier1` is **Starter** ("Plans" read like "pricing plans"). The database kinds don't
+change. Free is always shown as **"Free: try your first week"**, and the app never claims "free logging": after week 1
+a Free member can see their history but can't log new sessions.
+
+**Pricing audit, 5 Nov 2026** (applied here; Markus approved): monthly prices already sit at or under comparable apps
+(Fitbod $15.99, Alpha Progression $12.99, Ray $19.99, MyFitnessPal Premium+ $24.99). Yearly prices are set
+aggressively, because yearly plans are about 61% of health and fitness subscription revenue and competitors discount
+them 40–67%.
+
+| Tier | Monthly (US$) | Yearly (US$) | Yearly per month | Yearly discount |
+|---|---|---|---|---|
+| Starter | 4.99 | 34.99 | 2.92 | 42% |
+| Coaching | 12.99 | 79.99 | 6.67 | 49% |
+| Pro | 19.99 | 119.99 | 10.00 | 50% |
+
+**Australian prices** (AUD, GST included, as Australian consumer law requires the total price to be shown). Stripe
+sends each buyer the price list for their country.
+
+| Tier | Monthly (A$) | Yearly (A$) |
+|---|---|---|
+| Starter | 7.99 | 54.99 |
+| Coaching | 19.99 | 119.99 |
+| Pro | 29.99 | 179.99 |
+
+GST (1/11 of an Australian price) is owed once turnover passes A$75,000 a year; the prices above already include it,
+so they don't change at that point.
+
+**What pulls people up to Coaching** (all built in step 3.5 with Stripe; no new features):
 1. **7-day free Coaching trial** when you subscribe (Stripe `trial_period_days: 7`). One per person, card required.
-2. **Yearly prices** (two months free): Plans $49.90, Coaching $129.90, Pro $199.90 a year.
-3. **The comparison card** (Today and Coach tab): the Plans card lists what Coaching adds, in plain words ("Your weights
-   go up on their own", "A swap when something hurts", "A lighter day when you slept badly", "Meals planned for
-   you").
-4. **Moments in the app.** When a Plans member taps "This hurts", hits all reps, or logs a rough morning, a one-line
-   note says what Coaching would have done ("On Coaching, this would swap for a knee-friendly move"), at most once a
-   day, and never during a session.
+   - **Reminder email 2 days before the trial charges,** with the date, the amount, and a one-tap cancel link.
+   - **Cancel in one tap** from Me (the Stripe portal). Access runs to the end of the trial or paid period.
+   - The checkout screen states the auto-renewal plainly: "Free for 7 days, then A$19.99 a month until you cancel."
+2. **Yearly prices** (above).
+3. **The comparison card** (Today and the Coach tab): the Starter card lists what Coaching adds, in plain words:
+   - "Your weights set from what you actually lifted";
+   - "A gentler swap when something hurts";
+   - "A lighter day when you slept badly";
+   - "Meals planned for you".
+4. **Moments in the app.** When a Starter member hits all reps or logs a rough morning, a one-line note says what
+   Coaching would have done, at most once a day, and never during a session.
+   - **Never after a pain report or a safety stop:** nobody is sold anything at the moment they're hurt.
+5. **The "Best value" badge** goes on the Coaching card. It's our own judgement of value, stated as that; "Most
+   popular" is never used without data to back it.
 
 **Changes from today:**
 - **One-off plans** (`intro_plan` $2.50 and `plan` $4.99) are retired for new purchases. Unused credits keep working:
   the legacy `plan` level gets **Free's allowances**, plus the full block its credit pays for.
 - **Logging and Progress** move from Coaching-only to every tier (§4).
-- **Prices** live only in `coaching/access.ts` `PRICES` (monthly and yearly). Checkout supports `tier3` in test mode now.
+- **Prices** live only in `coaching/access.ts` `PRICES` (monthly and yearly, USD and AUD). Checkout supports `tier3` in
+  test mode now.
   Moving between tiers, trials and yearly prices are built in step 3.5.
 - No real subscribers exist yet, so there is nothing to grandfather.
 
 **Free in detail:**
 - The rules build the member's first block **once per account**, but the server sends only **week 1**. Weeks 2 to 4
-  are left out of the plan view, and every route refuses them with 402 "Part of Plans".
+  are left out of the plan view, and every route refuses them with 402 "Part of Starter".
 - **Each week-1 session can be done once** (no repeats: set logs are one row per item and set, and Journey needs
   them kept).
 - When week 1 is done, Today shows "Week 1 done" with the offer cards.
-- **Changing coach** is allowed until the first set is logged. After that, it's part of Plans.
+- **Changing coach** is allowed until the first set is logged. After that, it's part of Starter.
 - **On upgrade,** the same block opens in full; it is not rebuilt.
 
 **Lapsed subscriber** (the membership ended): they keep their **current block in full**, logging included, until it
@@ -69,7 +104,7 @@ Rows in `allowances`, as in Phase 2 §5:
 - **Weekly limits are enforced in code,** by counting rows per `week_of` (Monday, member's time zone). The allowance
   rows stay as the monthly backstop.
 
-| Kind | Free (and legacy `plan`) | Plans | Coaching | Pro |
+| Kind | Free (and legacy `plan`) | Starter | Coaching | Pro |
 |---|---|---|---|---|
 | `chat` | 0 | 3 / day, 60 / month | 20 / day, 300 / month | 40 / day, 600 / month |
 | `daily_note` | 0 | 1 / day, 31 / month | 1 / day, 31 / month | 1 / day, 31 / month |
@@ -84,11 +119,11 @@ Rows in `allowances`, as in Phase 2 §5:
 **Member caps** go in a new `member_caps` table (`tier`, `cap_micro_usd`, seeded like `allowances`). They replace
 Phase 2's single $1.50 constant:
 
-| Free | Plans | Coaching | Pro |
+| Free | Starter | Coaching | Pro |
 |---|---|---|---|
 | $0 | $0.50 | $2.00 | $3.50 |
 
-Pro and Coaching chat tools are the same. Plans keeps Phase 2's three tools (memory, the new-block button,
+Pro and Coaching chat tools are the same. Starter keeps Phase 2's three tools (memory, the new-block button,
 check-ins).
 
 **Free spend is zero by design,** so throwaway accounts can't drain the global AI budget. Free plan notes come from
@@ -114,7 +149,7 @@ lifetime summary and the month's totals.
 | Tier | Worst case | AI share of net revenue (after Stripe's 2.9% + $0.30) |
 |---|---|---|
 | Free | $0 | n/a |
-| Plans | $0.22 (Phase 2) | $4.99 nets $4.55, so 5% |
+| Starter | $0.22 (Phase 2) | $4.99 nets $4.55, so 5% |
 | Coaching | $0.69 chat + $0.014 notes + $0.063 plan notes + $0.38 reviews + $0.004 check-ins + $0.037 meal logs + $0.46 meal plans (10) = **$1.65** | $12.99 nets $12.31, so 13% |
 | Pro | $1.38 chat + $0.014 notes + $0.063 plan notes + $0.38 reviews + $0.38 mid-week + $0.031 report + $0.004 check-ins + $0.074 meal logs + $0.69 meal plans (15) = **$3.02** | $19.99 nets $19.11, so 16% |
 
@@ -123,13 +158,23 @@ lifetime summary and the month's totals.
 - **Pro:** $0.47 + 60 more chats ($0.14) + 4 mid-week check-ins ($0.30) + 1 report ($0.03) + 60 meal logs ($0.022)
   + 6 meal plans ($0.28) = **$1.24**.
 
+**Yearly plans and Australian prices,** at worst-case AI use for 12 months:
+- **Coaching yearly** $79.99 nets $77.37, against up to $19.80 of AI (26%; typical $7.90, 10%).
+- **Pro yearly** $119.99 nets $116.21, against up to $36.20 (31%; typical $14.90, 13%).
+- **Australian prices** lose 1/11 to GST once registered: A$19.99 Coaching nets about A$18.17 before Stripe's fee.
+
+The worst cases need every allowance used every day for a year, so they are bounds, not forecasts.
+
+**If sold through the app stores later** (Phase 4), Apple and Google take 15% (small-business rate) to 30%. Coaching at
+$12.99 still nets about $11.04.
+
 **Rule changes for Markus to approve explicitly:**
 1. **Build-plan standing rule 6 (the red line)** becomes per tier. If a tier's average cost per active member over the
-   last 30 days passes **50% of that tier's cap** (Plans $0.25, Coaching $1.00, Pro $1.75), that tier's allowances come
+   last 30 days passes **50% of that tier's cap** (Starter $0.25, Coaching $1.00, Pro $1.75), that tier's allowances come
    down first. It is read weekly. This replaces the single $1.50.
 2. **Phase 2 §7's member cap** (one US$1.50 for every tier) is replaced by the per-tier caps above.
 
-## 4. Free logging and the free session (step 3.2)
+## 4. Logging on every tier, Free's first week, and the free session (step 3.2)
 
 ### 4.1 Two access checks, replacing today's single `canLog`
 
@@ -198,7 +243,7 @@ after a conversation. It is set when:
 **Meal-log text and foods-to-avoid** go through `screenMessage` first: a warning word gives the stop flow; a wellbeing
 or eating word gives the help message and sets the block.
 
-### 5.2 Set-up (one screen, Plans and above)
+### 5.2 Set-up (one screen, Starter and above)
 
 - **Sex for the formula:** female, male, or prefer not to say. Prefer-not uses the midpoint constant (−78) and the
   female floor.
@@ -301,7 +346,7 @@ Build plan 3.4 is amended to say so.)
 - **What the agent sees:** today's check-in and the readiness result are added to context part 2. The daily note may
   mention them, but can't change the rule.
 - With no check-in, nothing changes.
-- **Who gets the lighter day:** Coaching and Pro (`canAdapt`). Free and Plans members record the check-in and see it on
+- **Who gets the lighter day:** Coaching and Pro (`canAdapt`). Free and Starter members record the check-in and see it on
   Progress; on a low day they get the one-line "On Coaching, today's session would be lighter" note (§1, at most once a
   day, never during a session).
 

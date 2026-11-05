@@ -91,7 +91,7 @@ parallel on separate branches unless marked "after".
 ## Phase 3: The body (target: 4 weeks) — gate: free-to-paid conversion measured; day-30 retention over 10%
 
 ### 3.1 Spec: tiers, free logging, nutrition-lite, check-ins
-- **Status (5 Nov):** `docs/TIERS-AND-BODY-SPEC.md` written by Opus while Fable was out, checked by an independent reviewer agent (16 findings applied). Markus approves §1–§3 by merging. Tiers set by Markus 5 Nov: Free, Plans $4.99, Coaching $12.99 (the one we push), Pro $19.99.
+- **Status (5 Nov):** `docs/TIERS-AND-BODY-SPEC.md` written by Opus while Fable was out, checked by an independent reviewer agent (16 findings applied). Markus approves §1–§3 by merging. Tiers set by Markus 5 Nov: Free (first week), Starter $4.99, Coaching $12.99 ("Best value", the one we push), Pro $19.99; yearly $34.99 / $79.99 / $119.99; AUD prices GST-inclusive.
 - **Who:** Fable. `docs/TIERS-AND-BODY-SPEC.md`: free tier (one coach, logging, one free session before signup), Plans US$4.99, Coaching $12.99, Pro $19.99 with their allowances; nutrition-lite (targets from profile and goal with declared formulas, weekly meal plan and grocery list, meal logging by sentence or photo with Haiku estimates, explicit "estimates, not medical advice"); body metrics (weight, waist, optional photos stored private); morning check-in (sleep hours, energy, soreness); share image; referral credit. Markus approves prices.
 
 ### 3.2 Free logging and the free session
