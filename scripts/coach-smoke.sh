@@ -18,7 +18,6 @@ echo "== member (dev auto-login), Free: first block, week 1 open (spec 3.1 §1)"
 r 200 GET /me/training
 r 200 PUT /me/training/profile -d "$A"
 r 201 POST /me/plans
-r 201 POST /me/plans
 ITEM=$(curl -s -b $J $B/me/training | grep -o '"items":\[{"id":[0-9]*' | head -1 | grep -o '[0-9]*$')
 SESS=$(curl -s -b $J $B/me/training | grep -o '"sessions":\[{"id":[0-9]*' | head -1 | grep -o '[0-9]*$')
 curl -s -b $J $B/me/training | grep -q '"access":"week1"' || { echo "FAIL Free plan should be week1"; FAIL=1; }

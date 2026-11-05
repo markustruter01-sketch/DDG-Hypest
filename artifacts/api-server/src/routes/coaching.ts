@@ -242,7 +242,7 @@ router.post("/coaching/preview", (req, res) => {
   if (err) return void res.status(400).json({ message: err });
   const plan = buildPlan(toInput(a, 1));
   res.json(PreviewPlanResponse.parse({
-    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null, notes_status: "none",
+    id: null, coach_id: plan.coachId, block: 1, weeks: plan.weeks, days_per_week: a.days_per_week, status: "preview", paused_reason: null, intro: null, notes_status: "none", access: "week1",
     sessions: plan.sessions.filter((s) => s.week === 1).map((s) => ({ id: null, week: s.week, day: s.day, title: s.title, note: null, completed_at: null, low_day: null, items: s.items.map((it) => itemView(it)) })),
   }));
 });
