@@ -860,7 +860,7 @@ export const GetDailyNoteResponse = zod.object({
   "updates": zod.array(zod.object({
   "id": zod.number().int(),
   "text": zod.string(),
-  "source": zod.enum(['checkin', 'weekly_review']),
+  "source": zod.enum(['checkin', 'weekly_review', 'midweek_check']),
   "created_at": zod.coerce.date()
 }))
 })
