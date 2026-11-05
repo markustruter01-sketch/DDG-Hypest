@@ -8,6 +8,7 @@ import { accessFor } from "../coaching/access";
 import { checkoutBlocked, checkoutParams, safeReturnUrl } from "../billing/checkout";
 import { confirmCheckout, handleEvent } from "../billing/sync";
 import { alert } from "../lib/alerts";
+import { recordEvent } from "../coaching/events";
 
 const router: IRouter = Router();
 
@@ -46,6 +47,7 @@ router.post("/billing/checkout", requireUser, async (req, res) => {
       checkoutParams({ kind, userId: user.id, email: row.email, customerId: row.customer, returnUrl }),
     );
     if (!session.url) throw new Error("Stripe returned a Checkout Session without a url");
+    void recordEvent("checkout_started", { userId: user.id, props: { kind } });
     res.json(CreateCheckoutResponse.parse({ url: session.url }));
   } catch (err) {
     stripeFailed(req, res, err);

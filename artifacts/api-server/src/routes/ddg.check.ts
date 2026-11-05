@@ -22,6 +22,7 @@ if (api && key) {
   ok(before["currency"] === "usd", "prices are US$");
 
   const { db, usersTable, membershipsTable } = await import("@workspace/db");
+  const { PRICES } = await import("../coaching/access");
   const [u] = await db.insert(usersTable).values({ email: `ddg-check-${Date.now()}@example.test`, passwordHash: "x", displayName: "DDG check", adultConfirmedAt: new Date() }).returning();
   await db.insert(membershipsTable).values([
     { userId: u!.id, kind: "tier2", status: "active", test: false },
@@ -31,7 +32,7 @@ if (api && key) {
   const after = await read();
   ok((after["activeSubscribers"] as number) - (before["activeSubscribers"] as number) === 1, "one real subscriber added; test-mode one ignored");
   ok((after["planPurchases"] as number) - (before["planPurchases"] as number) === 1, "one real plan purchase added");
-  ok((after["monthlyRecurringCents"] as number) - (before["monthlyRecurringCents"] as number) === 999, "Coaching adds its monthly price");
+  ok((after["monthlyRecurringCents"] as number) - (before["monthlyRecurringCents"] as number) === PRICES.tier2_cents, "Coaching adds its monthly price");
 } else {
   console.log("(HTTP part skipped: set DDG_CHECK_API and DDG_CHECK_KEY)");
 }

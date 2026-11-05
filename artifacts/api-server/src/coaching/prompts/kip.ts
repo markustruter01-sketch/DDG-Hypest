@@ -15,5 +15,6 @@ export const KIP: CoachPrompt = {
     fallback: "Let me come back to you on that.",
     dailyNoteOff: "Today: an easy, steady effort beats a hard one you can't repeat.",
     upgrade: "Chat is part of Plans and Coaching. Your plan is on Today.",
+    planIntro: "Week 1: steady and easy. Consistency now pays off later.",
   },
 };

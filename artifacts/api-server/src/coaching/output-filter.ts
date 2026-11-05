@@ -23,17 +23,17 @@ const near = (a: number, b: number) => Math.abs(a - b) < 0.26;
 const LB_PER_KG = 2.2046226218;
 
 /** Pure: the first rule this text breaks, or null. */
-export function filterReply(text: string, plan: PlanNumbers | null, max = REPLY_MAX): FilterRule | null {
+export function filterReply(text: string, plan: PlanNumbers | null, max = REPLY_MAX, opts: { skipPlanNumbers?: boolean; allowQuantities?: boolean } = {}): FilterRule | null {
   const t = text.replace(/[’`]/g, "'").replace(/\s+/g, " ").trim();
   if (!t) return "empty";
   if (t.length > max) return "length";
   if (LINK_RE.test(t)) return "link";
   if (redFlag(t.replace(CUES_RE, " "))) return "warning_word";
   if (PAIN_RE.test(t)) return "encourages_pain";
-  if (DOSE_RE.test(t)) return "dose";
+  if (!opts.allowQuantities && DOSE_RE.test(t)) return "dose";
   if (MEDICINE_RE.test(t)) return "medicine";
   if (DIAGNOSIS_RE.test(t)) return "diagnosis";
-  if (!trainingNumbersMatch(t, plan)) return "plan_number";
+  if (!opts.skipPlanNumbers && !opts.allowQuantities && !trainingNumbersMatch(t, plan)) return "plan_number";
   return null;
 }
 

@@ -32,6 +32,10 @@ export const aiLedgerMonthlyTable = pgTable(
     callsPlanNotes: integer("calls_plan_notes").notNull().default(0),
     callsWeeklyReview: integer("calls_weekly_review").notNull().default(0),
     callsCheckin: integer("calls_checkin").notNull().default(0),
+    callsMealLog: integer("calls_meal_log").notNull().default(0),
+    callsMealPlan: integer("calls_meal_plan").notNull().default(0),
+    callsMidweekCheck: integer("calls_midweek_check").notNull().default(0),
+    callsMonthlyReport: integer("calls_monthly_report").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.userId, table.month] })],
 );

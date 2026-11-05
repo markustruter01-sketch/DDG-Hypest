@@ -18,9 +18,10 @@ import { UnitsToggle } from "@/components/units-toggle";
 import { RemindersToggle } from "@/components/reminders-toggle";
 import { TimezoneSetting } from "@/components/timezone-setting";
 import { CoachMemoryList } from "@/components/coach-memory";
+import { TIER_NAME, isMember } from "@/lib/tiers";
 import { flushSets } from "@/lib/offline-sets";
 
-const LEVEL_NAME: Record<string, string> = { none: "No plan yet", plan: "One-off plan", tier1: "Plans", tier2: "Coaching" };
+const LEVEL_NAME = TIER_NAME;
 
 function Membership() {
   const training = useTraining();
@@ -29,7 +30,7 @@ function Membership() {
   const [portalError, setPortalError] = useState<string | null>(null);
   const access = training.data?.access;
   if (!access) return null;
-  const subscribed = access.level === "tier1" || access.level === "tier2";
+  const subscribed = isMember(access.level);
 
   async function manage() {
     setPortalError(null);
@@ -55,7 +56,7 @@ function Membership() {
       <UnitsToggle />
       <RemindersToggle />
       <TimezoneSetting />
-      {access.level !== "tier2" ? <Offers access={access} /> : null}
+      {access.level !== "tier3" ? <Offers access={access} /> : null}
     </section>
   );
 }

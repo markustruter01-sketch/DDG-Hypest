@@ -14,6 +14,7 @@ import { AREA_LABEL, EQUIPMENT_LABEL, EXPERIENCE_LABEL, GOAL_LABEL, coachById, d
 import { errorStatus, serverErrorText } from "@/lib/server-error";
 import { useUnits } from "@/lib/units";
 import { useAppConfig } from "@/lib/config";
+import { TRIAL_KEY } from "@/pages/trial-page";
 
 type Goal = TrainingAnswers["goal"];
 type Experience = TrainingAnswers["experience"];
@@ -111,6 +112,18 @@ export function OnboardingPage() {
     }
   }
 
+  /** Spec 3.1 §4.2: keep the answers as a draft, then run day 1 in the trial player. */
+  async function tryDayOne() {
+    setError(null);
+    try {
+      await saveOnboardingDraft(answers, request);
+      sessionStorage.setItem(TRIAL_KEY, JSON.stringify(plan?.sessions[0]));
+      navigate("/try");
+    } catch (err) {
+      setError(serverErrorText(err));
+    }
+  }
+
   async function savePlan() {
     setError(null);
     if (!loggedIn) {
@@ -138,7 +151,8 @@ export function OnboardingPage() {
     }
   }
 
-  const needsPayment = loggedIn && access ? access.level === "none" && access.plan_credits === 0 : false;
+  // Free builds its first block (week 1 open; spec 3.1 §1), so nobody has to pay to start.
+  const needsPayment = false;
 
   return (
     <main className="onboard">
@@ -225,9 +239,14 @@ export function OnboardingPage() {
           {needsPayment && access ? (
             <Offers access={access} onUnlocked={savePlan} beforePay={() => save.mutateAsync({ data: answers })} returnTo="/" />
           ) : (
-            <button className="primary-button" type="button" onClick={savePlan} disabled={save.isPending || create.isPending}>
-              {loggedIn ? "Start my plan →" : "Save my plan →"}
-            </button>
+            <>
+              <button className="primary-button" type="button" onClick={savePlan} disabled={save.isPending || create.isPending}>
+                {loggedIn ? "Start my plan →" : "Save my plan: free →"}
+              </button>
+              {!loggedIn && plan.sessions[0] ? (
+                <button className="secondary-button" type="button" onClick={tryDayOne}>Try day 1 now, no account</button>
+              ) : null}
+            </>
           )}
           {error ? <p className="error-text" role="alert">{error}</p> : null}
         </section>

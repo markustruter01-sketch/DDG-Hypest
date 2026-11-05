@@ -14,18 +14,17 @@ echo "== public"
 r 200 GET /coaches
 r 200 POST /coaching/preview -d "$A"
 r 400 POST /coaching/preview -d '{"coach_id":"mara","goal":"strength","experience":"beginner","days_per_week":3,"minutes":45,"equipment":[],"avoid_areas":[],"health_accepted":true}'
-echo "== member (dev auto-login), no purchase -> 402"
+echo "== member (dev auto-login), Free: first block, week 1 open (spec 3.1 §1)"
 r 200 GET /me/training
 r 200 PUT /me/training/profile -d "$A"
-r 402 POST /me/plans
-echo "== intro plan unlock -> plan; logging needs tier 2"
-r 200 POST /dev/unlock -d '{"kind":"intro_plan"}'
-r 409 POST /dev/unlock -d '{"kind":"intro_plan"}'
 r 201 POST /me/plans
-r 409 POST /me/plans
+r 201 POST /me/plans
 ITEM=$(curl -s -b $J $B/me/training | grep -o '"items":\[{"id":[0-9]*' | head -1 | grep -o '[0-9]*$')
 SESS=$(curl -s -b $J $B/me/training | grep -o '"sessions":\[{"id":[0-9]*' | head -1 | grep -o '[0-9]*$')
-r 402 PUT /me/items/$ITEM/sets/1 -d '{"reps":10,"seconds":null,"load_kg":20}'
+curl -s -b $J $B/me/training | grep -q '"access":"week1"' || { echo "FAIL Free plan should be week1"; FAIL=1; }
+r 200 PUT /me/items/$ITEM/sets/1 -d '{"reps":10,"seconds":null,"load_kg":20}'
+r 402 POST /me/plans
+r 402 POST /me/plans/next
 r 200 POST /me/items/$ITEM/hurts -d '{"text":"my knee aches a bit"}'
 echo "== safety stop on any tier, then resume"
 r 200 POST /me/items/$ITEM/hurts -d '{"text":"sharp pain in my knee"}'

@@ -65,7 +65,7 @@ export const membershipsTable = pgTable(
   },
   (table) => [
     uniqueIndex("memberships_stripe_ref_unique").on(table.stripeRef),
-    check("memberships_kind", sql`${table.kind} in ('intro_plan', 'plan', 'tier1', 'tier2')`),
+    check("memberships_kind", sql`${table.kind} in ('intro_plan', 'plan', 'tier1', 'tier2', 'tier3')`),
     check("memberships_status", sql`${table.status} in ('active', 'ended')`),
   ],
 );
@@ -109,6 +109,8 @@ export const planSessionsTable = pgTable(
     // One line from the coach about this session (AI layer); null when AI is off or failed.
     note: text("note"),
     completedAt: timestamp("completed_at"),
+    // Spec 3.1 §7: started on a low-readiness day (lighter view); nextLoads leaves these sessions out.
+    lowDay: boolean("low_day").notNull().default(false),
   },
   (table) => [uniqueIndex("plan_sessions_slot_unique").on(table.planId, table.week, table.day)],
 );

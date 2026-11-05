@@ -1071,3 +1071,10 @@ textarea.text-input { resize: vertical; }
 .memory-item > span:first-child { flex: 1 1 12rem; }
 .memory-edit .text-input { flex: 1 1 12rem; }
 .change-note { display: block; margin-top: var(--space-1); text-transform: none; }
+
+/* The free trial session (spec 3.1 §4.2). */
+.trial { display: flex; flex-direction: column; gap: var(--space-3); }
+.trial-item { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+.trial-set { display: grid; grid-template-columns: 3.5rem 1fr 1fr 2.75rem; gap: var(--space-2); align-items: center; }
+.tick { width: 2.75rem; height: 2.75rem; border-radius: 50%; border: var(--hairline) solid var(--color-line); background: none; color: var(--color-muted); }
+.tick-on { background: var(--color-ink); color: var(--color-on-dark); border-color: var(--color-ink); }

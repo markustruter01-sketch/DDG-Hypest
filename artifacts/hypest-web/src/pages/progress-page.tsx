@@ -1,30 +1,15 @@
 import { Link } from "react-router-dom";
 import { getGetProgressQueryKey, useGetProgress } from "@workspace/api-client-react";
-import { Offers } from "@/components/offers";
 import { request, useTraining } from "@/lib/coaching";
 import { shownLoad, useUnits } from "@/lib/units";
 
-/** Tier 2: streak, best lifts, weekly volume. Everyone else sees a blurred example and the offers. */
+/** Progress on every tier (spec 3.1 §4.1): streak, best lifts, weekly volume, Journey, body metrics, check-ins. */
 export function ProgressPage() {
   const training = useTraining();
-  const tier2 = training.data?.access.level === "tier2";
-  const progress = useGetProgress({ query: { queryKey: getGetProgressQueryKey(), enabled: tier2, retry: false }, request });
+  const progress = useGetProgress({ query: { queryKey: getGetProgressQueryKey(), enabled: training.isSuccess, retry: false }, request });
   const p = progress.data;
   const units = useUnits();
 
-  if (training.isSuccess && !tier2) {
-    return (
-      <main className="screen-scroll">
-        <h1 className="screen-title">Progress</h1>
-        <div className="locked-preview" aria-hidden="true">
-          <div className="stat-row"><div className="card stat"><span className="big-number">12</span><span className="label">Day streak</span></div><div className="card stat"><span className="big-number">31</span><span className="label">Sessions</span></div><div className="card stat"><span className="big-number">+18%</span><span className="label">Volume</span></div></div>
-          <VolumeChart data={[{ week_start: "a", volume_kg: 40 }, { week_start: "b", volume_kg: 55 }, { week_start: "c", volume_kg: 52 }, { week_start: "d", volume_kg: 70 }, { week_start: "e", volume_kg: 82 }]} />
-        </div>
-        <p className="label" style={{ textAlign: "center" }}>Example only · track yours with Coaching</p>
-        {training.data.access ? <Offers access={training.data.access} /> : null}
-      </main>
-    );
-  }
   if (!p) return <main className="screen-scroll" aria-busy="true"><h1 className="screen-title">Progress</h1></main>;
 
   return (

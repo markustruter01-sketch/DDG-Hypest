@@ -86,9 +86,10 @@ export function LandingPage() {
           <div className="landing-inner">
             <h2 className="landing-h2">Simple pricing</h2>
             <div className="price-grid">
-              <div className="price"><span className="label">First plan</span><b>{money(p.intro_plan_cents)}</b><span className="screen-copy">then {money(p.plan_cents)} a plan</span></div>
-              <div className="price"><span className="label">Plans</span><b>{money(p.tier1_cents)}<small>/mo</small></b><span className="screen-copy">New plan every 4 weeks</span></div>
-              <div className="price price-best"><span className="label">Coaching</span><b>{money(p.tier2_cents)}<small>/mo</small></b><span className="screen-copy">Logging, swaps, plans that adapt</span></div>
+              <div className="price"><span className="label">Free</span><b>$0</b><span className="screen-copy">Try your first week</span></div>
+              <div className="price"><span className="label">Starter</span><b>{money(p.tier1_cents)}<small>/mo</small></b><span className="screen-copy">A new plan every month</span></div>
+              <div className="price price-best"><span className="label">Coaching · Best value</span><b>{money(p.tier2_cents)}<small>/mo</small></b><span className="screen-copy">Plans that adapt, swaps, meal plans</span></div>
+              <div className="price"><span className="label">Pro</span><b>{money(p.tier3_cents)}<small>/mo</small></b><span className="screen-copy">The most coaching, monthly reports</span></div>
             </div>
             <p className="label" style={{ marginTop: "var(--space-3)" }}>US$</p>
           </div>

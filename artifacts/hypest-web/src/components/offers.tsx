@@ -6,7 +6,8 @@ import { useAppConfig } from "@/lib/config";
 import { money, request } from "@/lib/coaching";
 import { serverErrorText } from "@/lib/server-error";
 
-type Kind = "intro_plan" | "plan" | "tier1" | "tier2";
+type Kind = "tier1" | "tier2" | "tier3";
+const RANK: Record<string, number> = { tier1: 1, tier2: 2, tier3: 3 };
 
 /** A page on this site (a router path, or the current page), as an absolute URL Stripe can send the member back to. */
 export function returnUrl(routerPath?: string): string {
@@ -29,23 +30,19 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
   const [pending, setPending] = useState<Kind | null>(null);
   if (!config) return null;
   const p = config.prices;
-  const oneOff: Kind = access.intro_available ? "intro_plan" : "plan";
 
-  type Option = { kind: Kind; name: string; price: string; was?: string; per?: string; perks: string[]; best?: boolean };
-  const coaching: Option = { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", perks: ["New plan every 4 weeks", "Log every set", "Plans adapt to you", "Swap any move that hurts"], best: true };
-  // Plans members can only upgrade; the server cancels Plans once Coaching is paid (billing/sync.ts).
-  const upgrade = access.level === "tier1";
-  const options: Option[] = upgrade ? [{ ...coaching, name: "Upgrade to Coaching", best: false }] : [
-    {
-      kind: oneOff,
-      name: access.intro_available ? "First plan" : "One plan",
-      price: money(access.intro_available ? p.intro_plan_cents : p.plan_cents),
-      was: access.intro_available ? money(p.plan_cents) : undefined,
-      perks: ["Your 4-week plan"],
-    },
-    { kind: "tier1", name: "Plans", price: money(p.tier1_cents), per: "/mo", perks: ["New plan every 4 weeks"] },
-    coaching,
+  // docs/TIERS-AND-BODY-SPEC.md §1: only what is built is listed. Coaching carries the "Best value" badge (our judgement).
+  type Option = { kind: Kind; name: string; price: string; per?: string; perks: string[]; best?: boolean };
+  const all: Option[] = [
+    { kind: "tier1", name: "Starter", price: money(p.tier1_cents), per: "/mo", perks: ["A new plan every month, a little harder each week", "3 coach chats a day", "Calorie and protein targets"] },
+    { kind: "tier2", name: "Coaching", price: money(p.tier2_cents), per: "/mo", best: true, perks: ["Weights set from what you actually lifted", "A gentler swap when something hurts", "A lighter day after a rough night", "Meal plans, and meal logging by photo", "20 coach chats a day, and the Sunday review"] },
+    { kind: "tier3", name: "Pro", price: money(p.tier3_cents), per: "/mo", perks: ["Everything in Coaching", "40 coach chats a day", "A Wednesday check-in and a monthly report", "More meal-plan rebuilds"] },
   ];
+  // Members can only move up here; the server cancels the lower membership once the higher one is paid (billing/sync.ts).
+  const current = RANK[access.level] ?? 0;
+  const upgrade = current > 0;
+  const options = all.filter((o) => (RANK[o.kind] ?? 0) > current).map((o) => (upgrade ? { ...o, name: `Upgrade to ${o.name}` } : o));
+  if (!options.length) return null;
 
   const paying = config.payments !== "off";
   const usable = paying || config.dev_tools;
@@ -86,7 +83,6 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
           ) : null}
           <span className="offer-name">{o.name}</span>
           <span className="offer-price">
-            {o.was ? <s>{o.was}</s> : null}
             <b>{o.price}</b>
             {o.per ? <small>{o.per}</small> : null}
           </span>
@@ -100,7 +96,7 @@ export function Offers({ access, onUnlocked, beforePay, returnTo }: { access: Ac
       <p className="label" style={{ textAlign: "center" }}>
         {note} · US$
       </p>
-      {upgrade ? <p className="label" style={{ textAlign: "center" }}>Your Plans membership is cancelled when Coaching starts.</p> : null}
+      {upgrade ? <p className="label" style={{ textAlign: "center" }}>Your current membership is cancelled when the new one starts.</p> : null}
       {error ? <p className="error-text" role="alert">{error}</p> : null}
     </div>
   );

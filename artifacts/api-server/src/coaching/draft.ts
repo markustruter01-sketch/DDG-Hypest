@@ -3,6 +3,8 @@ import type { Request, Response } from "express";
 import { eq, lt } from "drizzle-orm";
 import { db, onboardingDraftsTable } from "@workspace/db";
 import { checkAnswers, saveProfile } from "./profile";
+import { carryTrial, cleanTrial } from "./trial";
+import { recordEvent } from "./events";
 import { logger } from "../lib/logger";
 
 /** Onboarding answers before signup (build plan 1.4): held server-side under an httpOnly cookie, so the
@@ -40,8 +42,9 @@ export async function saveDraft(req: Request, res: Response, answers: unknown): 
 }
 
 /** At signup or login: this browser's draft becomes the member's training profile. Never throws; a stale
- *  or invalid draft is simply dropped (the member answers again from Today). */
-export async function claimDraft(req: Request, res: Response, userId: number): Promise<boolean> {
+ *  or invalid draft is simply dropped (the member answers again from Today). At SIGNUP only (spec 3.1 §4.2), a free
+ *  session done before signup is carried into the new Free block. */
+export async function claimDraft(req: Request, res: Response, userId: number, opts: { signup?: boolean } = {}): Promise<boolean> {
   const h = tokenHash(req);
   if (!h) return false;
   res.clearCookie(DRAFT_COOKIE, cookieOptions());
@@ -51,12 +54,34 @@ export async function claimDraft(req: Request, res: Response, userId: number): P
     const checked = checkAnswers(row.answers);
     if (!checked.ok) return false;
     await saveProfile(userId, checked.values);
+    const trial = opts.signup ? cleanTrial(row.trial) : null;
+    if (trial?.sets.length) await carryTrial(userId, trial);
+    void recordEvent("signup", { userId, draftHash: h, props: { from_trial: Boolean(trial?.sets.length), coach_id: checked.values.coachId } });
     return true;
   } catch (err) {
     logger.warn({ err }, "onboarding draft not claimed");
     return false;
   }
 }
+
+/** Spec 3.1 §4.2: keep the visitor's free session with their draft (one session; replaced on each save). */
+export async function saveTrial(req: Request, raw: unknown): Promise<"saved" | "no_draft" | "bad"> {
+  const h = tokenHash(req);
+  if (!h) return "no_draft";
+  const cleaned = cleanTrial(raw);
+  if (!cleaned) return "bad";
+  const [prev] = await db.select({ trial: onboardingDraftsTable.trial }).from(onboardingDraftsTable).where(eq(onboardingDraftsTable.tokenHash, h));
+  if (!prev) return "no_draft";
+  // A late "still going" save never un-finishes a finished trial.
+  const trial = { ...cleaned, finished: cleaned.finished || Boolean((prev.trial as { finished?: boolean } | null)?.finished) };
+  await db.update(onboardingDraftsTable).set({ trial }).where(eq(onboardingDraftsTable.tokenHash, h));
+  if (!prev.trial) void recordEvent("trial_started", { draftHash: h });
+  if (trial.finished && !(prev.trial as { finished?: boolean } | null)?.finished) void recordEvent("trial_finished", { draftHash: h });
+  return "saved";
+}
+
+/** The draft's hash, for events before the account exists. */
+export const draftHashOf = (req: Request) => tokenHash(req);
 
 export async function deleteExpiredDrafts(now = new Date()): Promise<number> {
   return (await db.delete(onboardingDraftsTable).where(lt(onboardingDraftsTable.expiresAt, now)).returning({ id: onboardingDraftsTable.id })).length;

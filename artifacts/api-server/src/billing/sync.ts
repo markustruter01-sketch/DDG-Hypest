@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { billingEventsTable, db, membershipsTable, usersTable } from "@workspace/db";
+import { recordEvent } from "../coaching/events";
 
 /**
  * Stripe webhook → memberships. The ONLY code that grants paid access (Stripe is the source of truth).
@@ -21,11 +22,13 @@ export type Deps = {
  */
 export async function subscriptionsToReplace(sub: Stripe.Subscription): Promise<string[]> {
   const userId = Number(sub.metadata["user_id"]);
-  if (sub.metadata["kind"] !== "tier2" || !Number.isInteger(userId) || subscriptionAccess(sub).status !== "active") return [];
+  const kind = sub.metadata["kind"];
+  const lower = kind === "tier3" ? ["tier1", "tier2"] : kind === "tier2" ? ["tier1"] : [];
+  if (!lower.length || !Number.isInteger(userId) || subscriptionAccess(sub).status !== "active") return [];
   const rows = await db
     .select({ ref: membershipsTable.stripeRef })
     .from(membershipsTable)
-    .where(and(eq(membershipsTable.userId, userId), eq(membershipsTable.kind, "tier1"), eq(membershipsTable.status, "active")));
+    .where(and(eq(membershipsTable.userId, userId), inArray(membershipsTable.kind, lower), eq(membershipsTable.status, "active")));
   return rows.map((r) => r.ref).filter((r): r is string => Boolean(r?.startsWith("sub_")) && r !== sub.id);
 }
 
@@ -35,7 +38,7 @@ export const PAST_DUE_GRACE_DAYS = 3;
 export const RENEWAL_BUFFER_HOURS = 24;
 
 const ONE_OFF = new Set(["intro_plan", "plan"]);
-const MONTHLY = new Set(["tier1", "tier2"]);
+const MONTHLY = new Set(["tier1", "tier2", "tier3"]);
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : v?.id ?? null);
 const at = (unixSeconds: number) => new Date(unixSeconds * 1000);
 
@@ -87,10 +90,14 @@ async function applySubscription(tx: Tx, sub: Stripe.Subscription, test: boolean
   const kind = sub.metadata["kind"] ?? "";
   if (!Number.isInteger(userId) || !MONTHLY.has(kind) || !(await userExists(tx, userId))) return "skipped: subscription without a known user/kind";
   const { status, endsAt } = subscriptionAccess(sub);
+  const [before] = await tx.select({ status: membershipsTable.status }).from(membershipsTable).where(eq(membershipsTable.stripeRef, sub.id));
   await tx
     .insert(membershipsTable)
     .values({ userId, kind, status, test, endsAt, stripeRef: sub.id })
     .onConflictDoUpdate({ target: membershipsTable.stripeRef, set: { status, endsAt } });
+  // Conversion events (spec 3.1 §4.3): the first time it is active, and when it ends.
+  if (status === "active" && before?.status !== "active") void recordEvent("paid", { userId, props: { kind, tier: kind } });
+  if (status === "ended" && before?.status === "active") void recordEvent("cancelled", { userId, props: { kind, tier: kind } });
   await rememberCustomer(tx, userId, idOf(sub.customer));
   return `subscription ${status}`;
 }

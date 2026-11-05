@@ -28,6 +28,7 @@ import {
 } from "../lib/session";
 import { isTimezone } from "../lib/timezone";
 import { claimDraft } from "../coaching/draft";
+import { recordEvent } from "../coaching/events";
 import { authUser, requireUser } from "../middleware/require-user";
 import { sendEmail, siteUrl } from "../lib/email";
 
@@ -77,7 +78,7 @@ router.post("/auth/signup", async (req, res) => {
     }
 
     await createSession(res, user.id);
-    await claimDraft(req, res, user.id);
+    if (!(await claimDraft(req, res, user.id, { signup: true }))) void recordEvent("signup", { userId: user.id, props: { from_trial: false } });
     // Welcome email (only when email is set up). Not awaited: signup never waits on the mail server.
     const site = siteUrl();
     if (site) void sendEmail(user.email, "Welcome to Hypest", `Hi ${user.displayName},\n\nYour account is ready. Pick up where you left off: ${site}\n\nForgot your password one day? Use \"Forgot password?\" on the log-in page.`);

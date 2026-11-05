@@ -19,7 +19,7 @@ export const MODELS = {
 } as const;
 export type Tier = keyof typeof MODELS;
 /** The allowance kinds (spec §5); also the ai_usage purpose. */
-export type Kind = "chat" | "daily_note" | "plan_notes" | "weekly_review" | "checkin";
+export type Kind = "chat" | "daily_note" | "plan_notes" | "weekly_review" | "checkin" | "meal_log" | "meal_plan" | "midweek_check" | "monthly_report";
 export type Purpose = Kind;
 export type Message = { role: "user" | "assistant"; content: string };
 

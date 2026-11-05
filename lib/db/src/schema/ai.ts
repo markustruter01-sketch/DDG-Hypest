@@ -27,7 +27,7 @@ export const aiUsageTable = pgTable(
   (table) => [
     index("ai_usage_at").on(table.at),
     index("ai_usage_user_at").on(table.userId, table.at),
-    check("ai_usage_purpose", sql`${table.purpose} in ('plan_notes', 'chat', 'daily_note', 'weekly_review', 'checkin')`),
+    check("ai_usage_purpose", sql`${table.purpose} in ('plan_notes', 'chat', 'daily_note', 'weekly_review', 'checkin', 'meal_log', 'meal_plan', 'midweek_check', 'monthly_report')`),
   ],
 );
 

@@ -32,4 +32,19 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The generated API client must match lib/api-spec/openapi.yaml. The freshly generated files are uploaded as
+      # "generated" so a branch can commit them, and the job fails here when the committed ones differ.
+      - name: API codegen matches the spec
+        run: pnpm --filter @workspace/api-spec exec orval --config ./orval.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generated
+          path: |
+            lib/api-zod/src/generated
+            lib/api-client-react/src/generated
+      - name: Generated code is committed
+        run: |
+          changed=$(git status --porcelain -- lib/api-zod/src/generated lib/api-client-react/src/generated)
+          if [ -n "$changed" ]; then echo "$changed"; echo "Generated API code is out of date: commit the 'generated' artifact of this run"; exit 1; fi
       - run: bash scripts/check-all.sh

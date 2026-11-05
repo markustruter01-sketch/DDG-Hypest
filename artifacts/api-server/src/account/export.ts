@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { agentActionsTable, aiLedgerDailyTable, aiLedgerMonthlyTable, weeklyReviewsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
+import { agentActionsTable, bodyMetricsTable, mealLogsTable, mealPlansTable, monthlyReportsTable, morningCheckinsTable, nutritionProfilesTable, nutritionTargetsTable, aiLedgerDailyTable, aiLedgerMonthlyTable, weeklyReviewsTable, checkinsTable, coachMemoryTable, coachMessagesTable, db, membershipsTable, painEventsTable, remindersTable, planItemsTable, planSessionsTable, plansTable, setLogsTable, trainingProfilesTable, usersTable } from "@workspace/db";
 
 /** Everything Hypest holds about a member, in plain JSON (their right to a copy of their data). */
 export async function exportAccount(userId: number) {
@@ -27,6 +27,13 @@ export async function exportAccount(userId: number) {
   const daily = await db.select().from(aiLedgerDailyTable).where(eq(aiLedgerDailyTable.userId, userId)).orderBy(asc(aiLedgerDailyTable.day));
   const reviews = await db.select().from(weeklyReviewsTable).where(eq(weeklyReviewsTable.userId, userId)).orderBy(asc(weeklyReviewsTable.weekOf));
   const ledger = await db.select().from(aiLedgerMonthlyTable).where(eq(aiLedgerMonthlyTable.userId, userId)).orderBy(asc(aiLedgerMonthlyTable.month));
+  const [nutrition] = await db.select().from(nutritionProfilesTable).where(eq(nutritionProfilesTable.userId, userId));
+  const [targets] = await db.select().from(nutritionTargetsTable).where(eq(nutritionTargetsTable.userId, userId));
+  const mealPlans = await db.select().from(mealPlansTable).where(eq(mealPlansTable.userId, userId)).orderBy(asc(mealPlansTable.id));
+  const meals = await db.select().from(mealLogsTable).where(eq(mealLogsTable.userId, userId)).orderBy(asc(mealLogsTable.id));
+  const body = await db.select().from(bodyMetricsTable).where(eq(bodyMetricsTable.userId, userId)).orderBy(asc(bodyMetricsTable.day));
+  const mornings = await db.select().from(morningCheckinsTable).where(eq(morningCheckinsTable.userId, userId)).orderBy(asc(morningCheckinsTable.day));
+  const reports = await db.select().from(monthlyReportsTable).where(eq(monthlyReportsTable.userId, userId)).orderBy(asc(monthlyReportsTable.month));
   const [reminders] = await db.select({ lastSentAt: remindersTable.lastSentAt, createdAt: remindersTable.createdAt }).from(remindersTable).where(eq(remindersTable.userId, userId));
 
   return {
@@ -60,8 +67,18 @@ export async function exportAccount(userId: number) {
     coach_memory: memory.map((m) => ({ kind: m.kind, text: m.text, source: m.source, created_at: m.createdAt, updated_at: m.updatedAt })),
     coach_actions: actions.map((a) => ({ tool: a.tool, touched: a.touched, result: a.result, at: a.at })),
     coach_checkins: checkins.map((c) => ({ due_at: c.dueAt, topic: c.topic, status: c.status })),
-    ai_use: ledger.map((l) => ({ month: l.month, chats: l.callsChat, daily_notes: l.callsDailyNote, plan_notes: l.callsPlanNotes, weekly_reviews: l.callsWeeklyReview, checkins: l.callsCheckin })),
+    ai_use: ledger.map((l) => ({ month: l.month, chats: l.callsChat, daily_notes: l.callsDailyNote, plan_notes: l.callsPlanNotes, weekly_reviews: l.callsWeeklyReview, checkins: l.callsCheckin,
+      meal_logs: l.callsMealLog, meal_plans: l.callsMealPlan, midweek_checks: l.callsMidweekCheck, monthly_reports: l.callsMonthlyReport })),
     ai_use_daily: daily.map((d) => ({ day: d.day, kind: d.kind, calls: d.calls })),
+    nutrition_setup: nutrition
+      ? { sex: nutrition.sex, birth_year: nutrition.birthYear, height_cm: nutrition.heightCm, weight_kg: nutrition.weightKg, foods_to_avoid: nutrition.foodsToAvoid, pregnant: nutrition.pregnant, updated_at: nutrition.updatedAt }
+      : null,
+    nutrition_targets: targets ? { kcal: targets.kcal, protein_g: targets.proteinG, maintenance_only: targets.maintenanceOnly, day: targets.computedDay } : null,
+    meal_plans: mealPlans.map((m) => ({ week_of: m.weekOf, plan: m.plan, at: m.createdAt })),
+    meal_logs: meals.map((m) => ({ day: m.day, text: m.text, items: m.items, kcal: m.kcal, protein_g: m.proteinG, at: m.at })),
+    body_metrics: body.map((b) => ({ day: b.day, weight_kg: b.weightKg, waist_cm: b.waistCm })),
+    morning_checkins: mornings.map((m) => ({ day: m.day, sleep_hours: m.sleepHalfHours / 2, energy: m.energy, soreness: m.soreness })),
+    monthly_reports: reports.filter((r) => r.status === "done").map((r) => ({ month: r.month, text: r.text })),
     weekly_reviews: reviews.map((r) => ({ week_of: r.weekOf, status: r.status, at: r.createdAt })),
   };
 }

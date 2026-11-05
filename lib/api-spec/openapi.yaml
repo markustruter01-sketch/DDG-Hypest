@@ -480,6 +480,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /onboarding/draft/trial:
+    put:
+      operationId: saveOnboardingTrial
+      tags: [coaching]
+      summary: Public. The free session done before signup, kept with the onboarding draft and carried into the plan at signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrialSession"
+      responses:
+        "204":
+          description: Saved
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: No onboarding draft yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "429":
+          description: Too many tries from this network
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /me/training:
     get:
       operationId: getTraining
@@ -1455,7 +1487,8 @@ components:
       properties:
         level:
           type: string
-          enum: [none, plan, tier1, tier2]
+          enum: [none, plan, tier1, tier2, tier3]
+          description: none = Free, plan = a one-off credit, tier1 = Starter, tier2 = Coaching, tier3 = Pro
         intro_available: {type: boolean}
         plan_credits: {type: integer}
       required: [level, intro_available, plan_credits]
@@ -1539,11 +1572,15 @@ components:
           type: string
           enum: [none, pending, done, failed]
           description: "pending = the app should ask for the coach's notes (POST /me/plans/{planId}/notes)"
+        access:
+          type: string
+          enum: [full, week1]
+          description: week1 = Free, only week 1 is sent; weeks 2 to 4 are part of Starter and above
         sessions:
           type: array
           items:
             $ref: "#/components/schemas/PlanSessionView"
-      required: [id, coach_id, block, weeks, days_per_week, status, paused_reason, intro, notes_status, sessions]
+      required: [id, coach_id, block, weeks, days_per_week, status, paused_reason, intro, notes_status, access, sessions]
     TrainingState:
       type: object
       additionalProperties: false
@@ -1691,6 +1728,17 @@ components:
             total: {type: integer}
             new_7d: {type: integer}
           required: [total, new_7d]
+        funnel:
+          type: array
+          description: Conversion events (spec 3.1 §4.3), counts for the last 7 and 30 days
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              name: {type: string}
+              last_7d: {type: integer}
+              last_30d: {type: integer}
+            required: [name, last_7d, last_30d]
         memberships:
           type: array
           items:
@@ -1741,7 +1789,7 @@ components:
               livemode: {type: boolean}
               received_at: {type: string, format: date-time}
             required: [id, type, outcome, livemode, received_at]
-      required: [generated_at, switches, members, memberships, activity_7d, ai, paused_plans, billing_events]
+      required: [generated_at, switches, members, memberships, activity_7d, ai, paused_plans, billing_events, funnel]
     PastPlan:
       type: object
       additionalProperties: false
@@ -1787,8 +1835,28 @@ components:
       properties:
         kind:
           type: string
-          enum: [intro_plan, plan, tier1, tier2]
+          enum: [intro_plan, plan, tier1, tier2, tier3]
       required: [kind]
+    TrialSession:
+      type: object
+      additionalProperties: false
+      properties:
+        finished: {type: boolean}
+        sets:
+          type: array
+          maxItems: 96
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              position: {type: integer, minimum: 1, maximum: 12}
+              exercise_id: {type: string, minLength: 1, maxLength: 60}
+              set_number: {type: integer, minimum: 1, maximum: 8}
+              reps: {type: integer, minimum: 0, maximum: 200, nullable: true}
+              seconds: {type: integer, minimum: 0, maximum: 7200, nullable: true}
+              load_kg: {type: number, minimum: 0, maximum: 1000, nullable: true}
+            required: [position, exercise_id, set_number, reps, seconds, load_kg]
+      required: [finished, sets]
     Prices:
       type: object
       additionalProperties: false
@@ -1797,7 +1865,23 @@ components:
         plan_cents: {type: integer}
         tier1_cents: {type: integer}
         tier2_cents: {type: integer}
-      required: [intro_plan_cents, plan_cents, tier1_cents, tier2_cents]
+        tier3_cents: {type: integer}
+        tier1_yearly_cents: {type: integer}
+        tier2_yearly_cents: {type: integer}
+        tier3_yearly_cents: {type: integer}
+        aud:
+          type: object
+          additionalProperties: false
+          description: Australian prices in cents, GST included
+          properties:
+            tier1_cents: {type: integer}
+            tier2_cents: {type: integer}
+            tier3_cents: {type: integer}
+            tier1_yearly_cents: {type: integer}
+            tier2_yearly_cents: {type: integer}
+            tier3_yearly_cents: {type: integer}
+          required: [tier1_cents, tier2_cents, tier3_cents, tier1_yearly_cents, tier2_yearly_cents, tier3_yearly_cents]
+      required: [intro_plan_cents, plan_cents, tier1_cents, tier2_cents, tier3_cents, tier1_yearly_cents, tier2_yearly_cents, tier3_yearly_cents, aud]
     ChangePasswordRequest:
       type: object
       additionalProperties: false
@@ -1841,7 +1925,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [intro_plan, plan, tier1, tier2]
+          enum: [intro_plan, plan, tier1, tier2, tier3]
         return_url:
           type: string
           description: Page on this site to come back to after Stripe

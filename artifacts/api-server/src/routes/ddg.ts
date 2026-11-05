@@ -23,19 +23,20 @@ router.get("/ddg/summary", async (req, res) => {
   const [[oneOff], subs] = await Promise.all([
     db.select({ total: count() }).from(membershipsTable).where(and(real, inArray(membershipsTable.kind, ["intro_plan", "plan"]))),
     db.select({ kind: membershipsTable.kind, total: count() }).from(membershipsTable)
-      .where(and(real, eq(membershipsTable.status, "active"), inArray(membershipsTable.kind, ["tier1", "tier2"])))
+      .where(and(real, eq(membershipsTable.status, "active"), inArray(membershipsTable.kind, ["tier1", "tier2", "tier3"])))
       .groupBy(membershipsTable.kind),
   ]);
   const tier1 = subs.find((s) => s.kind === "tier1")?.total ?? 0;
   const tier2 = subs.find((s) => s.kind === "tier2")?.total ?? 0;
+  const tier3 = subs.find((s) => s.kind === "tier3")?.total ?? 0;
   res.setHeader("Cache-Control", "no-store");
   res.json({
     generatedAt: new Date().toISOString(),
     currency: "usd",
     planPurchases: oneOff?.total ?? 0,
-    activeSubscribers: tier1 + tier2,
+    activeSubscribers: tier1 + tier2 + tier3,
     // What the active subscriptions bring in each month at today's prices.
-    monthlyRecurringCents: tier1 * PRICES.tier1_cents + tier2 * PRICES.tier2_cents,
+    monthlyRecurringCents: tier1 * PRICES.tier1_cents + tier2 * PRICES.tier2_cents + tier3 * PRICES.tier3_cents,
   });
 });
 

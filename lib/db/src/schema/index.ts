@@ -12,3 +12,4 @@ export { authFailuresTable, authAttemptsTable } from "./auth-failures";
 export { remindersTable } from "./reminders";
 export { onboardingDraftsTable } from "./onboarding-drafts";
 export { allowancesTable, aiLedgerMonthlyTable, aiLedgerDailyTable, coachMemoryTable, agentActionsTable, checkinsTable, weeklyReviewsTable } from "./agent";
+export { eventsTable, nutritionProfilesTable, nutritionTargetsTable, mealPlansTable, mealLogsTable, bodyMetricsTable, morningCheckinsTable, memberCapsTable, monthlyReportsTable, midweekChecksTable } from "./body";

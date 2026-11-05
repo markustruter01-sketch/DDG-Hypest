@@ -15,5 +15,6 @@ export const JADE: CoachPrompt = {
     fallback: "Let me come back to you on that.",
     dailyNoteOff: "Today's mission: move, sweat a little, have fun with it.",
     upgrade: "Chatting with me comes with Plans and Coaching. Your plan's on Today!",
+    planIntro: "Let's go! Week 1 is all about finding your rhythm. Have fun with it.",
   },
 };

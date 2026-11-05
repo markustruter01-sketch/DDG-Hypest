@@ -20,14 +20,17 @@ export const MAX_TOOL_STEPS = 3;
 /** Model calls per turn: 3 tool rounds and the answer (spec §3). */
 export const MAX_MODEL_CALLS = MAX_TOOL_STEPS + 1;
 
-export type TurnKind = Exclude<Kind, "plan_notes">;
+export type TurnKind = Extract<Kind, "chat" | "daily_note" | "checkin" | "weekly_review" | "midweek_check" | "monthly_report">;
 
-type KindSpec = { tier: Tier; maxTokens: number; maxChars: number };
+/** planNumbers: false = the reply may quote past lifts (the monthly report); every other filter rule still applies. */
+type KindSpec = { tier: Tier; maxTokens: number; maxChars: number; planNumbers?: false };
 export const KIND_SPECS: Record<TurnKind, KindSpec> = {
   chat: { tier: "quick", maxTokens: 300, maxChars: REPLY_MAX },
   daily_note: { tier: "quick", maxTokens: 200, maxChars: 300 },
   checkin: { tier: "quick", maxTokens: 250, maxChars: 400 },
   weekly_review: { tier: "plan", maxTokens: 800, maxChars: REPLY_MAX },
+  midweek_check: { tier: "plan", maxTokens: 800, maxChars: REPLY_MAX },
+  monthly_report: { tier: "plan", maxTokens: 700, maxChars: 1800, planNumbers: false },
 };
 
 export type TurnOutcome = {
@@ -201,7 +204,7 @@ export async function runTurn(args: {
 
   if (proposal) changes.push({ tool: "build_block", line: "Tap the button below to start your new block." });
   if (failed) return fixed(ctx.prompt.lines.fallback, failed, true, changes, proposal);
-  const rule = filterReply(lastText, planNumbers(block), spec.maxChars);
+  const rule = filterReply(lastText, planNumbers(block), spec.maxChars, { skipPlanNumbers: spec.planNumbers === false });
   if (rule !== null) {
     await db.insert(agentActionsTable).values({ userId: args.userId, turnId, tool: "filter_drop", touched: {}, result: { ok: false, rule }, promptVersion: PROMPT_VERSION });
     return fixed(ctx.prompt.lines.fallback, `filter:${rule}`, true, changes, proposal);
