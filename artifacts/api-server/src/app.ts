@@ -36,6 +36,8 @@ app.use(securityHeaders);
 app.use(cookieParser());
 // Stripe signs the raw body, so the webhook must be mounted before express.json.
 app.post("/api/billing/webhook", express.raw({ type: "application/json", limit: "1mb" }), billingWebhook);
+// Meal photos (spec 3.1 §5.5) are the only large body: a higher limit on that one route, before the default 100 kB.
+app.use("/api/me/food/meals/photo", express.json({ limit: "4500kb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

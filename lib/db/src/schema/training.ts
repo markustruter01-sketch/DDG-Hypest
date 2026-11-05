@@ -180,5 +180,5 @@ export const painEventsTable = pgTable(
     resolvedAt: timestamp("resolved_at"),
     resolvedNote: text("resolved_note"),
   },
-  (table) => [check("pain_events_source", sql`${table.source} in ('hurts', 'chat', 'resume')`)],
+  (table) => [check("pain_events_source", sql`${table.source} in ('hurts', 'chat', 'resume', 'food')`)],
 );

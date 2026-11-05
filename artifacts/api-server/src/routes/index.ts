@@ -10,6 +10,7 @@ import adminRouter from "./admin";
 import clientErrorsRouter from "./client-errors";
 import remindersRouter from "./reminders";
 import ddgRouter from "./ddg";
+import foodRouter from "./food";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(adminRouter);
 router.use(clientErrorsRouter);
 router.use(remindersRouter);
 router.use(ddgRouter);
+router.use(foodRouter);
 
 export default router;

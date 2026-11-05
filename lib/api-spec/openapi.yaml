@@ -8,6 +8,8 @@ servers:
   - url: /api
     description: Base API path
 tags:
+  - name: food
+    description: Nutrition-lite (spec 3.1 §5)
   - name: health
     description: Health operations
   - name: auth
@@ -1241,8 +1243,329 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /me/food:
+    get:
+      operationId: getFood
+      tags: [food]
+      summary: The Food screen (spec 3.1 §5)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/food/setup:
+    put:
+      operationId: saveFoodSetup
+      tags: [food]
+      summary: Save the nutrition set-up; works out the targets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodSetup"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Part of Starter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Nutrition is off for this member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/food/meal-plan:
+    post:
+      operationId: makeMealPlan
+      tags: [food]
+      summary: This week's meal plan and grocery list (Coaching and Pro)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Part of Coaching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Nutrition is off
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Set up food first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "429":
+          description: Weekly or daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: Could not be made this time
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Not switched on
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/food/meals:
+    post:
+      operationId: logMeal
+      tags: [food]
+      summary: Log a meal from a sentence (Coaching and Pro)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MealText"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Part of Coaching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Nutrition is off
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Set up food first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "429":
+          description: Limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: Could not estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Not switched on
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/food/meals/photo:
+    post:
+      operationId: logMealPhoto
+      tags: [food]
+      summary: Log a meal from a photo (never stored)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MealPhoto"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "402":
+          description: Part of Coaching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: Nutrition is off
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Set up food first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "413":
+          description: Photo too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "429":
+          description: Limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: Could not estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "503":
+          description: Not switched on
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /me/food/meals/{mealId}:
+    patch:
+      operationId: updateMeal
+      tags: [food]
+      summary: Edit a logged meal
+      parameters:
+        - $ref: "#/components/parameters/MealId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MealEdit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    delete:
+      operationId: deleteMeal
+      tags: [food]
+      summary: Delete a logged meal
+      parameters:
+        - $ref: "#/components/parameters/MealId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   parameters:
+    MealId:
+      name: mealId
+      in: path
+      required: true
+      schema:
+        type: integer
     SessionId:
       name: sessionId
       in: path
@@ -1274,6 +1597,156 @@ components:
       schema:
         type: integer
   schemas:
+    MealItem:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 80}
+        kcal: {type: integer, minimum: 0, maximum: 2500}
+        protein_g: {type: integer, minimum: 0, maximum: 200}
+      required: [name, kcal, protein_g]
+    FoodSetup:
+      type: object
+      additionalProperties: false
+      properties:
+        sex: {type: string, enum: [female, male, unsaid]}
+        birth_year: {type: integer, minimum: 1900, maximum: 2100}
+        height_cm: {type: number, minimum: 120, maximum: 230}
+        weight_kg: {type: number, minimum: 35, maximum: 300}
+        foods_to_avoid:
+          type: array
+          maxItems: 10
+          items: {type: string, minLength: 1, maxLength: 40}
+        pregnant: {type: boolean, description: Pregnant or breastfeeding}
+      required: [sex, birth_year, height_cm, weight_kg, foods_to_avoid, pregnant]
+    MealText:
+      type: object
+      additionalProperties: false
+      properties:
+        text: {type: string, minLength: 1, maxLength: 300}
+      required: [text]
+    MealPhoto:
+      type: object
+      additionalProperties: false
+      properties:
+        media_type: {type: string, enum: [image/jpeg, image/png, image/webp]}
+        data: {type: string, minLength: 1, maxLength: 4100000, description: Base64}
+      required: [media_type, data]
+    MealEdit:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/MealItem"
+      required: [items]
+    MealPlanMeal:
+      type: object
+      additionalProperties: false
+      properties:
+        slot: {type: string, enum: [breakfast, lunch, dinner, snack]}
+        name: {type: string}
+        ingredients:
+          type: array
+          items: {type: string}
+        kcal: {type: integer}
+        protein_g: {type: integer}
+      required: [slot, name, ingredients, kcal, protein_g]
+    FoodState:
+      type: object
+      additionalProperties: false
+      properties:
+        blocked: {type: boolean, description: "Nutrition is off for good (spec 3.1 §5.1): show only the fixed line"}
+        available: {type: boolean, description: Set-up and targets are in this member's tier (Starter and above)}
+        can_use_ai: {type: boolean, description: Meal plans and meal logging (Coaching and Pro, AI on)}
+        notice:
+          type: string
+          nullable: true
+          description: A fixed safety or help message to show, once
+        setup:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            sex: {type: string, enum: [female, male, unsaid]}
+            birth_year: {type: integer}
+            height_cm: {type: number}
+            weight_kg: {type: number}
+            foods_to_avoid:
+              type: array
+              items: {type: string}
+          required: [sex, birth_year, height_cm, weight_kg, foods_to_avoid]
+        targets:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            kcal: {type: integer}
+            protein_g: {type: integer}
+            maintenance_only: {type: boolean}
+          required: [kcal, protein_g, maintenance_only]
+        today:
+          type: object
+          additionalProperties: false
+          properties:
+            day: {type: string}
+            kcal: {type: integer}
+            protein_g: {type: integer}
+            meals:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  id: {type: integer}
+                  text: {type: string}
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MealItem"
+                  kcal: {type: integer}
+                  protein_g: {type: integer}
+                  at: {type: string, format: date-time}
+                required: [id, text, items, kcal, protein_g, at]
+          required: [day, kcal, protein_g, meals]
+        meal_plan:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            week_of: {type: string}
+            days:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  day: {type: integer}
+                  meals:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MealPlanMeal"
+                  total_kcal: {type: integer}
+                  total_protein_g: {type: integer}
+                required: [day, meals, total_kcal, total_protein_g]
+            grocery:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  aisle: {type: string}
+                  items:
+                    type: array
+                    items: {type: string}
+                required: [aisle, items]
+          required: [week_of, days, grocery]
+        meal_plans_left: {type: integer}
+        meal_logs_left_today: {type: integer}
+      required: [blocked, available, can_use_ai, notice, setup, targets, today, meal_plan, meal_plans_left, meal_logs_left_today]
     HealthStatus:
       type: object
       properties:

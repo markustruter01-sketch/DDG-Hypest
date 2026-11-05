@@ -26,7 +26,9 @@ export type Message = { role: "user" | "assistant"; content: string };
 export type TextBlock = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 export type ToolUseBlock = { type: "tool_use"; id: string; name: string; input: unknown };
 export type ToolResultBlock = { type: "tool_result"; tool_use_id: string; content: string; is_error?: boolean };
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
+/** A photo for one call only (meal logging, spec 3.1 §5.5): never stored or logged. */
+export type ImageBlock = { type: "image"; source: { type: "base64"; media_type: "image/jpeg" | "image/png" | "image/webp"; data: string } };
+export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ImageBlock;
 export type ApiMessage = { role: "user" | "assistant"; content: string | ContentBlock[] };
 export type ToolDef = { name: string; description: string; input_schema: Record<string, unknown> };
 
