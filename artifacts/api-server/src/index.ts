@@ -4,6 +4,7 @@ import { tidyExpired } from "./lib/tidy";
 import { devLoginProblem, listenHost } from "./lib/dev-login";
 import { backfillNutritionBlocks } from "./coaching/food";
 import { seedAllowances } from "./coaching/allowance";
+import { pool, syncCheckConstraints } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -24,6 +25,11 @@ if (devProblem) {
   logger.error(devProblem);
   throw new Error(`Refusing to start: ${devProblem}`);
 }
+
+// Schema push leaves changed CHECK rules stale; bring them in line before anything writes.
+const checks = await syncCheckConstraints(pool);
+if (checks.updated.length) logger.info({ updated: checks.updated }, "Database check rules updated to match the schema");
+for (const f of checks.failed) logger.error(f, "Database check rule could not be updated (existing rows break it); left unchanged");
 
 try {
   await seedAllowances(); // docs/COACH-AGENT-SPEC.md §5: fills missing rows only; never overwrites Markus's edits
