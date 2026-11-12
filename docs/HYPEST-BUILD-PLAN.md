@@ -135,6 +135,13 @@ Run these once Phases 2 and 3 are built. Each is a few minutes. Nothing is "laun
 4. **Rest beep (from 1.5):** on an iPhone with the ringer on, finish a set: the beep plays when rest ends.
 5. Phase 2 and 3 items are added here as they are built.
 
+**Emulated run, 12 Nov 2026 (Claude: local build, test database, Chromium phone emulation at 360 and 412 px):**
+- Found and fixed: on 360–412 px phones the weight and reps steppers pushed the "Set done" tick off the card, so a set could not be ticked. Each set now stacks the two steppers with the tick beside them (`App.css` `.set`).
+- 1 Offline logging: pass. Offline tick shows "on phone" and "1 set saved on this phone"; back online it synced well inside 30 s. Service worker registers. Not covered by the checklist: reopening a session with no signal shows no session (only the app shell is cached).
+- 2 Shared phone: pass. A's offline set was never sent or shown while B was logged in; after A logged back in it uploaded and the label cleared.
+- 4 Rest beep: pass in emulation (the two tones start when rest ends). Whether an iPhone plays it with the ringer on still needs the real phone.
+- Still real-device only: install on Android and iPhone, network limits on mobile data vs Wi-Fi (item 3), iPhone beep.
+
 ## Standing rules for every step
 1. Opus builds on a branch, with tests, and opens a PR that ends with what it checked and what it could not.
 2. Fable reviews before merge anything touching money, safety, prompts, the schema, or auth.
