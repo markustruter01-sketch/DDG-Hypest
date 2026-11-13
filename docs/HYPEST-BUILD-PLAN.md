@@ -142,6 +142,8 @@ Run these once Phases 2 and 3 are built. Each is a few minutes. Nothing is "laun
 - 4 Rest beep: pass in emulation (the two tones start when rest ends). Whether an iPhone plays it with the ringer on still needs the real phone.
 - Still real-device only: install on Android and iPhone, network limits on mobile data vs Wi-Fi (item 3), iPhone beep.
 
+**Fixed 13 Nov 2026 (Claude, emulated as above): reopening a workout with no signal.** The service worker now keeps the last good answer for the four read-only calls Today and a session need (`/auth/me`, `/me/training`, `/coaches`, `/config`): network first, the saved answer only when there is no signal. They are the member's own, so they are wiped before any login, signup or logout and on any 401. Emulated: with no signal, reloading the session page shows the session and a set can be ticked ("on phone"); Today shows the plan; back online the set synced; after logout the saved answers are empty and the session no longer opens offline; member B's login keeps only B's answers. Errors with no connection now read "No connection. Try again when you have signal." instead of "Failed to fetch"; finishing a session with no signal says the ticked sets are saved on the phone and to tap Finish again. Real-phone check 1 now also covers: turn data off, close the app fully, reopen it, open the session.
+
 ## Standing rules for every step
 1. Opus builds on a branch, with tests, and opens a PR that ends with what it checked and what it could not.
 2. Fable reviews before merge anything touching money, safety, prompts, the schema, or auth.

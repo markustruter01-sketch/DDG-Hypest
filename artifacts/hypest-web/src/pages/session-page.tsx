@@ -14,7 +14,7 @@ import {
 import { AREA_LABEL, coachById, dose, request, useCoaches, useTraining } from "@/lib/coaching";
 import { FinishCard, type FinishStats } from "@/components/finish-card";
 import { nextSession } from "@/pages/today-page";
-import { serverErrorText } from "@/lib/server-error";
+import { isNoSignal, serverErrorText } from "@/lib/server-error";
 import { loadStep, shownLoad, targetLoad, toKg, useUnits, type Units } from "@/lib/units";
 import { useRestTimer, useScreenAwake } from "@/lib/gym";
 import { platesFor, platesText } from "@/lib/plates";
@@ -119,7 +119,7 @@ export function SessionPage() {
     try {
       await complete.mutateAsync({ sessionId });
     } catch (err) {
-      setFinishError(serverErrorText(err));
+      setFinishError(isNoSignal(err) ? "No signal. Your ticked sets are saved on this phone. Tap Finish again when you have signal." : serverErrorText(err));
       return;
     }
     await queryClient.invalidateQueries({ queryKey: getGetTrainingQueryKey() });
