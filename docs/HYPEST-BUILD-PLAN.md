@@ -4,6 +4,13 @@ Written by Fable 5.1, Tue 3 Nov 2026, from the audit "Hypest audit: business,
 product and software". Owner: Markus. This file is the single plan; every
 session (Fable or Opus) reads it first and ticks its step when done.
 
+> **17 Nov 2026 (Fable 5.2):** the site now tells search engines not to list it
+> (`artifacts/hypest-web/index.html`, PR #44, live and checked). Change it back at launch.
+> The company audit and growth plan are in `DDG-Control/docs/plans/`. The growth plan says:
+> test demand before building Phase 4. Hypest work from those two documents is in
+> `quant-terminal/docs/plans/fund-roadmap-build-guide-for-opus.md`, Part B, orders B1.13
+> (launch checklist) and B2.10 (demand test). This plan's own rules still apply here.
+
 ## How the two models split the work
 
 | Who | Does | Never does |
